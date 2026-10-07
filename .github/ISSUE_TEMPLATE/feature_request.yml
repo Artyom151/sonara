@@ -1,0 +1,11 @@
+name: Feature request / Идея
+description: Suggest an improvement / Предложить улучшение
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Idea / Идея
+      description: What should Sonara do, and why? / Что должно появиться и зачем?
+    validations:
+      required: true

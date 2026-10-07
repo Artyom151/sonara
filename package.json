@@ -1,0 +1,69 @@
+{
+  "name": "sonara",
+  "version": "1.0.0",
+  "description": "Sonara — music streaming client (SoundCloud + YouTube)",
+  "scripts": {
+    "dev": "concurrently -k -n server,web -c magenta,cyan \"pnpm dev:server\" \"vite\"",
+    "dev:server": "tsx watch server/index.ts",
+    "build": "vite build",
+    "start": "tsx server/index.ts",
+    "typecheck": "tsc -p .",
+    "icons": "node scripts/gen-icons.mjs && node scripts/gen-brand.mjs",
+    "tauri": "tauri",
+    "desktop:dev": "tauri dev",
+    "desktop:build": "tauri build",
+    "android:sync": "vite build && cap sync android",
+    "android:open": "cap open android",
+    "android:build": "vite build && cap sync android && node scripts/android-gradle.mjs assembleRelease",
+    "android:debug": "vite build && cap sync android && node scripts/android-gradle.mjs assembleDebug",
+    "smoke:android": "node scripts/smoke-android.mjs",
+    "android:gradle": "node scripts/android-gradle.mjs",
+    "android:keystore": "node scripts/android-keystore.mjs"
+  },
+  "author": "Sonara",
+  "license": "Apache-2.0",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.20.0",
+      "onFail": "download"
+    }
+  },
+  "type": "module",
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
+    "@capacitor/status-bar": "^8.0.4",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@hono/node-server": "^2.1.3",
+    "@material/material-color-utilities": "^0.4.0",
+    "@supabase/supabase-js": "^2.117.2",
+    "@tauri-apps/api": "^2.12.1",
+    "@tauri-apps/plugin-http": "^2.8.0",
+    "@tauri-apps/plugin-opener": "^2.7.0",
+    "framework7-icons": "^5.0.5",
+    "hls.js": "^1.7.3",
+    "hono": "^4.13.13",
+    "motion": "^14.0.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "youtubei.js": "^18.1.0",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "@tauri-apps/cli": "^2.12.1",
+    "@types/node": "^26.6.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "concurrently": "^10.0.5",
+    "playwright-core": "^1.63.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.3"
+  },
+  "private": true
+}

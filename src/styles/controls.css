@@ -1,0 +1,427 @@
+/* ───────── Toggle (iOS 26) ───────── */
+.toggle {
+  position: relative;
+  width: 63px;
+  height: 28px;
+  flex: none;
+  touch-action: none;
+}
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: rgb(120 120 128 / 0.32);
+  overflow: hidden;
+}
+.toggle-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--green);
+}
+:root[data-accent-toggles='1'] .toggle-fill {
+  background: var(--accent-strong);
+}
+.toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  height: 24px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow:
+    0 3px 8px rgb(0 0 0 / 0.15),
+    0 3px 1px rgb(0 0 0 / 0.06);
+  transition:
+    background-color 0.25s,
+    box-shadow 0.25s,
+    backdrop-filter 0.25s;
+}
+/* Pressed: the knob becomes a clear magnifying lens. */
+.toggle-knob.lens {
+  background: rgb(255 255 255 / 0.12);
+  -webkit-backdrop-filter: blur(1px) saturate(160%) brightness(1.2);
+  backdrop-filter: blur(1px) saturate(160%) brightness(1.2);
+  box-shadow:
+    inset 0 0.5px 0 rgb(255 255 255 / 0.9),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.5),
+    inset 0 -2px 6px rgb(255 255 255 / 0.25),
+    0 6px 16px rgb(0 0 0 / 0.25);
+}
+
+/* ───────── Segmented ───────── */
+.segmented {
+  position: relative;
+  display: flex;
+  height: 38px;
+  padding: 3px;
+  --g-radius: 19px;
+  --g-alpha: 0.14;
+}
+.seg {
+  position: relative;
+  z-index: 4 !important;
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 550;
+  color: var(--text-2);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: color 0.25s;
+}
+.seg.on {
+  color: var(--text);
+}
+.seg-lens {
+  position: absolute !important;
+  top: 3px;
+  bottom: 3px;
+  z-index: 3 !important;
+  border-radius: 16px;
+  background: rgb(255 255 255 / 0.14);
+  box-shadow:
+    inset 0 0.5px 0 rgb(255 255 255 / 0.4),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.1),
+    0 2px 8px rgb(0 0 0 / 0.2);
+}
+
+/* ───────── Menu ───────── */
+.menu-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+}
+.menu {
+  position: fixed;
+  min-width: 230px;
+  max-width: min(300px, calc(100vw - 24px));
+  --g-radius: 26px;
+  /* Menus carry text: denser tint, more blur, gentler lens than decorative glass. */
+  --lg-tint: rgb(28 28 30 / 0.62);
+  --lg-blur: 18px;
+  --lg-strength: 5;
+}
+/* Scroll inside, so the glass layer stays put. */
+.menu > div {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 8px 0;
+  border-radius: inherit;
+  scrollbar-width: none;
+}
+.menu > div::-webkit-scrollbar {
+  display: none;
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 18px 0 8px;
+  font-size: 15.5px;
+  text-align: left;
+  border-radius: 14px;
+}
+.menu-item:active {
+  background: rgb(255 255 255 / 0.1);
+}
+.menu-item.destructive {
+  color: var(--red);
+}
+.menu-check {
+  width: 24px;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.menu-label {
+  flex: 1;
+}
+.menu-icon {
+  display: grid;
+  place-items: center;
+  opacity: 0.9;
+}
+.menu-sep {
+  height: 0.5px;
+  margin: 6px 18px;
+  background: rgb(255 255 255 / 0.15);
+}
+
+.select-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-2);
+  font-size: 15px;
+  padding: 6px 0 6px 10px;
+  max-width: 60vw;
+}
+.select-btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ───────── Slider ───────── */
+.slider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  color: var(--text-2);
+}
+.slider-track {
+  position: relative;
+  flex: 1;
+  height: 28px;
+  touch-action: none;
+  cursor: pointer;
+}
+.slider-rail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 3px;
+  background: rgb(120 120 128 / 0.32);
+  overflow: hidden;
+}
+.slider-fill {
+  height: 100%;
+  background: var(--accent);
+}
+.slider-knob {
+  position: absolute;
+  top: 50%;
+  width: 34px;
+  height: 22px;
+  margin: -11px 0 0 -17px;
+  border-radius: 11px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+  transition: background-color 0.2s;
+}
+.slider-knob.lens {
+  background: rgb(255 255 255 / 0.15);
+  -webkit-backdrop-filter: blur(1px) brightness(1.2);
+  backdrop-filter: blur(1px) brightness(1.2);
+  box-shadow:
+    inset 0 0.5px 0 rgb(255 255 255 / 0.9),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.5),
+    0 6px 16px rgb(0 0 0 / 0.25);
+}
+
+/* ───────── Sheet ───────── */
+.sheet-scrim,
+.alert-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgb(0 0 0 / 0.55);
+}
+.sheet {
+  position: absolute !important;
+  left: 8px;
+  right: 8px;
+  bottom: calc(var(--sab) + 8px);
+  max-height: calc(100% - var(--sat) - 60px);
+  display: flex;
+  flex-direction: column;
+  --g-radius: 34px;
+  /* Sheets carry forms and lists: dense frosted glass so they never blend into the page. */
+  --lg-tint: rgb(24 24 27 / 0.82);
+  --lg-blur: 30px;
+  --lg-strength: 6;
+  overflow: hidden;
+}
+.sheet.full {
+  height: calc(100% - var(--sat) - 40px);
+}
+.sheet-inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+.grabber {
+  width: 38px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgb(255 255 255 / 0.3);
+  margin: 8px auto 6px;
+  flex: none;
+}
+.sheet-title {
+  text-align: center;
+  font-weight: 650;
+  font-size: 16px;
+  padding: 4px 20px 10px;
+}
+.sheet-body {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  padding-bottom: 12px;
+  scrollbar-width: none;
+}
+@media (min-width: 960px) {
+  .sheet {
+    left: 50%;
+    right: auto;
+    width: 520px;
+    margin-left: -260px;
+    bottom: 24px;
+  }
+}
+
+/* ───────── Alert ───────── */
+.alert-scrim {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.alert {
+  width: min(340px, 100%);
+  padding: 22px 18px 16px;
+  text-align: center;
+  --g-radius: 34px;
+  --lg-tint: rgb(28 28 31 / 0.86);
+  --lg-blur: 30px;
+  --lg-strength: 6;
+}
+.alert h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 650;
+}
+.alert p {
+  margin: 0 0 12px;
+  font-size: 13.5px;
+  color: var(--text-2);
+}
+.alert-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.alert-btn {
+  flex: 1;
+  height: 46px;
+  border-radius: 23px;
+  font-weight: 600;
+  font-size: 16px;
+  background: rgb(255 255 255 / 0.1);
+  transition: transform 0.3s var(--ease-spring), background-color 0.2s;
+}
+.alert-btn:active {
+  transform: scale(1.05);
+  background: rgb(255 255 255 / 0.18);
+}
+.alert-btn.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.alert-btn.destructive {
+  color: var(--red);
+}
+.alert-btn:disabled {
+  opacity: 0.4;
+}
+
+.field {
+  width: 100%;
+  height: 46px;
+  padding: 0 16px;
+  border-radius: 23px;
+  border: 0;
+  outline: 0;
+  background: rgb(255 255 255 / 0.08);
+  font-size: 16px;
+  margin-top: 8px;
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.1);
+}
+.field:focus {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+/* ───────── Toast ───────── */
+.toasts {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: calc(var(--sat) + 10px);
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  padding: 11px 18px;
+  font-size: 13.5px;
+  font-weight: 550;
+  max-width: calc(100vw - 40px);
+  --g-alpha: 0.5;
+  --g-blur: 30px;
+}
+
+.art-fallback {
+  width: 100%;
+  height: 100%;
+}
+
+/* Action sheet header */
+.action-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 2px 20px 14px;
+}
+.action-head .track-art {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+}
+.action-list {
+  margin: 0 12px;
+  border-radius: 24px;
+  background: rgb(255 255 255 / 0.07);
+  overflow: hidden;
+}
+.action {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 50px;
+  padding: 0 18px;
+  font-size: 16px;
+  text-align: left;
+  position: relative;
+}
+.action + .action::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 52px;
+  right: 0;
+  height: 0.5px;
+  background: var(--sep);
+}
+.action:active {
+  background: rgb(255 255 255 / 0.08);
+}
+.action.destructive {
+  color: var(--red);
+}
+.action svg {
+  flex: none;
+  opacity: 0.85;
+}

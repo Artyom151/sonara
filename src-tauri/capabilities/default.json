@@ -1,0 +1,53 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Sonara main window",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "core:window:allow-internal-toggle-maximize",
+    "core:window:allow-is-maximized",
+    "core:window:allow-start-dragging",
+    "core:window:allow-close",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-minimize",
+    "opener:allow-open-url",
+    {
+      "identifier": "http:default",
+      "allow": [
+        {
+          "url": "https://soundcloud.com/*"
+        },
+        {
+          "url": "https://*.soundcloud.com/*"
+        },
+        {
+          "url": "https://*.soundcloud.cloud/*"
+        },
+        {
+          "url": "https://*.sndcdn.com/*"
+        },
+        {
+          "url": "https://*.youtube.com/*"
+        },
+        {
+          "url": "https://youtube.com/*"
+        },
+        {
+          "url": "https://*.googlevideo.com/*"
+        },
+        {
+          "url": "https://*.ytimg.com/*"
+        },
+        {
+          "url": "https://*.googleapis.com/*"
+        },
+        {
+          "url": "https://lrclib.net/*"
+        }
+      ]
+    }
+  ]
+}

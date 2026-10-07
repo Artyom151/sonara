@@ -1,0 +1,261 @@
+name: Release
+
+# Push a tag like v1.2.3 (or run manually) → builds every platform and publishes a GitHub
+# release with English + Russian notes from CHANGELOG.md / CHANGELOG_ru.md and the commit list.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version without "v" (e.g. 1.2.3). A tag v<version> is created on the current commit.'
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: 22
+  PNPM_VERSION: 11
+
+jobs:
+  prepare:
+    name: Prepare release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
+      release_id: ${{ steps.release.outputs.id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Version
+        id: v
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then V="${{ github.event.inputs.version }}"; else V="${GITHUB_REF_NAME#v}"; fi
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+          echo "tag=v$V" >> "$GITHUB_OUTPUT"
+      - name: Release notes (EN + RU)
+        run: node scripts/release-notes.mjs "${{ steps.v.outputs.version }}" > notes.md && cat notes.md
+      - name: Create draft release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.v.outputs.tag }}"
+          PRE=""; case "$TAG" in *-*) PRE="--prerelease";; esac
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --notes-file notes.md --title "Sonara ${{ steps.v.outputs.version }}"
+          else
+            gh release create "$TAG" --draft $PRE --target "$GITHUB_SHA" --title "Sonara ${{ steps.v.outputs.version }}" --notes-file notes.md
+          fi
+          echo "id=$(gh release view "$TAG" --json databaseId -q .databaseId)" >> "$GITHUB_OUTPUT"
+
+  desktop:
+    name: Desktop · ${{ matrix.name }}
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux (glibc)
+            os: ubuntu-22.04
+            args: ''
+          - name: Windows
+            os: windows-latest
+            args: ''
+          - name: macOS (universal)
+            os: macos-latest
+            args: '--target universal-apple-darwin'
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Linux dependencies
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev patchelf libssl-dev
+      - name: Environment
+        shell: bash
+        run: |
+          {
+            echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}"
+            echo "VITE_SUPABASE_PUBLISHABLE_KEY=${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}"
+            echo "VITE_DISCORD_APP_ID=${{ secrets.VITE_DISCORD_APP_ID }}"
+          } > .env
+          node scripts/set-version.mjs "${{ needs.prepare.outputs.version }}"
+      - run: pnpm install --frozen-lockfile
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          releaseId: ${{ needs.prepare.outputs.release_id }}
+          args: ${{ matrix.args }}
+
+  linux-musl:
+    name: Desktop · Linux (musl / Alpine)
+    needs: prepare
+    runs-on: ubuntu-latest
+    container: alpine:3.22
+    steps:
+      - name: System packages
+        run: |
+          apk add --no-cache bash git curl tar gzip nodejs npm build-base pkgconf openssl-dev \
+            webkit2gtk-4.1-dev gtk+3.0-dev librsvg-dev github-cli
+          npm i -g pnpm@${{ env.PNPM_VERSION }}
+          curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+      - uses: actions/checkout@v4
+      - name: Build
+        shell: bash
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          {
+            echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}"
+            echo "VITE_SUPABASE_PUBLISHABLE_KEY=${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}"
+            echo "VITE_DISCORD_APP_ID=${{ secrets.VITE_DISCORD_APP_ID }}"
+          } > .env
+          node scripts/set-version.mjs "${{ needs.prepare.outputs.version }}"
+          pnpm install --frozen-lockfile
+          pnpm tauri build --no-bundle
+      - name: Package
+        shell: bash
+        run: |
+          V="${{ needs.prepare.outputs.version }}"
+          D="Sonara-$V-linux-musl-x86_64"
+          mkdir -p "$D"
+          cp src-tauri/target/release/sonara "$D/sonara"
+          cp packaging/linux/sonara.desktop packaging/linux/INSTALL.txt "$D/"
+          cp src-tauri/icons/128x128.png "$D/sonara.png"
+          tar czf "$D.tar.gz" "$D"
+      - name: Upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: gh release upload "${{ needs.prepare.outputs.tag }}" "Sonara-${{ needs.prepare.outputs.version }}-linux-musl-x86_64.tar.gz" --clobber --repo "$GITHUB_REPOSITORY"
+
+  android:
+    name: Android
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - name: Environment
+        run: |
+          {
+            echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}"
+            echo "VITE_SUPABASE_PUBLISHABLE_KEY=${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}"
+            echo "VITE_DISCORD_APP_ID=${{ secrets.VITE_DISCORD_APP_ID }}"
+          } > .env
+          node scripts/set-version.mjs "${{ needs.prepare.outputs.version }}"
+      - name: Signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > android/sonara-release.jks
+            {
+              echo "storeFile=sonara-release.jks"
+              echo "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
+              echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}"
+              echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}"
+            } > android/keystore.properties
+          else
+            echo "::warning::ANDROID_KEYSTORE_BASE64 not set — the APK will be signed with a debug key."
+          fi
+      - run: pnpm install --frozen-lockfile
+      - name: Build APK + AAB
+        run: |
+          pnpm build
+          pnpm exec cap sync android
+          node scripts/android-gradle.mjs assembleRelease bundleRelease
+      - name: Upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          V="${{ needs.prepare.outputs.version }}"
+          cp android/app/build/outputs/apk/release/app-release.apk "Sonara-$V-android.apk"
+          cp android/app/build/outputs/bundle/release/app-release.aab "Sonara-$V-android.aab"
+          gh release upload "${{ needs.prepare.outputs.tag }}" "Sonara-$V-android.apk" "Sonara-$V-android.aab" --clobber
+
+  ios:
+    name: iOS (unsigned)
+    needs: prepare
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Environment
+        run: |
+          {
+            echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}"
+            echo "VITE_SUPABASE_PUBLISHABLE_KEY=${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}"
+          } > .env
+          node scripts/set-version.mjs "${{ needs.prepare.outputs.version }}"
+      - run: pnpm install --frozen-lockfile
+      - name: Build
+        run: |
+          pnpm build
+          pnpm exec cap sync ios
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+      - name: Package IPA
+        run: |
+          V="${{ needs.prepare.outputs.version }}"
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -qry "Sonara-$V-ios-unsigned.ipa" Payload
+      - name: Upload
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ needs.prepare.outputs.tag }}" "Sonara-${{ needs.prepare.outputs.version }}-ios-unsigned.ipa" --clobber
+
+  publish:
+    name: Publish
+    needs: [prepare, desktop, linux-musl, android, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "${{ needs.prepare.outputs.tag }}" --draft=false --repo "$GITHUB_REPOSITORY"

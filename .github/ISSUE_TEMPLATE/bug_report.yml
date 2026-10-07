@@ -1,0 +1,29 @@
+name: Bug report / Ошибка
+description: Something does not work / Что-то работает не так
+labels: [bug]
+body:
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform / Платформа
+      options: [Android, iOS, Windows, macOS, Linux (glibc), Linux (musl), Web]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Sonara version / Версия
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened / Что произошло
+      description: Steps to reproduce, expected and actual result / Шаги, ожидание и результат
+    validations:
+      required: true
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots or logs / Скриншоты или логи

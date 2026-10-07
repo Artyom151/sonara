@@ -1,0 +1,25 @@
+Sonara for Linux (musl) — Alpine and other musl-based systems
+==============================================================
+
+1. Runtime packages (Alpine):
+     apk add webkit2gtk-4.1 gtk+3.0 librsvg gst-plugins-good gst-plugins-bad gst-libav
+
+2. Install for the current user:
+     install -Dm755 sonara         ~/.local/bin/sonara
+     install -Dm644 sonara.desktop ~/.local/share/applications/sonara.desktop
+     install -Dm644 sonara.png     ~/.local/share/icons/hicolor/128x128/apps/sonara.png
+
+   Or system-wide (as root): /usr/local/bin, /usr/share/applications, /usr/share/icons/hicolor/128x128/apps.
+
+3. Run "Sonara" from the app menu, or `sonara` in a terminal.
+
+The GStreamer plugins are needed to play AAC / MP3 audio inside WebKitGTK.
+
+---
+
+Sonara для Linux (musl) — Alpine и другие системы на musl
+
+1. Пакеты: apk add webkit2gtk-4.1 gtk+3.0 librsvg gst-plugins-good gst-plugins-bad gst-libav
+2. Установка для пользователя — команды install из пункта 2 выше.
+3. Запуск: «Sonara» в меню приложений или `sonara` в терминале.
+Плагины GStreamer нужны для воспроизведения AAC / MP3 в WebKitGTK.

@@ -1,0 +1,452 @@
+/* ───────────────────────── Desktop shell (≥960px) ─────────────────────────
+   ┌ rail ┬──────────────── titlebar (drag) ─────────── _ □ × ┐
+   │ logo │ ┌──────────────── content panel ───────────────┐ │
+   │  ⌕   │ │  Wave hero · sections                         │ │
+   │  ⌂   │ └───────────────────────────────────────────────┘ │
+   │  ♥   │ ┌──────────────── glass player bar ─────────────┐ │
+   │ (A)  │ └───────────────────────────────────────────────┘ │
+   └──────┴───────────────────────────────────────────────────┘ */
+
+.app.desk {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  grid-template-rows: 40px minmax(0, 1fr) auto;
+  --gutter: 36px;
+  background: var(--bg);
+}
+
+/* Title bar */
+.titlebar {
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  z-index: 80;
+  user-select: none;
+}
+.win-controls {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  height: 40px;
+}
+.win-btn {
+  width: 46px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  color: var(--text-2);
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+.win-btn:hover {
+  background: rgb(255 255 255 / 0.08);
+  color: var(--text);
+}
+.win-btn.close:hover {
+  background: #e5302a;
+  color: #fff;
+}
+
+/* Icon rail */
+.rail {
+  grid-column: 1;
+  grid-row: 1 / 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 0 22px;
+}
+.rail-logo {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 26px;
+  border-radius: 14px;
+  transition: transform 0.35s var(--ease-spring);
+}
+.rail-logo:active {
+  transform: scale(0.92);
+}
+.rail-items {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.rail-btn {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  color: var(--text-2);
+  border-radius: 16px;
+  transition: color 0.2s;
+}
+.rail-btn:hover {
+  color: var(--text);
+}
+.rail-btn.active {
+  color: var(--text);
+}
+.rail-btn > svg {
+  position: relative;
+  z-index: 2;
+}
+.rail-lens {
+  position: absolute !important;
+  inset: 0;
+  --g-radius: 16px;
+  --lg-tint: rgb(255 255 255 / 0.08);
+  --lg-strength: 6;
+  z-index: 1;
+}
+.rail-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  padding: 2px;
+  background: conic-gradient(from 200deg, var(--accent), var(--accent-tertiary, var(--accent-strong)), var(--accent));
+  transition: transform 0.35s var(--ease-spring);
+}
+.rail-avatar span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--bg);
+  font-weight: 700;
+  font-size: 16px;
+}
+.rail-avatar:hover,
+.rail-avatar.active {
+  transform: scale(1.06);
+}
+
+/* Content panel */
+.app.desk .main {
+  grid-column: 2;
+  grid-row: 2;
+  margin-right: 12px;
+  border-radius: 24px;
+  overflow: hidden;
+  --panel: color-mix(in srgb, var(--bg), #fff 2.8%);
+  background: var(--panel);
+  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.06);
+}
+.app.desk .screen {
+  /* Opaque: pushed screens slide over the previous one. */
+  background: var(--panel);
+  padding: 28px 0 48px;
+}
+.app.desk .nav-bar {
+  top: -28px;
+  margin-top: -28px;
+  padding: 14px 18px 10px;
+}
+.app.desk .screen-title {
+  margin-top: 6px;
+}
+.app.desk .hero-bg {
+  inset: -60px 0 0;
+}
+
+/* Player bar */
+.pbar {
+  grid-column: 2;
+  grid-row: 3;
+  height: 88px;
+  margin: 10px 12px 12px 0;
+  --g-radius: 22px;
+  --lg-tint: color-mix(in srgb, var(--accent-container) 26%, transparent);
+  --lg-blur: 4px;
+}
+.pbar-inner {
+  height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 560px) minmax(0, 1fr);
+  align-items: center;
+  gap: 20px;
+  padding: 0 18px 0 10px;
+}
+.pbar-track {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.pbar-art {
+  width: 68px;
+  height: 68px;
+  flex: none;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-2);
+  transition: transform 0.35s var(--ease-spring);
+}
+.pbar-art:hover {
+  transform: scale(1.04);
+}
+.pbar-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.pbar-meta {
+  min-width: 0;
+  max-width: 260px;
+}
+.pbar-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+.pbar-artist {
+  font-size: 13px;
+  color: var(--text-2);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pbar-icon {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--text-2);
+  transition:
+    color 0.2s,
+    background-color 0.2s,
+    transform 0.3s var(--ease-spring);
+}
+.pbar-icon:hover:not(:disabled) {
+  color: var(--text);
+  background: rgb(255 255 255 / 0.07);
+}
+.pbar-icon:active:not(:disabled) {
+  transform: scale(0.88);
+}
+.pbar-icon.big {
+  color: var(--text);
+  width: 40px;
+  height: 40px;
+}
+.pbar-icon.on {
+  color: var(--accent);
+}
+.pbar-icon.liked {
+  color: var(--red);
+}
+.pbar-icon:disabled {
+  opacity: 0.35;
+}
+.pbar-center {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pbar-transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+.pbar-play {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #fff;
+  color: #000;
+  transition: transform 0.3s var(--ease-spring);
+}
+.pbar-play:hover:not(:disabled) {
+  transform: scale(1.07);
+}
+.pbar-play:active:not(:disabled) {
+  transform: scale(0.94);
+}
+.pbar-play:disabled {
+  opacity: 0.5;
+}
+.spinner.dark {
+  width: 18px;
+  height: 18px;
+  border-color: rgb(0 0 0 / 0.2);
+  border-top-color: #000;
+}
+.pbar-progress {
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.pbar-progress > span:last-child {
+  text-align: right;
+}
+.pbar-progress .scrub {
+  margin: 0;
+  height: 16px;
+}
+.pbar-progress .scrub-track {
+  height: 3px;
+  margin-top: -1.5px;
+}
+.pbar-progress .scrub.active .scrub-track,
+.pbar-progress .scrub:hover .scrub-track {
+  height: 6px;
+  margin-top: -3px;
+}
+.pbar-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.pbar-volume {
+  width: 150px;
+}
+.pbar-volume .slider {
+  gap: 4px;
+}
+.pbar-volume .slider-rail {
+  height: 4px;
+  margin-top: -2px;
+}
+.pbar-volume .slider-knob {
+  width: 22px;
+  height: 14px;
+  margin: -7px 0 0 -11px;
+  border-radius: 7px;
+}
+
+/* Wave hero */
+.wave {
+  position: relative;
+  height: clamp(440px, 66vh, 680px);
+  margin: -28px 0 10px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.wave-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.wave-center {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  margin-top: -40px;
+}
+.wave-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 46px;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  color: #fff;
+  transition: transform 0.35s var(--ease-spring);
+}
+.wave-title:hover {
+  transform: scale(1.03);
+}
+.wave-title:active {
+  transform: scale(0.97);
+}
+.wave-tune {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 22px;
+  font-size: 15px;
+  font-weight: 600;
+  --g-radius: 23px;
+  --lg-tint: rgb(255 255 255 / 0.16);
+  --lg-blur: 6px;
+}
+.wave-chips {
+  position: absolute;
+  z-index: 2;
+  left: var(--gutter);
+  bottom: 22px;
+  display: flex;
+  gap: 10px;
+}
+.wave-chip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 360px;
+  padding: 8px 20px 8px 8px;
+  text-align: left;
+  --g-radius: 32px;
+  --lg-tint: rgb(255 255 255 / 0.06);
+}
+.wave-chip-arts {
+  display: flex;
+  flex: none;
+}
+.wave-chip-arts > span {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 0 2px rgb(var(--bg-rgb) / 0.6);
+  background: var(--surface-2);
+}
+.wave-chip-arts > span + span {
+  margin-left: -14px;
+}
+.wave-chip-arts img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.wave-chip-text {
+  min-width: 0;
+}
+.wave-chip-text b {
+  display: block;
+  font-size: 14px;
+}
+.wave-chip-text small {
+  display: block;
+  font-size: 12px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Full-screen player keeps clear of the window controls. */
+@media (min-width: 960px) {
+  .player {
+    padding-top: 48px;
+  }
+  .player-head {
+    padding-right: 140px;
+  }
+}
+
+/* macOS: room for the native traffic lights at the top-left of the rail. */
+.app.desk.mac .rail {
+  padding-top: 44px;
+}

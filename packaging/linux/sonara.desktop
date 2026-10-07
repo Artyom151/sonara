@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Sonara
+GenericName=Music player
+Comment=SoundCloud and YouTube music with an endless Wave
+Exec=sonara
+Icon=sonara
+Terminal=false
+Categories=AudioVideo;Audio;Player;Music;
+Keywords=music;player;soundcloud;youtube;
+StartupWMClass=sonara

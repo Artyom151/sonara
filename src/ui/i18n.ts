@@ -1,0 +1,125 @@
+import { useSettings } from '../store/settings';
+
+const en = {
+  home: 'Home', search: 'Search', likes: 'Likes', profile: 'Profile',
+  trendingNow: 'Trending now', mixesForYou: 'Mixes for you', picksForYou: 'Picks for you', seeAll: 'See all',
+  trendingYoutube: 'Trending on YouTube', tracks: 'tracks', playlistOfTheDay: 'Playlist of the Day',
+  likedBy: 'Liked by', and: '&', searchPlaceholder: 'Artists, songs, playlists', all: 'All',
+  recentSearches: 'Recent searches', clear: 'Clear', browseGenres: 'Browse genres', songs: 'Songs', playlists: 'Playlists',
+  noResults: 'Nothing found', likedSongs: 'Liked Songs', yourPlaylists: 'Your playlists', newPlaylist: 'New Playlist',
+  createPlaylist: 'Create playlist', playlistName: 'Playlist name', description: 'Description', create: 'Create',
+  cancel: 'Cancel', save: 'Save', delete: 'Delete', rename: 'Rename', edit: 'Edit', done: 'Done',
+  play: 'Play', shuffle: 'Shuffle', playNext: 'Play next', addToQueue: 'Add to queue', addToPlaylist: 'Add to playlist',
+  removeFromPlaylist: 'Remove from playlist', like: 'Like', unlike: 'Remove from Likes', share: 'Share',
+  openIn: 'Open in', lyrics: 'Lyrics', queue: 'Up next', noLyrics: 'No lyrics for this track', instrumental: 'Instrumental',
+  settings: 'Settings', appearance: 'Appearance', accent: 'Accent color', accentSystem: 'Material You (system)',
+  accentArtwork: 'From artwork', accentSonara: 'Sonara violet', accentCustom: 'Custom', tintInterface: 'Tint interface',
+  tintInterfaceHint: 'Color backgrounds and glass with the accent palette', glassStyle: 'Glass', glassClear: 'Clear', glassTinted: 'Tinted',
+  reduceMotion: 'Reduce motion', splash: 'Startup animation', language: 'Language', auto: 'Automatic',
+  sources: 'Sources', soundcloudClientId: 'SoundCloud client_id', refresh: 'Refresh', youtubeKey: 'YouTube Data API key',
+  youtubeKeyHint: 'Optional. Enables official YouTube search and charts.', region: 'Region', playback: 'Playback',
+  autoplay: 'Autoplay similar tracks', skipUnavailable: 'Skip unavailable tracks', lyricsLine: 'Lyrics line in player',
+  storage: 'Storage', clearCache: 'Reset library', about: 'About', version: 'Version', recentlyPlayed: 'Recently played',
+  emptyLikes: 'Tap the heart on any track to save it here', emptyPlaylist: 'This playlist is empty', addSongs: 'Add songs',
+  dynamicUnsupported: 'Requires Android 12 or newer', copied: 'Link copied', added: 'Added', listener: 'Listener',
+  displayName: 'Display name', minutes: 'min', loadingError: 'Could not load. Pull to retry', retry: 'Retry',
+  savedPlaylists: 'Saved playlists', savePlaylist: 'Save to library', saved: 'Saved', following: 'In library',
+  stats: 'Stats', liked: 'liked', created: 'playlists', played: 'played', dislike: "Don't recommend",
+  repeat: 'Repeat', volume: 'Volume', genre: 'Genre',
+  wave: 'Wave', tune: 'Tune', forYou: 'For you', trends: 'Trends', waveFromTrack: 'From current track',
+  waveHint: 'An endless stream in your style', waveSearch: 'Artist, track, genre or mood', waveGo: 'Start',
+  waveMoods: 'Moods', live: 'Live', waveBuilding: 'Tuning the wave…', waveIdle: 'Endless, adapts as you listen',
+  reroll: 'Refresh', stop: 'Stop', pause: 'Pause', nowPlaying: 'Now playing', lessLikeThis: 'Less like this',
+  waveEmpty: 'Picking the next tracks…', moodEnergy: 'Energetic', moodChill: 'Chill', moodFocus: 'Focus',
+  moodNight: 'Night drive', moodParty: 'Party', moodSad: 'Melancholy', moodPhonk: 'Phonk', moodRomance: 'Romance',
+  hideLyrics: 'Hide lyrics', showLyrics: 'Show lyrics',
+  account: 'Account', signIn: 'Sign in', signUp: 'Sign up', signOut: 'Sign out', createAccount: 'Create account',
+  signInTitle: 'Your Sonara', signUpTitle: 'Join Sonara', authSub: 'Comment on tracks, pick a nickname and an avatar.',
+  signInPitch: 'Sign in to comment inside the player, choose a username and an avatar.',
+  email: 'Email', password: 'Password', username: 'username', usernameRules: '3–24 characters: a–z, 0–9, _ and .',
+  usernameFree: 'Available', checking: 'Checking…', or: 'or', demoAccount: 'Continue with a demo account',
+  modeCloud: 'Cloud', modeLocal: 'On this device', cloudNote: 'Cloud accounts sync through Supabase.',
+  localNote: 'A local account lives only on this device and works offline.',
+  welcome: 'Welcome to Sonara', welcomeBack: 'Welcome back', checkEmail: 'Check your email',
+  checkEmailText: 'We sent a confirmation link to', emailSent: 'Email sent', resend: 'Send again',
+  haveConfirmed: 'I confirmed — sign in', editProfile: 'Edit profile', uploadPhoto: 'Upload photo',
+  errCredentials: 'Wrong email or password', errNotConfirmed: 'Confirm your email first', errEmailTaken: 'This email is already registered',
+  errUsernameTaken: 'This username is taken', errUsernameInvalid: 'Use 3–24 characters: a–z, 0–9, _ and .',
+  errWeakPassword: 'Password must be at least 6 characters', errNetwork: 'Network error, try again', errUpload: 'Could not upload the photo',
+  basedOnLikes: 'Based on your liked tracks', graphics: 'Graphics', graphicsHint: 'Lower settings save battery on phones',
+  discordStatus: 'Show what I listen to', discordHint: 'Discord must be running. Create an app at discord.com/developers, paste its Application ID and upload the Sonara logo as an art asset named "sonara".',
+  gfxAuto: 'Automatic', gfxHigh: 'Maximum', gfxBalanced: 'Balanced', gfxLow: 'Battery saver', comments: 'Comments', noComments: 'No comments yet — be the first', commentAt: 'Comment at', send: 'Send',
+  signInToComment: 'Sign in to comment', commentsNotSetup: 'Comments need the database migration (supabase/migrations)',
+};
+
+const ru: typeof en = {
+  home: 'Главная', search: 'Поиск', likes: 'Лайки', profile: 'Профиль',
+  trendingNow: 'В тренде', mixesForYou: 'Миксы для вас', picksForYou: 'Подборка для вас', seeAll: 'Все',
+  trendingYoutube: 'В тренде на YouTube', tracks: 'треков', playlistOfTheDay: 'Плейлист дня',
+  likedBy: 'Понравилось', and: 'и', searchPlaceholder: 'Артисты, треки, плейлисты', all: 'Все',
+  recentSearches: 'Недавние запросы', clear: 'Очистить', browseGenres: 'Жанры', songs: 'Треки', playlists: 'Плейлисты',
+  noResults: 'Ничего не найдено', likedSongs: 'Любимые треки', yourPlaylists: 'Ваши плейлисты', newPlaylist: 'Новый плейлист',
+  createPlaylist: 'Создать плейлист', playlistName: 'Название', description: 'Описание', create: 'Создать',
+  cancel: 'Отмена', save: 'Сохранить', delete: 'Удалить', rename: 'Переименовать', edit: 'Изменить', done: 'Готово',
+  play: 'Слушать', shuffle: 'Перемешать', playNext: 'Играть следующим', addToQueue: 'В очередь', addToPlaylist: 'В плейлист',
+  removeFromPlaylist: 'Убрать из плейлиста', like: 'Нравится', unlike: 'Убрать из лайков', share: 'Поделиться',
+  openIn: 'Открыть в', lyrics: 'Текст', queue: 'Далее', noLyrics: 'Текст не найден', instrumental: 'Инструментал',
+  settings: 'Настройки', appearance: 'Оформление', accent: 'Акцентный цвет', accentSystem: 'Material You (системный)',
+  accentArtwork: 'По обложке', accentSonara: 'Фиолетовый Sonara', accentCustom: 'Свой', tintInterface: 'Окрашивать интерфейс',
+  tintInterfaceHint: 'Фон и стекло в цветах акцентной палитры', glassStyle: 'Стекло', glassClear: 'Прозрачное', glassTinted: 'Тонированное',
+  reduceMotion: 'Уменьшить движение', splash: 'Анимация запуска', language: 'Язык', auto: 'Автоматически',
+  sources: 'Источники', soundcloudClientId: 'SoundCloud client_id', refresh: 'Обновить', youtubeKey: 'Ключ YouTube Data API',
+  youtubeKeyHint: 'Необязательно. Включает официальный поиск и чарты YouTube.', region: 'Регион', playback: 'Воспроизведение',
+  autoplay: 'Автовоспроизведение похожих', skipUnavailable: 'Пропускать недоступные', lyricsLine: 'Строка текста в плеере',
+  storage: 'Данные', clearCache: 'Сбросить библиотеку', about: 'О приложении', version: 'Версия', recentlyPlayed: 'Недавно играли',
+  emptyLikes: 'Нажмите на сердце у трека, чтобы сохранить его здесь', emptyPlaylist: 'Плейлист пуст', addSongs: 'Добавить треки',
+  dynamicUnsupported: 'Нужен Android 12 или новее', copied: 'Ссылка скопирована', added: 'Добавлено', listener: 'Слушатель',
+  displayName: 'Имя', minutes: 'мин', loadingError: 'Не удалось загрузить', retry: 'Повторить',
+  savedPlaylists: 'Сохранённые плейлисты', savePlaylist: 'Сохранить в библиотеку', saved: 'Сохранено', following: 'В библиотеке',
+  stats: 'Статистика', liked: 'лайков', created: 'плейлистов', played: 'прослушано', dislike: 'Не рекомендовать',
+  repeat: 'Повтор', volume: 'Громкость', genre: 'Жанр',
+  wave: 'Волна', tune: 'Настроить', forYou: 'Для вас', trends: 'Тренды', waveFromTrack: 'По текущему треку',
+  waveHint: 'Бесконечный поток в вашем стиле', waveSearch: 'Артист, трек, жанр или настроение', waveGo: 'Запустить',
+  waveMoods: 'Настроение', live: 'В эфире', waveBuilding: 'Настраиваем волну…', waveIdle: 'Бесконечная, подстраивается под вас',
+  reroll: 'Обновить', stop: 'Стоп', pause: 'Пауза', nowPlaying: 'Сейчас играет', lessLikeThis: 'Меньше такого',
+  waveEmpty: 'Подбираем следующие треки…', moodEnergy: 'Энергично', moodChill: 'Спокойно', moodFocus: 'Для работы',
+  moodNight: 'Ночная поездка', moodParty: 'Вечеринка', moodSad: 'Грустное', moodPhonk: 'Фонк', moodRomance: 'Романтика',
+  hideLyrics: 'Скрыть текст', showLyrics: 'Показать текст',
+  account: 'Аккаунт', signIn: 'Войти', signUp: 'Регистрация', signOut: 'Выйти', createAccount: 'Создать аккаунт',
+  signInTitle: 'Ваш Sonara', signUpTitle: 'Присоединяйтесь', authSub: 'Комментируйте треки, выберите никнейм и аватарку.',
+  signInPitch: 'Войдите, чтобы комментировать в плеере, выбрать username и аватарку.',
+  email: 'Email', password: 'Пароль', username: 'username', usernameRules: '3–24 символа: a–z, 0–9, _ и .',
+  usernameFree: 'Свободно', checking: 'Проверяем…', or: 'или', demoAccount: 'Продолжить с демо‑аккаунтом',
+  modeCloud: 'Облако', modeLocal: 'На устройстве', cloudNote: 'Облачный аккаунт синхронизируется через Supabase.',
+  localNote: 'Локальный аккаунт хранится только на этом устройстве и работает офлайн.',
+  welcome: 'Добро пожаловать в Sonara', welcomeBack: 'С возвращением', checkEmail: 'Проверьте почту',
+  checkEmailText: 'Мы отправили ссылку для подтверждения на', emailSent: 'Письмо отправлено', resend: 'Отправить ещё раз',
+  haveConfirmed: 'Я подтвердил — войти', editProfile: 'Изменить профиль', uploadPhoto: 'Загрузить фото',
+  errCredentials: 'Неверный email или пароль', errNotConfirmed: 'Сначала подтвердите email', errEmailTaken: 'Этот email уже зарегистрирован',
+  errUsernameTaken: 'Этот username занят', errUsernameInvalid: '3–24 символа: a–z, 0–9, _ и .',
+  errWeakPassword: 'Пароль — минимум 6 символов', errNetwork: 'Ошибка сети, попробуйте ещё раз', errUpload: 'Не удалось загрузить фото',
+  basedOnLikes: 'На основе ваших любимых треков', graphics: 'Графика', graphicsHint: 'Ниже — меньше расход батареи на телефоне',
+  discordStatus: 'Показывать, что я слушаю', discordHint: 'Discord должен быть запущен. Создайте приложение на discord.com/developers, вставьте его Application ID и загрузите логотип Sonara как art asset с именем «sonara».',
+  gfxAuto: 'Автоматически', gfxHigh: 'Максимум', gfxBalanced: 'Сбалансировано', gfxLow: 'Экономно', comments: 'Комментарии', noComments: 'Пока нет комментариев — будьте первым', commentAt: 'Комментарий на', send: 'Отправить',
+  signInToComment: 'Войдите, чтобы комментировать', commentsNotSetup: 'Для комментариев нужна миграция базы (supabase/migrations)',
+};
+
+export type StrKey = keyof typeof en;
+
+export const resolveLang = (l: string) => (l === 'auto' ? (navigator.language.toLowerCase().startsWith('ru') ? 'ru' : 'en') : l);
+
+export function useT() {
+  const lang = resolveLang(useSettings((s) => s.lang));
+  const dict = lang === 'ru' ? ru : en;
+  return (k: StrKey) => dict[k];
+}
+
+export const compact = (n?: number) =>
+  n == null ? '' : n >= 1e6 ? `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(n >= 1e4 ? 0 : 1)} K` : String(n);
+
+export const fmtTime = (s: number) => {
+  if (!Number.isFinite(s) || s < 0) s = 0;
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${String(sec).padStart(2, '0')}`;
+};

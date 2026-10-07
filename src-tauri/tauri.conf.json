@@ -1,0 +1,84 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Sonara",
+  "version": "1.0.0",
+  "identifier": "app.sonara.music",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "pnpm exec vite",
+    "beforeBuildCommand": "pnpm build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Sonara",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 380,
+        "minHeight": 640,
+        "resizable": true,
+        "center": true,
+        "backgroundColor": "#000000",
+        "decorations": false,
+        "shadow": true,
+        "additionalBrowserArgs": "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --renderer-process-limit=1 --disable-background-networking --disable-component-update --disable-gpu-shader-disk-cache"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "deb",
+      "rpm",
+      "appimage",
+      "nsis",
+      "msi"
+    ],
+    "category": "Music",
+    "shortDescription": "Sonara music player",
+    "longDescription": "Stream music from SoundCloud and YouTube with synced lyrics and playlists.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "linux": {
+      "deb": {
+        "depends": [
+          "gstreamer1.0-plugins-good",
+          "gstreamer1.0-plugins-bad",
+          "gstreamer1.0-libav"
+        ]
+      },
+      "rpm": {
+        "depends": [
+          "gstreamer1-plugins-good",
+          "gstreamer1-plugins-bad-free"
+        ]
+      }
+    },
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "displayLanguageSelector": true,
+        "languages": [
+          "English",
+          "Russian"
+        ]
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    }
+  }
+}

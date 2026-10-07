@@ -1,0 +1,125 @@
+/* ───────────────────────── Liquid Glass ─────────────────────────
+   Optics come from the ported GLSL shader (src/ui/glass/shaders.ts), rendered
+   per element by src/ui/glass/liquid.ts:
+     .lg-layer        backdrop-filter: blur(B) url(#lg-N) — refraction, tint mix,
+                      rim light/shade (the shader's main()), shaped by its alpha mask
+     .glass::before   rim light overlay — only where SVG backdrop filters are unsupported
+   Defaults are deliberately transparent with a light blur. */
+
+.glass {
+  --g-radius: 999px;
+  --lg-blur: 3px;
+  --lg-tint: rgb(255 255 255 / 0.04);
+  --lg-strength: 10;
+  --lg-wave: 8;
+  --lg-edge: 1.5;
+  --lg-depth: 1;
+  --lg-alpha: 1;
+  --lg-pad: 0px;
+  position: relative;
+  border-radius: var(--g-radius);
+  background: none;
+}
+
+/* Backdrop layer (inserted as first child). Extends by the rim padding so the
+   shader's outer edge (outerEdge × 0.42) can sit just outside the box. */
+.glass > .lg-layer {
+  position: absolute;
+  inset: var(--lg-pad);
+  border-radius: inherit;
+  pointer-events: none;
+  background: var(--lg-tint);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+/* WebKit / no WebGL2 / before the maps arrive: the host itself blurs its backdrop.
+   (Its own content is never part of its backdrop, so text stays crisp.) */
+:root:not([data-lg='svg']) .glass,
+.glass:not([data-lg]) {
+  -webkit-backdrop-filter: blur(var(--lg-blur));
+  backdrop-filter: blur(var(--lg-blur));
+  background: var(--lg-tint);
+}
+:root[data-lg='svg'] .glass[data-lg] {
+  /* The backdrop layer reaches past the box (rim + lens offset) so the filter can sample there;
+     clip its painting so it never widens the page / creates sideways scrolling. */
+  overflow: clip;
+  overflow-clip-margin: 3px;
+}
+:root[data-lg='svg'] .glass[data-lg]:not(.btn.primary) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: none;
+}
+:root:not([data-lg='svg']) .glass > .lg-layer {
+  display: none;
+}
+
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: var(--lg-pad);
+  pointer-events: none;
+  background-image: var(--lg-light-map, none);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+/* Chromium: tint, rim light and shade are composited inside the SVG backdrop filter. */
+:root[data-lg='svg'] .glass[data-lg] > .lg-layer {
+  background: none;
+}
+:root[data-lg='svg'] .glass::before {
+  display: none;
+}
+
+/* Content paints above the backdrop layer. */
+.glass > :not(.lg-layer) {
+  position: relative;
+}
+
+/* Variants */
+.glass.dark {
+  --lg-tint: rgb(12 12 14 / 0.38);
+}
+.glass.clear {
+  --lg-tint: rgb(255 255 255 / 0.015);
+  --lg-blur: 2px;
+}
+:root[data-glass='tinted'] .glass {
+  --lg-tint: rgb(var(--glass-tint-rgb) / 0.4);
+  --lg-blur: 6px;
+}
+.glass.refract {
+  --lg-strength: 14;
+}
+
+/* Press feedback: glass swells slightly and brightens, like iOS 26 controls. */
+.glass-press {
+  transition:
+    transform 0.35s cubic-bezier(0.2, 1.4, 0.4, 1),
+    filter 0.25s ease;
+  will-change: transform;
+}
+.glass-press:active {
+  transform: scale(1.08);
+}
+
+/* Circle icon button used in headers (chevron, more). */
+.glass-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  color: var(--text);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass > .lg-layer {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    background: rgb(var(--glass-tint-rgb) / 0.92);
+  }
+}

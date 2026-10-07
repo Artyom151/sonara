@@ -1,0 +1,25 @@
+node_modules
+dist
+.env
+*.local
+src-tauri/target
+src-tauri/gen
+android/.gradle
+android/app/build
+android/build
+android/local.properties
+android/app/src/main/assets/public
+smoke-results
+android/keystore.properties
+android/*.jks
+android/*.keystore
+promo/.env
+promo/out
+# Generated / local-only
+liquid-glass.zip
+promo/audio/*.wav
+promo/audio/fish-raw
+promo/audio/piper
+# Shows another artist's full lyrics — keep it out of the public repo
+photos/track-with-lyrics.png
+.github-secrets*
