@@ -63,7 +63,7 @@ export function createCoreApi(fetcher: Fetcher, store?: KeyValueStore): SonaraAp
     playlist: (source: Source, id: string) => (source === 'youtube' ? yt.playlist(id) : source === 'deezer' ? dz.playlist(id) : sc.playlist(id)),
 
     async search(q, source, opts = {}): Promise<SearchResult> {
-      const useSc = source !== 'youtube' && (opts.sources?.soundcloud ?? true);
+      const useSc = (source === 'all' || source === 'soundcloud') && (opts.sources?.soundcloud ?? true);
       const useYt = (source === 'all' || source === 'youtube') && (opts.sources?.youtube ?? true);
       const useDz = (source === 'all' || source === 'deezer') && (opts.sources?.deezer ?? true);
       const [st, sp, yv, yp, dt, dp] = await Promise.all([
