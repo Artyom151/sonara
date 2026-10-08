@@ -13,13 +13,11 @@ smoke-results
 android/keystore.properties
 android/*.jks
 android/*.keystore
-promo/.env
-promo/out
 # Generated / local-only
 liquid-glass.zip
-promo/audio/*.wav
-promo/audio/fish-raw
-promo/audio/piper
 # Shows another artist's full lyrics — keep it out of the public repo
 photos/track-with-lyrics.png
 .github-secrets*
+
+# Personal promo-video workspace (kept local, not part of the project)
+promo/

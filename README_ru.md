@@ -186,7 +186,6 @@ server/          API-сервер на Hono для веб-сборки
 src-tauri/       десктоп (Rust): Discord RPC, уровень памяти WebView2
 android/ ios/    проекты Capacitor (плагин Dynamic Color, медиасервис)
 supabase/        SQL-миграции
-promo/           генератор рекламного ролика для TikTok
 scripts/         иконки, заметки к релизу, синхронизация версии, сборка Android, smoke-тест
 ```
 

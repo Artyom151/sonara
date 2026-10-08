@@ -186,7 +186,6 @@ server/          Hono API server for the web build
 src-tauri/       desktop app (Rust): Discord RPC, WebView2 memory level
 android/ ios/    Capacitor projects (Dynamic Color plugin, media service)
 supabase/        SQL migrations
-promo/           TikTok promo video generator
 scripts/         icons, release notes, version sync, Android build helpers, smoke test
 ```
 
