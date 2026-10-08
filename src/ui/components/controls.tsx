@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useMotionValue, useSpring, useTransform, type PanInfo } from 'motion/react';
+import { AnimatePresence, motion, useDragControls, useMotionValue, useSpring, useTransform, type PanInfo } from 'motion/react';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { IconCheck, IconChevronDown, IconChevronLeft, IconChevronRight } from '../icons';
@@ -284,6 +284,7 @@ export function Slider({
 
 /* ───────────── Sheet ───────────── */
 export function Sheet({ open, onClose, children, title, full }: { open: boolean; onClose: () => void; children: ReactNode; title?: ReactNode; full?: boolean }) {
+  const sheetDrag = useDragControls();
   const onDragEnd = (_: unknown, info: PanInfo) => {
     if (info.offset.y > 120 || info.velocity.y > 600) onClose();
   };
@@ -298,6 +299,9 @@ export function Sheet({ open, onClose, children, title, full }: { open: boolean;
             exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 380, damping: 38 }}
             drag="y"
+            dragListener={false}
+            dragControls={sheetDrag}
+            onPointerDown={(e) => !(e.target as HTMLElement).closest('.sheet-body') && sheetDrag.start(e)}
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0.05, bottom: 0.9 }}
             onDragEnd={onDragEnd}
@@ -306,7 +310,7 @@ export function Sheet({ open, onClose, children, title, full }: { open: boolean;
             <div className="sheet-inner">
               <div className="grabber" />
               {title && <div className="sheet-title">{title}</div>}
-              <div className="sheet-body" onPointerDownCapture={(e) => e.stopPropagation()}>
+              <div className="sheet-body">
                 {children}
               </div>
             </div>

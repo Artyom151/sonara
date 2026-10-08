@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, type PanInfo } from 'motion/react';
+import { AnimatePresence, motion, useDragControls, type PanInfo } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { goToArtist } from '../artists';
 import { api } from '../../core';
@@ -256,6 +256,13 @@ export function Player() {
   const lyrics = useLyrics(expanded ? track : undefined);
 
   const close = () => usePlayer.getState().setExpanded(false);
+  // Swipe-down-to-close starts only from "empty" areas, never from the scrubber, buttons,
+  // artwork (its own swipe) or lyrics — so seeking works with mouse and touch.
+  const dragControls = useDragControls();
+  const startDrag = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('.scrub, button, input, .player-art, .lyrics, .player-side, .comments, .player-card')) return;
+    dragControls.start(e);
+  };
   const onDragEnd = (_: unknown, info: PanInfo) => {
     if (info.offset.y > 140 || info.velocity.y > 700) close();
   };
@@ -277,6 +284,9 @@ export function Player() {
           exit={{ y: '100%', borderRadius: 40 }}
           transition={{ type: 'spring', stiffness: 300, damping: 36 }}
           drag="y"
+          dragListener={false}
+          dragControls={dragControls}
+          onPointerDown={startDrag}
           dragConstraints={{ top: 0, bottom: 0 }}
           dragElastic={{ top: 0, bottom: 0.7 }}
           onDragEnd={onDragEnd}
@@ -330,7 +340,6 @@ export function Player() {
                       if (info.offset.x < -80) usePlayer.getState().next();
                       else if (info.offset.x > 80) usePlayer.getState().prev();
                     }}
-                    onPointerDownCapture={(e) => e.stopPropagation()}
                   >
                     <Art src={track.artworkLarge ?? track.artwork} seed={track.key} />
                   </motion.div>
@@ -338,7 +347,7 @@ export function Player() {
                 <LikedBy track={track} />
               </div>
 
-              <div className="player-card glass refract" onPointerDownCapture={(e) => e.stopPropagation()}>
+              <div className="player-card glass refract">
                 <div>
                   <div className="np">
                     <div className="np-art">
@@ -384,7 +393,7 @@ export function Player() {
                 </div>
               </div>
 
-              <div className="player-foot" onPointerDownCapture={(e) => e.stopPropagation()}>
+              <div className="player-foot">
                 <button className={`ctl ${shuffle ? 'on' : 'dim'}`} aria-label={t('shuffle')} onClick={() => usePlayer.getState().toggleShuffle()}>
                   <IconShuffle size={20} />
                 </button>
@@ -421,7 +430,7 @@ export function Player() {
             </div>
 
             {sidePanel && (
-              <div className="player-side" onPointerDownCapture={(e) => e.stopPropagation()}>
+              <div className="player-side">
                 <div className="player-side-head">
                   <Segmented
                     value={sideTab}
