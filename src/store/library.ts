@@ -8,6 +8,8 @@ export interface LocalPlaylist {
   description: string;
   /** Index into the generated cover palettes. */
   cover: number;
+  /** Custom cover photo (square JPEG data URL); falls back to the generated cover. */
+  image?: string;
   tracks: Track[];
   createdAt: number;
   updatedAt: number;
@@ -24,7 +26,7 @@ interface Library {
   isLiked: (key: string) => boolean;
   toggleDislike: (t: Track) => void;
   createPlaylist: (title: string, description?: string, tracks?: Track[]) => LocalPlaylist;
-  updatePlaylist: (id: string, patch: Partial<Pick<LocalPlaylist, 'title' | 'description' | 'cover'>>) => void;
+  updatePlaylist: (id: string, patch: Partial<Pick<LocalPlaylist, 'title' | 'description' | 'cover' | 'image'>>) => void;
   deletePlaylist: (id: string) => void;
   addToPlaylist: (id: string, tracks: Track[]) => void;
   removeFromPlaylist: (id: string, key: string) => void;

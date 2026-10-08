@@ -12,6 +12,7 @@ import './platform/mediaControls';
 import './platform/discord';
 import './platform/memory';
 import './account/sync';
+import './account/cloud';
 import { isAndroid, isCapacitor } from './platform';
 import { resolveTier } from './platform/perf';
 import { useSettings } from './store/settings';

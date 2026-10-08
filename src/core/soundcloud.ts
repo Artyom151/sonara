@@ -1,4 +1,4 @@
-import type { Fetcher, Liker, Playlist, ScTranscoding, StreamInfo, Track, TrendingGenre } from './types';
+import type { Fetcher, Liker, Playlist, ScTranscoding, StreamInfo, Track, TrendingGenre, ArtistPage } from './types';
 
 const API = 'https://api-v2.soundcloud.com';
 const UA =
@@ -206,6 +206,40 @@ export class SoundCloud {
   async likers(id: string): Promise<Liker[]> {
     const r = await this.get(`/tracks/${id}/likers`, { limit: 3 });
     return (r.collection ?? []).map((u: any) => ({ name: u.first_name || u.username, avatar: artworkUrl(u.avatar_url, 'large') }));
+  }
+
+  /** Artist page for a SoundCloud user: top tracks, albums / sets. */
+  async artist(id: string): Promise<ArtistPage> {
+    const [u, top, albums, sets] = await Promise.all([
+      this.get(`/users/${id}`),
+      this.get(`/users/${id}/toptracks`, { limit: 25 }).catch(() => ({ collection: [] })),
+      this.get(`/users/${id}/albums`, { limit: 20 }).catch(() => ({ collection: [] })),
+      this.get(`/users/${id}/playlists_without_albums`, { limit: 20 }).catch(() => ({ collection: [] })),
+    ]);
+    let tracks: Track[] = (top.collection ?? []).filter((t: any) => t.policy !== 'BLOCK').map(this.mapTrack);
+    if (!tracks.length) {
+      const r = await this.get(`/users/${id}/tracks`, { limit: 25 }).catch(() => ({ collection: [] }));
+      tracks = (r.collection ?? []).filter((t: any) => t.policy !== 'BLOCK').map(this.mapTrack).sort((a: Track, b: Track) => (b.plays ?? 0) - (a.plays ?? 0));
+    }
+    return {
+      key: `soundcloud:artist:${u.id}`,
+      source: 'soundcloud',
+      id: String(u.id),
+      name: u.username,
+      picture: artworkUrl(u.avatar_url, 't500x500'),
+      fans: u.followers_count,
+      top: tracks,
+      albums: [...(albums.collection ?? []), ...(sets.collection ?? [])].map(this.mapPlaylist),
+      related: [],
+    };
+  }
+
+  /** First SoundCloud user whose name matches. */
+  async findArtist(name: string): Promise<string | null> {
+    const r = await this.get('/search/users', { q: name, limit: 5 });
+    const n = name.toLowerCase();
+    const hit = (r.collection ?? []).find((u: any) => u.username?.toLowerCase() === n) ?? r.collection?.[0];
+    return hit ? String(hit.id) : null;
   }
 
   async track(id: string): Promise<Track> {

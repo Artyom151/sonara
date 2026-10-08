@@ -11,6 +11,7 @@ export type Route =
   | { name: 'recent' }
   | { name: 'settings' }
   | { name: 'wave' }
+  | { name: 'artist'; source: Source; id?: string; artistName: string }
   | { name: 'all'; kind: 'trending' | 'mixes' | 'picks' | 'youtube' };
 
 export type Modal =
@@ -18,6 +19,7 @@ export type Modal =
   | { type: 'addToPlaylist'; tracks: Track[] }
   | { type: 'createPlaylist'; tracks?: Track[]; editId?: string }
   | { type: 'queue' }
+  | { type: 'artists'; track: Track; names: string[]; anchor?: DOMRect }
   | { type: 'lyrics' }
   | { type: 'auth'; tab?: 'signIn' | 'signUp' }
   | { type: 'editProfile' }

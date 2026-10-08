@@ -1,7 +1,7 @@
 import { useLibrary } from '../../store/library';
 import { useUi } from '../../store/ui';
 import { Art } from '../components/controls';
-import { MixCover } from '../components/MixCover';
+import { PlaylistCover } from '../components/MixCover';
 import { TrackList } from '../components/TrackRow';
 import { useT } from '../i18n';
 import { IconChevronRight, IconHeart, IconPlus } from '../icons';
@@ -25,7 +25,7 @@ export function PlaylistTiles() {
       {playlists.map((p) => (
         <button key={p.id} className="lib-tile" onClick={() => push({ name: 'local', id: p.id })}>
           <div className="lib-cover">
-            <MixCover index={p.cover} />
+            <PlaylistCover p={p} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <b>{p.title}</b>

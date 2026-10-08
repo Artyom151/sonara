@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import type { Track } from '../core/types';
-import type { AccountProvider, Comment, Liker, Profile } from './types';
+import type { AccountProvider, Comment, Liker, Profile, SyncRow } from './types';
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
@@ -17,7 +17,7 @@ interface ProfileRow {
 }
 
 /** Small, stream-free copy of a track for the synced library. */
-const snapshot = (t: Track) => ({
+export const snapshot = (t: Track): Track => ({
   key: t.key,
   id: t.id,
   source: t.source,
@@ -160,6 +160,27 @@ export function remoteProvider(sb: SupabaseClient): AccountProvider {
           .filter(Boolean)
           .map((u: any) => ({ id: u.id, username: u.username, displayName: u.display_name || u.username, avatar: u.avatar }));
         return { users, count: count ?? users.length };
+      },
+    },
+
+    sync: {
+      async load(userId) {
+        const { data, error } = await sb.from('user_sync').select('playlists, saved, recent, dislikes, prefs, now_playing, likes_at').eq('user_id', userId).maybeSingle();
+        if (error) throw new Error(error.code === 'PGRST205' || error.code === '42P01' ? 'sync_not_setup' : error.message);
+        return (data as SyncRow | null) ?? null;
+      },
+      async save(userId, patch) {
+        const { error } = await sb.from('user_sync').upsert({ user_id: userId, ...patch, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+        if (error) throw new Error(error.code === 'PGRST205' || error.code === '42P01' ? 'sync_not_setup' : error.message);
+      },
+      subscribe(userId, onChange) {
+        const channel = sb
+          .channel(`sync:${userId}:${crypto.randomUUID()}`)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'user_sync', filter: `user_id=eq.${userId}` }, () => onChange())
+          .subscribe();
+        return () => {
+          sb.removeChannel(channel);
+        };
       },
     },
 

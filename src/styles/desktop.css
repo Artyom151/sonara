@@ -155,15 +155,29 @@
   inset: -60px 0 0;
 }
 
-/* Player bar */
+/* Player bar: floats over the bottom of the content panel (like the phone tab bar), so the
+   glass has content to refract while you scroll. */
+.app.desk .main {
+  grid-row: 2 / 4;
+  margin-bottom: 12px;
+}
+.app.desk:not(.island-mode) .screen {
+  padding-bottom: 150px;
+}
 .pbar {
   grid-column: 2;
   grid-row: 3;
+  align-self: end;
+  z-index: 30;
   height: 88px;
-  margin: 10px 12px 12px 0;
-  --g-radius: 22px;
-  --lg-tint: color-mix(in srgb, var(--accent-container) 26%, transparent);
-  --lg-blur: 4px;
+  margin: 0 24px 22px 12px;
+  --g-radius: 24px;
+  --lg-tint: color-mix(in srgb, var(--accent-container) 14%, rgb(20 20 24 / 0.16));
+  --lg-blur: 5px;
+  --lg-strength: 14;
+  --lg-depth: 1.6;
+  --lg-edge: 2;
+  box-shadow: 0 18px 40px -18px rgb(0 0 0 / 0.7);
 }
 .pbar-inner {
   height: 100%;

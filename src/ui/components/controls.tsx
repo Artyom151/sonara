@@ -1,7 +1,7 @@
 import { AnimatePresence, motion, useMotionValue, useSpring, useTransform, type PanInfo } from 'motion/react';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { IconCheck, IconChevronDown } from '../icons';
+import { IconCheck, IconChevronDown, IconChevronLeft, IconChevronRight } from '../icons';
 
 const spring = { type: 'spring', stiffness: 520, damping: 34, mass: 0.8 } as const;
 const softSpring = { type: 'spring', stiffness: 380, damping: 32 } as const;
@@ -100,19 +100,31 @@ export interface MenuItem {
   icon?: ReactNode;
   checked?: boolean;
   destructive?: boolean;
-  onSelect: () => void;
+  onSelect?: () => void;
   separatorBefore?: boolean;
+  /** Nested menu: selecting the item swaps the menu content for these items (iOS style). */
+  children?: MenuItem[];
+  /** Shown on the right of an item with children (e.g. the current choice). */
+  detail?: string;
 }
 
 export function Menu({ anchor, items, onClose }: { anchor: DOMRect | null; items: MenuItem[]; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number; origin: string; maxH: number } | null>(null);
+  const [sub, setSub] = useState<MenuItem | null>(null);
+  useEffect(() => {
+    if (!anchor) setSub(null);
+  }, [anchor]);
+  const shown = sub?.children ?? items;
 
   useLayoutEffect(() => {
     if (!anchor || !ref.current) return;
-    const m = ref.current.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    // offsetWidth/Height ignore the entrance scale animation (getBoundingClientRect would report
+    // a 0.4x box on the first frame and the menu would be placed as if it were tiny).
+    const m = { width: ref.current.offsetWidth, height: ref.current.offsetHeight };
+    const vv = window.visualViewport;
+    const vw = vv?.width ?? window.innerWidth;
+    const vh = vv?.height ?? window.innerHeight;
     const gap = 8;
     const margin = 12;
     const spaceBelow = vh - anchor.bottom - gap - margin;
@@ -123,42 +135,74 @@ export function Menu({ anchor, items, onClose }: { anchor: DOMRect | null; items
     const h = Math.min(m.height, maxH);
     const top = below ? anchor.bottom + gap : anchor.top - gap - h;
     const alignRight = anchor.left + anchor.width / 2 > vw / 2;
-    const left = Math.min(vw - m.width - margin, Math.max(margin, alignRight ? anchor.right - m.width : anchor.left));
+    const width = Math.min(m.width, vw - margin * 2);
+    const left = Math.min(vw - width - margin, Math.max(margin, alignRight ? anchor.right - width : anchor.left));
     setPos({ left, top, maxH, origin: `${alignRight ? 'right' : 'left'} ${below ? 'top' : 'bottom'}` });
-  }, [anchor]);
+  }, [anchor, sub]);
 
   return createPortal(
     <AnimatePresence>
       {anchor && (
-        <motion.div className="menu-scrim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+        // The scrim is transparent: no opacity animation here either (it would be a backdrop root).
+        <motion.div className="menu-scrim" exit={{ x: 0, transition: { duration: 0.16 } }} onClick={onClose}>
           <motion.div
             ref={ref}
             className="menu glass refract"
             style={{ left: pos?.left ?? -9999, top: pos?.top ?? 0, transformOrigin: pos?.origin }}
-            initial={{ opacity: 0, scale: 0.4, filter: 'blur(8px)' }}
-            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)', transitionEnd: { filter: 'none' } }}
-            exit={{ opacity: 0, scale: 0.6, filter: 'blur(6px)' }}
+            // Only transform on the glass itself: opacity or filter on it would make it a backdrop
+            // root, and the liquid glass layer inside would show no backdrop until the end.
+            initial={{ scale: 0.4 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0.6, transition: { duration: 0.16 } }}
             transition={{ type: 'spring', stiffness: 460, damping: 32 }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ maxHeight: pos?.maxH }}>
-              {items.map((it, i) => (
-                <div key={i}>
+            <motion.div
+              className="menu-scroll"
+              style={{ maxHeight: pos?.maxH }}
+              initial={{ opacity: 0, filter: 'blur(6px)' }}
+              animate={{ opacity: 1, filter: 'blur(0px)', transitionEnd: { filter: 'none' } }}
+              exit={{ opacity: 0, filter: 'blur(4px)', transition: { duration: 0.14 } }}
+              transition={{ duration: 0.22 }}
+            >
+              {sub && (
+                <>
+                  <button className="menu-item menu-back" onClick={() => setSub(null)}>
+                    <span className="menu-check">
+                      <IconChevronLeft size={15} />
+                    </span>
+                    <span className="menu-label">{sub.label}</span>
+                  </button>
+                  <div className="menu-sep" />
+                </>
+              )}
+              {shown.map((it, i) => (
+                <div key={`${sub?.label ?? ''}${i}`}>
                   {it.separatorBefore && <div className="menu-sep" />}
                   <button
                     className={`menu-item ${it.destructive ? 'destructive' : ''}`}
                     onClick={() => {
+                      if (it.children) return setSub(it);
                       onClose();
-                      it.onSelect();
+                      it.onSelect?.();
                     }}
                   >
                     <span className="menu-check">{it.checked && <IconCheck size={15} />}</span>
-                    <span className="menu-label">{it.label}</span>
-                    {it.icon && <span className="menu-icon">{it.icon}</span>}
+                    <span className="menu-label">
+                      {it.label}
+                      {it.detail && <small className="menu-detail">{it.detail}</small>}
+                    </span>
+                    {it.children ? (
+                      <span className="menu-icon">
+                        <IconChevronRight size={15} />
+                      </span>
+                    ) : (
+                      it.icon && <span className="menu-icon">{it.icon}</span>
+                    )}
                   </button>
                 </div>
               ))}
-            </div>
+            </motion.div>
           </motion.div>
         </motion.div>
       )}
@@ -336,21 +380,32 @@ export function Field(props: React.InputHTMLAttributes<HTMLInputElement>) {
 export function Marquee({ text, className }: { text: string; className?: string }) {
   const box = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLSpanElement>(null);
-  const [run, setRun] = useState(false);
+  // Width of one copy incl. its gap (0 = the text fits). Only box width changes re-measure.
+  const [loop, setLoop] = useState(0);
   useLayoutEffect(() => {
     const b = box.current;
     const i = inner.current;
     if (!b || !i) return;
-    const check = () => setRun(i.scrollWidth - 48 > b.clientWidth + 2);
+    let lastW = -1;
+    const check = () => {
+      const w = b.clientWidth;
+      if (w === lastW) return;
+      lastW = w;
+      setLoop(i.scrollWidth > w + 2 ? i.scrollWidth + 40 : 0); // + the 40px gap between copies
+    };
     check();
     const ro = new ResizeObserver(check);
     ro.observe(b);
     return () => ro.disconnect();
   }, [text]);
+  // Endless loop: two copies scroll by exactly one copy, so the end frame equals the start frame.
+  const style = loop ? ({ '--mq-loop': `-${loop}px`, '--mq-dur': `${Math.max(6, loop / 38 + 2)}s` } as React.CSSProperties) : undefined;
   return (
-    <div ref={box} className={`marquee ${run ? 'run' : ''} ${className ?? ''}`} style={{ ['--mq-dur' as string]: `${Math.max(8, text.length * 0.35)}s` }}>
-      <span ref={inner}>{text}</span>
-      {run && <span aria-hidden>{text}</span>}
+    <div ref={box} className={`marquee ${loop ? 'run' : ''} ${className ?? ''}`}>
+      <div className="marquee-track" style={style}>
+        <span ref={inner}>{text}</span>
+        {loop > 0 && <span aria-hidden>{text}</span>}
+      </div>
     </div>
   );
 }

@@ -29,6 +29,17 @@ export interface SignUpInput {
   avatar: string;
 }
 
+/** One JSON section per column of public.user_sync (see supabase/migrations/0003_sonara_sync.sql). */
+export interface SyncRow {
+  playlists?: unknown;
+  saved?: unknown;
+  recent?: unknown;
+  dislikes?: unknown;
+  prefs?: unknown;
+  now_playing?: unknown;
+  likes_at?: number | null;
+}
+
 export interface AccountProvider {
   kind: 'supabase' | 'mock';
   restore(): Promise<Profile | null>;
@@ -45,6 +56,14 @@ export interface AccountProvider {
     upsert(userId: string, tracks: Track[]): Promise<void>;
     list(userId: string): Promise<Track[]>;
     likedBy(trackKey: string): Promise<{ users: Liker[]; count: number }>;
+  };
+  sync: {
+    /** null: nothing synced yet. Throws 'sync_not_setup' when the table is missing. */
+    load(userId: string): Promise<SyncRow | null>;
+    /** Writes only the given sections. */
+    save(userId: string, patch: SyncRow): Promise<void>;
+    /** Called when another device (or window) changed the row. */
+    subscribe(userId: string, onChange: () => void): () => void;
   };
   comments: {
     list(trackKey: string): Promise<Comment[]>;

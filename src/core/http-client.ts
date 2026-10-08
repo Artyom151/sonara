@@ -10,6 +10,7 @@ export function createHttpApi(base = '', getOptions: () => ApiOptions = () => ({
     if (o.sources) {
       h['x-src-sc'] = o.sources.soundcloud ? '1' : '0';
       h['x-src-yt'] = o.sources.youtube ? '1' : '0';
+      h['x-src-dz'] = o.sources.deezer === false ? '0' : '1';
     }
     return h;
   };
@@ -34,6 +35,7 @@ export function createHttpApi(base = '', getOptions: () => ApiOptions = () => ({
       return { ...s, url: s.url.startsWith('/') ? base + s.url : s.url };
     },
     lyrics: (track) => get('lyrics', { track: t(track) }),
+    artist: (ref) => get('artist', { source: ref.source, name: ref.name, ...(ref.id ? { id: ref.id } : {}) }),
     likers: (track) => get('likers', { track: t(track) }),
     clientId: async (refresh) => (await get<{ clientId: string }>('client-id', refresh ? { refresh: '1' } : {})).clientId,
   };

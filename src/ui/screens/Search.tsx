@@ -6,7 +6,7 @@ import { useUi } from '../../store/ui';
 import { Art, Segmented } from '../components/controls';
 import { TrackList } from '../components/TrackRow';
 import { useT } from '../i18n';
-import { IconClose, IconSearch, IconSoundCloud, IconYouTube } from '../icons';
+import { IconClose, IconSearch, IconSoundCloud, IconDeezer, IconYouTube } from '../icons';
 import { useHome } from './Home';
 
 const YT_PLAYLIST = /[?&]list=([\w-]+)/;
@@ -73,6 +73,7 @@ export function Search() {
             { value: 'all', label: t('all') },
             { value: 'soundcloud', label: (<><IconSoundCloud size={15} /> SoundCloud</>) },
             { value: 'youtube', label: (<><IconYouTube size={15} /> YouTube</>) },
+            { value: 'deezer', label: (<><IconDeezer size={15} /> Deezer</>) },
           ]}
         />
       </div>
@@ -141,7 +142,7 @@ export function Search() {
                     </div>
                     <div className="track-title" style={{ marginTop: 6 }}>{p.title}</div>
                     <div className="track-sub">
-                      {p.source === 'youtube' ? <IconYouTube size={12} /> : <IconSoundCloud size={12} />}
+                      {p.source === 'youtube' ? <IconYouTube size={12} /> : p.source === 'deezer' ? <IconDeezer size={12} /> : <IconSoundCloud size={12} />}
                       {p.subtitle}
                     </div>
                   </button>

@@ -9,9 +9,11 @@ import { Logo } from '../components/Brand';
 import { Select, Toggle } from '../components/controls';
 import { toast } from '../components/Toast';
 import { useT } from '../i18n';
-import { IconChevronLeft, IconChevronRight, IconDiscord, IconMusic, IconQuote, IconSoundCloud, IconYouTube } from '../icons';
+import { IconChevronLeft, IconChevronRight, IconDeezer, IconDiscord, IconMusic, IconQuote, IconSoundCloud, IconYouTube } from '../icons';
 import { useAccount } from '../../account/store';
+import { pull, useCloud } from '../../account/cloud';
 import { Avatar } from '../components/Avatar';
+import { useDesktop } from '../useMedia';
 
 const SWATCHES = ['#8b5cf6', '#ff375f', '#ff9f0a', '#ffd60a', '#30d158', '#64d2ff', '#0a84ff', '#bf5af2', '#ff6482'];
 const REGIONS = ['US', 'GB', 'DE', 'FR', 'RU', 'UA', 'KZ', 'BR', 'JP', 'KR', 'IN', 'TR', 'PL', 'ES', 'IT', 'CA', 'AU'];
@@ -39,6 +41,8 @@ export function Settings() {
   const pop = useUi((x) => x.pop);
   const open = useUi((x) => x.open);
   const account = useAccount();
+  const desktop = useDesktop();
+  const cloud = useCloud();
   const [clientId, setClientId] = useState('…');
   const [dynamicOk, setDynamicOk] = useState<boolean | null>(null);
 
@@ -94,6 +98,9 @@ export function Settings() {
             onChange={(v) => s.set({ graphics: v })}
           />
         </Cell>
+        <Cell noicon label={t('islandPlayer')} hint={t(desktop ? 'islandPlayerHintDesk' : 'islandPlayerHint')}>
+          <Toggle checked={s.islandPlayer} onChange={(v) => s.set({ islandPlayer: v })} />
+        </Cell>
         <Cell noicon label={t('reduceMotion')}>
           <Toggle checked={s.reduceMotion} onChange={(v) => s.set({ reduceMotion: v })} />
         </Cell>
@@ -112,6 +119,9 @@ export function Settings() {
         </Cell>
         <Cell icon={<IconYouTube size={18} />} color="#ff0033" label="YouTube">
           <Toggle checked={s.sources.youtube} onChange={(v) => s.set({ sources: { ...s.sources, youtube: v } })} />
+        </Cell>
+        <Cell icon={<IconDeezer size={18} />} color="#a238ff" label="Deezer">
+          <Toggle checked={s.sources.deezer ?? true} onChange={(v) => s.set({ sources: { ...s.sources, deezer: v } })} />
         </Cell>
         <Cell noicon label={t('soundcloudClientId')}>
           <span className="cell-value mono">{clientId.length > 12 ? `${clientId.slice(0, 6)}…${clientId.slice(-4)}` : clientId}</span>
@@ -185,6 +195,23 @@ export function Settings() {
                 <span className="cell-value">{account.profile.email}</span>
               </div>
             )}
+            <button className="cell noicon" onClick={() => pull()} disabled={cloud.status === 'syncing'}>
+              <span className="cell-label">
+                {t('syncNow')}
+                <small>
+                  {cloud.status === 'syncing'
+                    ? t('syncing')
+                    : cloud.status === 'not_setup'
+                      ? t('syncNotSetup')
+                      : cloud.status === 'error'
+                        ? t('syncError')
+                        : cloud.lastSync
+                          ? `${t('syncOk')} · ${new Date(cloud.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                          : t('syncHint')}
+                </small>
+              </span>
+              {cloud.status === 'syncing' ? <span className="spinner" style={{ width: 16, height: 16 }} /> : null}
+            </button>
             <button className="cell destructive" onClick={() => account.signOut()}>
               {t('signOut')}
             </button>
@@ -196,7 +223,9 @@ export function Settings() {
           </button>
         )}
       </div>
-      <div className="group-foot">{account.cloudAvailable ? t('cloudNote') : t('localNote')}</div>
+      <div className="group-foot">
+        {account.profile ? (account.mode === 'supabase' ? t('syncHint') : t('syncLocal')) : account.cloudAvailable ? t('cloudNote') : t('localNote')}
+      </div>
 
       <div className="group-label">{t('storage')}</div>
       <div className="group">

@@ -1,6 +1,6 @@
 import { blobToDataUrl } from './image';
 import type { Track } from '../core/types';
-import type { AccountProvider, Comment, Profile } from './types';
+import type { AccountProvider, Comment, Profile, SyncRow } from './types';
 
 /**
  * Offline account: everything lives in this device's storage. Used when Supabase
@@ -21,6 +21,8 @@ const COMMENTS = 'sonara.mock.comments';
 /** trackKey → userIds, plus per-user track snapshots. */
 const LIKES = 'sonara.mock.likes';
 const LIKED_TRACKS = 'sonara.mock.likedTracks';
+/** Per-user sync row; other windows on this device see changes through the storage event. */
+const SYNC = 'sonara.mock.sync.';
 
 const read = <T,>(k: string, d: T): T => {
   try {
@@ -125,6 +127,22 @@ export const mockProvider: AccountProvider = {
       const byId = new Map(Object.values(users()).map((u) => [u.id, u.profile]));
       const people = ids.map((id) => byId.get(id)).filter(Boolean) as Profile[];
       return { users: people.slice(0, 3), count: people.length };
+    },
+  },
+
+  sync: {
+    async load(userId) {
+      return read<SyncRow | null>(SYNC + userId, null);
+    },
+    async save(userId, patch) {
+      write(SYNC + userId, { ...read<SyncRow>(SYNC + userId, {}), ...patch });
+    },
+    subscribe(userId, onChange) {
+      const on = (e: StorageEvent) => {
+        if (e.key === SYNC + userId) onChange();
+      };
+      window.addEventListener('storage', on);
+      return () => window.removeEventListener('storage', on);
     },
   },
 

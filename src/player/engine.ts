@@ -1,7 +1,7 @@
 import type Hls from 'hls.js';
 import { api } from '../core';
 import type { Track } from '../core/types';
-import { nativeFetch } from '../platform';
+import { isTauri, nativeFetch } from '../platform';
 import { useLibrary } from '../store/library';
 import { usePlayer } from '../store/player';
 import { useSettings } from '../store/settings';
@@ -29,14 +29,50 @@ const resetSource = () => {
   blobUrl = null;
 };
 
-/** Native platforms: when a direct URL is rejected, download through the native fetch. */
-async function viaNativeBlob(url: string) {
+const YT_UA = 'com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X;)';
+const CHUNK = 1 << 20; // googlevideo throttles long un-ranged reads; 1 MB ranges come at full speed
+
+/**
+ * Native platforms: download YouTube audio through the native fetch in parallel 1 MB ranges and
+ * play it from a blob. The webview's own media stack cannot be used for googlevideo URLs:
+ * WebKitGTK's GStreamer source never starts (play() hangs without an error) and other webviews
+ * get 403 for URLs issued to the iOS client.
+ */
+async function viaNativeBlob(url: string, token: number) {
   if (!nativeFetch) throw new Error('unavailable');
-  const r = await nativeFetch(url, { headers: { 'User-Agent': 'com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X;)' } });
-  if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  blobUrl = URL.createObjectURL(await r.blob());
+  const get = async (from: number, to: number) => {
+    for (let attempt = 0; ; attempt++) {
+      const r = await nativeFetch!(`${url}&range=${from}-${to}`, { headers: { 'User-Agent': YT_UA } });
+      if (r.ok) return { buf: await r.arrayBuffer(), total: Number(r.headers.get('content-range')?.split('/')[1]) || 0, len: Number(r.headers.get('content-length')) || 0 };
+      if (attempt >= 2) throw new Error(`HTTP ${r.status}`);
+    }
+  };
+  const fromUrl = Number(new URL(url).searchParams.get('clen')) || 0;
+  const first = await get(0, CHUNK - 1);
+  const total = fromUrl || first.total || first.buf.byteLength;
+  const parts: ArrayBuffer[] = [first.buf];
+  if (first.buf.byteLength < total) {
+    const ranges: [number, number][] = [];
+    for (let from = first.buf.byteLength; from < total; from += CHUNK) ranges.push([from, Math.min(total, from + CHUNK) - 1]);
+    const out: ArrayBuffer[] = new Array(ranges.length);
+    let next = 0;
+    const worker = async () => {
+      while (next < ranges.length && token === loadToken) {
+        const i = next++;
+        out[i] = (await get(ranges[i][0], ranges[i][1])).buf;
+      }
+    };
+    await Promise.all([worker(), worker(), worker(), worker()]);
+    if (token !== loadToken) throw new Error('superseded');
+    parts.push(...out);
+  }
+  const mime = new URL(url).searchParams.get('mime') ?? 'audio/mp4';
+  if (blobUrl) URL.revokeObjectURL(blobUrl);
+  blobUrl = URL.createObjectURL(new Blob(parts, { type: mime }));
   return blobUrl;
 }
+
+const isYouTubeAudio = (t: Track) => t.source === 'youtube' || t.source === 'deezer';
 
 async function attach(url: string, kind: 'progressive' | 'hls') {
   switching = true;
@@ -60,7 +96,13 @@ async function load(track: Track, autoplay: boolean, startAt = 0) {
   try {
     const s = await api.stream(track);
     if (token !== loadToken) return;
-    await attach(s.url, s.kind);
+    // Desktop (Tauri): always through the native fetch, see viaNativeBlob. Android plays the
+    // URL directly and falls back to it in playSafe.
+    if (isYouTubeAudio(track) && isTauri && /googlevideo\.com/.test(s.url)) {
+      const blob = await viaNativeBlob(s.url, token);
+      if (token !== loadToken) return;
+      await attach(blob, 'progressive');
+    } else await attach(s.url, s.kind);
     // Resume position only once metadata is known; setting it earlier is ignored or aborts play().
     if (startAt > 1) {
       const seekTo = () => {
@@ -96,8 +138,8 @@ async function playSafe(track: Track, url: string) {
       if (usePlayer.getState().playing) await audio.play();
       return;
     }
-    if (track.source === 'youtube' && nativeFetch) {
-      audio.src = await viaNativeBlob(url);
+    if (isYouTubeAudio(track) && nativeFetch && !url.startsWith('blob:')) {
+      audio.src = await viaNativeBlob(url, loadToken);
       await audio.play();
       return;
     }
@@ -135,9 +177,9 @@ audio.addEventListener('pause', () => {
 audio.addEventListener('error', () => {
   const t = usePlayer.getState().current();
   if (!t || t.key !== loadedKey || !audio.src) return;
-  if (t.source === 'youtube' && nativeFetch && !blobUrl) {
+  if ((t.source === 'youtube' || t.source === 'deezer') && nativeFetch && !blobUrl) {
     const src = audio.src;
-    viaNativeBlob(src)
+    viaNativeBlob(src, loadToken)
       .then((u) => {
         audio.src = u;
         return audio.play();

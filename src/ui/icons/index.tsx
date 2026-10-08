@@ -108,3 +108,9 @@ export const IconYouTube = ({ size = 24, ...p }: P) => (
     <path d="M21.6 7.2a2.6 2.6 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4A2.6 2.6 0 0 0 2.4 7.2C2 8.8 2 12 2 12s0 3.2.4 4.8a2.6 2.6 0 0 0 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.4a2.6 2.6 0 0 0 1.8-1.8c.4-1.6.4-4.8.4-4.8s0-3.2-.4-4.8zM10 15V9l5.2 3z" />
   </svg>
 );
+
+export const IconDeezer = ({ size = 24, ...p }: P) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden {...p}>
+    <path d="M2 16h3.6v2.4H2zM6.6 16h3.6v2.4H6.6zM11.2 16h3.6v2.4h-3.6zM15.8 16h3.6v2.4h-3.6zM6.6 12.8h3.6v2.4H6.6zM11.2 12.8h3.6v2.4h-3.6zM15.8 12.8h3.6v2.4h-3.6zM11.2 9.6h3.6V12h-3.6zM15.8 9.6h3.6V12h-3.6zM15.8 6.4h3.6v2.4h-3.6z" />
+  </svg>
+);

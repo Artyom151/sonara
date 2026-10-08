@@ -1,4 +1,4 @@
-export type Source = 'soundcloud' | 'youtube';
+export type Source = 'soundcloud' | 'youtube' | 'deezer';
 
 export type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -57,6 +57,8 @@ export interface HomeData {
   mixes: Playlist[];
   picks: Track[];
   youtube: Track[];
+  /** Deezer global chart. */
+  deezer?: Track[];
 }
 
 export interface SearchResult {
@@ -89,7 +91,28 @@ export interface Liker {
 export interface ApiOptions {
   youtubeApiKey?: string;
   region?: string;
-  sources?: { soundcloud: boolean; youtube: boolean };
+  sources?: { soundcloud: boolean; youtube: boolean; deezer?: boolean };
+}
+
+/** What the UI knows about an artist when opening their page. */
+export interface ArtistRef {
+  source: Source;
+  /** Native id when known (SoundCloud user id, Deezer artist id, YouTube channel id). */
+  id?: string;
+  name: string;
+}
+
+export interface ArtistPage {
+  key: string;
+  source: Source;
+  id: string;
+  name: string;
+  picture?: string;
+  /** Followers / fans. */
+  fans?: number;
+  top: Track[];
+  albums: Playlist[];
+  related: (ArtistRef & { picture?: string })[];
 }
 
 export interface SonaraApi {
@@ -104,4 +127,5 @@ export interface SonaraApi {
   /** Popular tracks for a genre or tag (SoundCloud). */
   tagTracks(tag: string): Promise<Track[]>;
   clientId(refresh?: boolean): Promise<string>;
+  artist(ref: ArtistRef): Promise<ArtistPage>;
 }

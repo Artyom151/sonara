@@ -49,3 +49,9 @@ export function MixCover({ index, className }: { index: number; className?: stri
     </svg>
   );
 }
+
+/** A local playlist's cover: the user's photo when set, otherwise the generated one. */
+export function PlaylistCover({ p, className }: { p: { cover: number; image?: string; title?: string }; className?: string }) {
+  if (p.image) return <img className={className} src={p.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />;
+  return <MixCover index={p.cover} className={className} />;
+}

@@ -1,5 +1,6 @@
 import { AnimatePresence, motion, type PanInfo } from 'motion/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { goToArtist } from '../artists';
 import { api } from '../../core';
 import type { Lyrics, Track } from '../../core/types';
 import { seek, togglePlay } from '../../player/engine';
@@ -345,7 +346,9 @@ export function Player() {
                     </div>
                     <div className="np-meta">
                       <Marquee className="np-title" text={track.title} />
-                      <div className="np-artist">{track.artist}</div>
+                      <button className="np-artist link" onClick={(e) => goToArtist(track, e.currentTarget.getBoundingClientRect())}>
+                        {track.artist}
+                      </button>
                     </div>
                   </div>
                   <Scrubber />

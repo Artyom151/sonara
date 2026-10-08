@@ -15,7 +15,7 @@ export interface Settings {
   /** Graphics quality; 'auto' picks by device (see platform/perf). */
   graphics: 'auto' | 'high' | 'balanced' | 'low';
   showSplash: boolean;
-  sources: { soundcloud: boolean; youtube: boolean };
+  sources: { soundcloud: boolean; youtube: boolean; deezer?: boolean };
   youtubeApiKey: string;
   region: string;
   autoplay: boolean;
@@ -28,6 +28,8 @@ export interface Settings {
   /** Desktop: Discord Rich Presence. */
   discordEnabled: boolean;
   discordAppId: string;
+  /** Now playing as a Dynamic Island-style pill (phone: top of the screen, desktop: title bar). */
+  islandPlayer: boolean;
   set: (patch: Partial<Settings>) => void;
 }
 
@@ -42,7 +44,7 @@ export const useSettings = create<Settings>()(
       reduceMotion: false,
       graphics: 'auto',
       showSplash: true,
-      sources: { soundcloud: true, youtube: true },
+      sources: { soundcloud: true, youtube: true, deezer: true },
       youtubeApiKey: '',
       region: 'US',
       autoplay: true,
@@ -53,6 +55,7 @@ export const useSettings = create<Settings>()(
       displayName: 'Listener',
       discordEnabled: true,
       discordAppId: (import.meta.env.VITE_DISCORD_APP_ID as string | undefined) ?? '',
+      islandPlayer: false,
       set: (patch) => set(patch),
     }),
     { name: 'sonara.settings', partialize: ({ set: _, ...rest }) => rest },

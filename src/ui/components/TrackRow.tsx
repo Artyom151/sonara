@@ -3,7 +3,7 @@ import { useLibrary } from '../../store/library';
 import { usePlayer, type QueueContext } from '../../store/player';
 import { useUi } from '../../store/ui';
 import { compact, fmtTime } from '../i18n';
-import { IconMore, IconSoundCloud, IconYouTube } from '../icons';
+import { IconMore, IconSoundCloud, IconDeezer, IconYouTube } from '../icons';
 import { Art } from './controls';
 
 export function EqBars({ paused }: { paused?: boolean }) {
@@ -17,7 +17,7 @@ export function EqBars({ paused }: { paused?: boolean }) {
 }
 
 export function SourceMark({ source }: { source: Track['source'] }) {
-  return source === 'youtube' ? <IconYouTube size={12} /> : <IconSoundCloud size={12} />;
+  return source === 'youtube' ? <IconYouTube size={12} /> : source === 'deezer' ? <IconDeezer size={12} /> : <IconSoundCloud size={12} />;
 }
 
 export function TrackRow({

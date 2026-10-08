@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { togglePlay } from '../../player/engine';
 import { useLibrary } from '../../store/library';
+import { useSettings } from '../../store/settings';
 import { usePlayer } from '../../store/player';
 import { useUi, type Tab } from '../../store/ui';
 import { useT } from '../i18n';
@@ -91,9 +92,10 @@ export function TabBar() {
 }
 
 export function Dock() {
+  const island = useSettings((s) => s.islandPlayer);
   return (
     <div className="dock">
-      <MiniPlayer />
+      {island ? null : <MiniPlayer />}
       <TabBar />
     </div>
   );

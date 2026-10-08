@@ -17,6 +17,8 @@ import { TitleBar, isMac } from './desktop/TitleBar';
 import { isTauri } from '../platform';
 import { useDesktop } from './useMedia';
 import { Toasts } from './components/Toast';
+import { IslandPlayer } from './components/IslandPlayer';
+import { Handoff } from './components/Handoff';
 import { RouteView } from './screens/Detail';
 import { Home } from './screens/Home';
 import { Likes } from './screens/Likes';
@@ -38,7 +40,7 @@ function TabStack({ tab }: { tab: Tab }) {
   const active = useUi((s) => s.tab === tab);
   const top = stack.at(-1);
   return (
-    <div style={{ position: 'absolute', inset: 0, display: active ? 'block' : 'none' }}>
+    <div className="tab-stack" style={{ position: 'absolute', inset: 0, display: active ? 'block' : 'none' }}>
       {ROOTS[tab]()}
       <AnimatePresence initial={false}>
         {stack.map((r, i) => (
@@ -61,6 +63,10 @@ function TabStack({ tab }: { tab: Tab }) {
 export function App() {
   const desktop = useDesktop();
   const showSplash = useSettings((s) => s.showSplash);
+  const island = useSettings((s) => s.islandPlayer);
+  useEffect(() => {
+    document.documentElement.dataset.island = island ? (desktop ? 'desk' : '1') : '0';
+  }, [island, desktop]);
   const [splash, setSplash] = useState(showSplash);
   const done = useCallback(() => setSplash(false), []);
 
@@ -92,7 +98,7 @@ export function App() {
   }, []);
 
   return (
-    <div className={`app ${desktop ? 'desk' : ''} ${isTauri && isMac ? 'mac' : ''}`}>
+    <div className={`app ${desktop ? 'desk' : ''} ${desktop && island ? 'island-mode' : ''} ${isTauri && isMac ? 'mac' : ''}`}>
       <ThemeController />
       {desktop && <TitleBar />}
       {desktop && <Rail />}
@@ -101,11 +107,14 @@ export function App() {
           <TabStack key={t} tab={t} />
         ))}
         {!desktop && <Dock />}
+        {!desktop && island && <IslandPlayer />}
       </main>
-      {desktop && <PlayerBar />}
+      {desktop && !island && <PlayerBar />}
+      {desktop && island && <IslandPlayer desktop />}
       <Player />
       <Modals />
       <Toasts />
+      <Handoff />
       <AnimatePresence>{splash && <Splash key="splash" onDone={done} />}</AnimatePresence>
     </div>
   );

@@ -5,23 +5,28 @@ import { useUi, type Modal } from '../../store/ui';
 import { useT } from '../i18n';
 import {
   IconBan,
+  IconCheck,
+  IconChevronDown,
   IconClose,
   IconExternal,
   IconHeart,
   IconMusicList,
+  IconPerson,
   IconPlus,
   IconQueue,
+  IconRepeat,
   IconShare,
   IconTrash,
 } from '../icons';
 import { Alert, Art, Field, Menu, Sheet, type MenuItem } from './controls';
-import { MixCover } from './MixCover';
+import { MixCover, PlaylistCover } from './MixCover';
 import { LyricsView, useLyrics } from './Player';
 import { AuthSheet } from '../account/AuthSheet';
 import { EditProfileSheet } from '../account/EditProfileSheet';
 import { CommentsPanel } from '../account/Comments';
 import { SourceMark } from './TrackRow';
 import { openExternal, shareTrack } from './actions';
+import { openArtistPage, splitArtists } from '../artists';
 import { toast } from './Toast';
 
 function TrackMenu({ m }: { m: Extract<Modal, { type: 'track' }> }) {
@@ -31,15 +36,42 @@ function TrackMenu({ m }: { m: Extract<Modal, { type: 'track' }> }) {
   const liked = useLibrary((s) => s.likes.some((x) => x.key === m.track.key));
   const disliked = useLibrary((s) => s.dislikes.includes(m.track.key));
   const track = m.track;
+  const [subOpen, setSubOpen] = useState<number | null>(null);
+  const isCurrent = usePlayer((s) => s.queue[s.index]?.key === track.key);
+  const repeat = usePlayer((s) => s.repeat);
+  const setRepeat = (r: 'off' | 'all' | 'one') => usePlayer.getState().patch({ repeat: r });
+  // Playing track: repeat modes as a nested menu (phones have no repeat button in the mini player / island).
+  const playback: MenuItem[] = isCurrent
+    ? [
+        {
+          label: t('repeat'),
+          icon: <IconRepeat size={18} one={repeat === 'one'} />,
+          detail: repeat === 'off' ? t('repeatOff') : repeat === 'all' ? t('repeatAll') : t('repeatOne'),
+          children: [
+            { label: t('repeatOff'), checked: repeat === 'off', onSelect: () => setRepeat('off') },
+            { label: t('repeatAll'), icon: <IconRepeat size={18} />, checked: repeat === 'all', onSelect: () => setRepeat('all') },
+            { label: t('repeatOne'), icon: <IconRepeat size={18} one />, checked: repeat === 'one', onSelect: () => setRepeat('one') },
+          ],
+        },
+      ]
+    : [];
+
+  const artists = splitArtists(track.artist, track.title);
+  const toArtist: MenuItem =
+    artists.length > 1
+      ? { label: t('goToArtist'), icon: <IconPerson size={18} />, children: artists.map((n) => ({ label: n, icon: <IconPerson size={18} />, onSelect: () => openArtistPage(track, n, false) })) }
+      : { label: t('goToArtist'), icon: <IconPerson size={18} />, onSelect: () => openArtistPage(track, artists[0] ?? track.artist, true) };
 
   const items: MenuItem[] = [
-    { label: t('playNext'), icon: <IconQueue size={18} />, onSelect: () => (usePlayer.getState().playNext(track), toast(t('added'))) },
+    ...playback,
+    { ...toArtist, separatorBefore: isCurrent },
+    { label: t('playNext'), separatorBefore: true, icon: <IconQueue size={18} />, onSelect: () => (usePlayer.getState().playNext(track), toast(t('added'))) },
     { label: t('addToQueue'), icon: <IconMusicList size={18} />, onSelect: () => (usePlayer.getState().addToQueue([track]), toast(t('added'))) },
     { label: t('addToPlaylist'), icon: <IconPlus size={18} />, onSelect: () => setTimeout(() => open({ type: 'addToPlaylist', tracks: [track] })) },
     { label: liked ? t('unlike') : t('like'), icon: <IconHeart size={18} filled={liked} />, onSelect: () => useLibrary.getState().toggleLike(track), separatorBefore: true },
     { label: t('dislike'), icon: <IconBan size={18} />, checked: disliked, onSelect: () => useLibrary.getState().toggleDislike(track) },
     { label: t('share'), icon: <IconShare size={18} />, onSelect: () => shareTrack(track, t('copied')), separatorBefore: true },
-    ...(track.url ? [{ label: `${t('openIn')} ${track.source === 'youtube' ? 'YouTube' : 'SoundCloud'}`, icon: <IconExternal size={18} />, onSelect: () => openExternal(track.url!) }] : []),
+    ...(track.url ? [{ label: `${t('openIn')} ${track.source === 'youtube' ? 'YouTube' : track.source === 'deezer' ? 'Deezer' : 'SoundCloud'}`, icon: <IconExternal size={18} />, onSelect: () => openExternal(track.url!) }] : []),
     ...(m.playlistId
       ? [{ label: t('removeFromPlaylist'), icon: <IconTrash size={18} />, destructive: true, onSelect: () => useLibrary.getState().removeFromPlaylist(m.playlistId!, track.key) }]
       : []),
@@ -62,10 +94,31 @@ function TrackMenu({ m }: { m: Extract<Modal, { type: 'track' }> }) {
       </div>
       <div className="action-list">
         {items.map((it, i) => (
-          <button key={i} className={`action ${it.destructive ? 'destructive' : ''}`} onClick={() => (close(), it.onSelect())}>
-            {it.icon}
-            <span>{it.label}</span>
-          </button>
+          <div key={i}>
+            <button
+              className={`action ${it.destructive ? 'destructive' : ''}`}
+              onClick={() => (it.children ? setSubOpen(subOpen === i ? null : i) : (close(), it.onSelect?.()))}
+            >
+              {it.icon}
+              <span>{it.label}</span>
+              {it.children && (
+                <span className="action-detail">
+                  {it.detail}
+                  <IconChevronDown size={14} style={{ transform: subOpen === i ? 'rotate(180deg)' : undefined, transition: 'transform .25s' }} />
+                </span>
+              )}
+            </button>
+            {it.children && subOpen === i && (
+              <div className="action-sub">
+                {it.children.map((c, j) => (
+                  <button key={j} className="action" onClick={() => (close(), c.onSelect?.())}>
+                    <span className="action-check">{c.checked && <IconCheck size={16} />}</span>
+                    <span>{c.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         ))}
       </div>
     </Sheet>
@@ -102,7 +155,7 @@ function AddToPlaylist({ m }: { m: Extract<Modal, { type: 'addToPlaylist' }> }) 
             }}
           >
             <div className="lib-cover">
-              <MixCover index={p.cover} />
+              <PlaylistCover p={p} />
             </div>
             <div>
               <b>{p.title}</b>
@@ -226,6 +279,29 @@ function Confirm({ m }: { m: Extract<Modal, { type: 'confirm' }> }) {
   );
 }
 
+/** Several artists on one track: pick whose page to open. */
+function ArtistChooser({ m }: { m: Extract<Modal, { type: 'artists' }> }) {
+  const t = useT();
+  const close = useUi((s) => s.close);
+  const pick = (name: string) => {
+    close();
+    openArtistPage(m.track, name, false);
+  };
+  if (m.anchor) return <Menu anchor={m.anchor} items={m.names.map((n) => ({ label: n, icon: <IconPerson size={18} />, onSelect: () => pick(n) }))} onClose={close} />;
+  return (
+    <Sheet open onClose={close} title={t('chooseArtist')}>
+      <div className="action-list">
+        {m.names.map((n) => (
+          <button key={n} className="action" onClick={() => pick(n)}>
+            <IconPerson size={18} />
+            <span>{n}</span>
+          </button>
+        ))}
+      </div>
+    </Sheet>
+  );
+}
+
 export function Modals() {
   const modals = useUi((s) => s.modals);
   return (
@@ -250,6 +326,8 @@ export function Modals() {
             return <EditProfileSheet key={i} onClose={() => useUi.getState().close()} />;
           case 'comments':
             return <CommentsSheet key={i} />;
+          case 'artists':
+            return <ArtistChooser key={i} m={m} />;
         }
       })}
     </>

@@ -44,6 +44,7 @@ function lazyCoreApi(): SonaraApi {
     likers: call('likers'),
     tagTracks: call('tagTracks'),
     clientId: call('clientId'),
+    artist: call('artist'),
   };
 }
 

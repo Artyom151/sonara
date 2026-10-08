@@ -56,6 +56,12 @@
 :root:not([data-lg='svg']) .glass > .lg-layer {
   display: none;
 }
+/* Desktop WebKit: the content under this glass is already blurred and refracted by the shader
+   maps (liquid.ts, content refraction), so the host only adds tint and rim light. */
+:root .glass[data-lgc] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 
 .glass::before {
   content: '';
@@ -72,6 +78,18 @@
 }
 :root[data-lg='svg'] .glass::before {
   display: none;
+}
+
+/* Phones while scrolling: plain blur + tint instead of the SVG filter (liquid.ts). The mask
+   keeps the shader's shape, so the bars do not change outline. */
+:root[data-scrolling='1'] .glass > .lg-layer {
+  -webkit-backdrop-filter: blur(var(--lg-blur)) !important;
+  backdrop-filter: blur(var(--lg-blur)) !important;
+  background: var(--lg-tint) !important;
+}
+/* Battery saver: lighter blur on the shader bars (blur radius is the main GPU cost). */
+:root[data-perf='low'] .glass[data-lg] {
+  --lg-blur: 4px;
 }
 
 /* Content paints above the backdrop layer. */

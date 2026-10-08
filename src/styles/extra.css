@@ -108,7 +108,7 @@ button:disabled {
   filter: none;
 }
 /* Low: glass becomes a light translucent fill with a small blur. */
-:root[data-perf='low'] .glass {
+:root[data-perf='low'] .glass:not(.tabbar):not(.mini):not(.pbar) {
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   background: rgb(var(--glass-tint-rgb) / 0.55);
@@ -122,4 +122,382 @@ button:disabled {
 .track-row {
   content-visibility: auto;
   contain-intrinsic-size: auto 52px;
+}
+
+/* ───────── Dynamic Island player (Settings → Island player) ───────── */
+.island {
+  position: fixed;
+  z-index: 70;
+  top: calc(var(--sat) + 8px);
+  left: 50%;
+  translate: -50% 0;
+  background: #000;
+  color: #fff;
+  box-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.08), 0 12px 30px -8px rgb(0 0 0 / 0.7);
+  overflow: hidden;
+  cursor: pointer;
+}
+.island:not(.open) {
+  height: 40px;
+  width: min(74vw, 290px);
+}
+.island.open {
+  width: min(92vw, 380px);
+  cursor: default;
+}
+.island-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 69;
+  background: rgb(0 0 0 / 0.25);
+}
+.island-compact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 14px 0 7px;
+}
+.island-gap {
+  flex: 1;
+}
+.island-art {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  overflow: hidden;
+  flex: none;
+  background: #1c1c1e;
+}
+.island-art.small {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+}
+.island-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.island-expanded {
+  padding: 18px 18px 14px;
+}
+.island-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+.island-meta {
+  flex: 1;
+  min-width: 0;
+}
+.island-title {
+  font-size: 15px;
+  font-weight: 650;
+}
+.island-artist {
+  font-size: 12.5px;
+  color: rgb(255 255 255 / 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.island .scrub {
+  margin-top: 10px;
+}
+.island .times {
+  color: rgb(255 255 255 / 0.45);
+}
+.island-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 34px;
+  margin-top: 2px;
+}
+.island-controls button {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  transition: transform 0.3s var(--ease-spring), background-color 0.2s;
+}
+.island-controls button:active {
+  transform: scale(0.88);
+  background: rgb(255 255 255 / 0.1);
+}
+/* Room for the island above screen titles. */
+:root[data-island='1'] .screen {
+  padding-top: calc(var(--sat) + 58px);
+}
+
+:root[data-island='1'] .nav-bar {
+  top: calc(-1 * var(--sat) - 58px);
+  margin-top: calc(-1 * var(--sat) - 58px);
+  padding-top: calc(var(--sat) + 54px);
+}
+.island-play {
+  background: rgb(255 255 255 / 0.08);
+}
+
+/* Desktop: the island lives in the title bar and replaces the player bar. */
+.island.desk {
+  top: 5px;
+  /* Centre over the content panel, not the whole window (rail is 76px). */
+  left: calc(50% + 32px);
+  z-index: 90;
+}
+.island.desk:not(.open) {
+  height: 30px;
+  width: 300px;
+}
+.island.desk.open {
+  width: 420px;
+}
+.island.desk .island-compact {
+  height: 30px;
+  gap: 10px;
+  padding: 0 12px 0 4px;
+}
+.island.desk .island-art.small {
+  width: 22px;
+  height: 22px;
+}
+.island-line {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgb(255 255 255 / 0.85);
+}
+.island.desk .island-expanded {
+  padding: 16px 18px 12px;
+}
+.island.desk .island-art:not(.small),
+.island.desk .island-meta {
+  cursor: pointer;
+}
+.island-extras {
+  display: flex;
+  gap: 2px;
+}
+.island-small {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: rgb(255 255 255 / 0.6);
+  transition: color 0.2s, background-color 0.2s, transform 0.3s var(--ease-spring);
+}
+.island-small:hover {
+  color: #fff;
+  background: rgb(255 255 255 / 0.08);
+}
+.island-small:active {
+  transform: scale(0.88);
+}
+.island-small.on {
+  color: var(--accent);
+}
+.island-small.liked {
+  color: var(--red);
+}
+.island.desk .island-controls {
+  gap: 18px;
+}
+.island.desk .island-controls button:not(.island-small):hover {
+  background: rgb(255 255 255 / 0.08);
+}
+.island-volume {
+  margin-top: 6px;
+  padding: 0 4px;
+}
+.island-volume .slider-rail {
+  height: 4px;
+  margin-top: -2px;
+}
+.island-volume .slider-knob {
+  width: 20px;
+  height: 12px;
+  margin: -6px 0 0 -10px;
+  border-radius: 6px;
+}
+:root[data-island='desk'] .island-scrim {
+  background: transparent;
+}
+/* No bottom bar in island mode: the content panel takes its row. */
+.app.desk.island-mode .main {
+  grid-row: 2 / 4;
+  margin-bottom: 12px;
+}
+
+/* ───────── Handoff: continue what another device played ───────── */
+.handoff {
+  position: fixed;
+  z-index: 75;
+  left: 12px;
+  right: 12px;
+  bottom: calc(var(--sab) + var(--tabbar-h) + var(--mini-h) + 26px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 10px 10px;
+  --g-radius: 22px;
+}
+:root[data-island='1'] .handoff {
+  bottom: calc(var(--sab) + var(--tabbar-h) + 22px);
+}
+.app.desk .handoff {
+  left: auto;
+  right: 24px;
+  bottom: 120px;
+  width: 380px;
+}
+:root[data-island='desk'] .handoff {
+  bottom: 24px;
+}
+.handoff-art {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.handoff-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.handoff-text {
+  flex: 1;
+  min-width: 0;
+}
+.handoff-text small,
+.handoff-text b,
+.handoff-text span {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.handoff-text small {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.handoff-text b {
+  font-size: 14px;
+  margin-top: 1px;
+}
+.handoff-text span {
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.handoff-go {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fff;
+  color: #000;
+  transition: transform 0.3s var(--ease-spring);
+}
+.handoff-go:active {
+  transform: scale(0.9);
+}
+.handoff-close {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--text-2);
+}
+
+/* ───────── Artist page ───────── */
+.artist-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 8px var(--gutter) 10px;
+}
+.artist-photo {
+  width: min(48vw, 200px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface-2);
+  box-shadow: 0 24px 50px -16px rgb(0 0 0 / 0.7);
+}
+.artist-photo img,
+.album-art img,
+.artist-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.artist-hero h1 {
+  margin: 16px 0 2px;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.artist-hero p {
+  margin: 0 0 4px;
+  color: var(--text-2);
+  font-size: 13.5px;
+}
+.album-card {
+  width: 140px;
+  flex: none;
+  text-align: left;
+}
+.album-art {
+  width: 140px;
+  height: 140px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface-2);
+  margin-bottom: 6px;
+}
+.artist-card {
+  width: 104px;
+  flex: none;
+  text-align: center;
+}
+.artist-avatar {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 6px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.artist-card .track-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Artist names that open the artist page. */
+button.link {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  text-align: inherit;
+  font: inherit;
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+button.link:hover {
+  text-decoration: underline;
 }

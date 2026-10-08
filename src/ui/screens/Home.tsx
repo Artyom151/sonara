@@ -70,7 +70,7 @@ function SectionHead({ title, onAll }: { title: string; onAll?: () => void }) {
 export function useHome() {
   const sources = useSettings((s) => s.sources);
   const key = useSettings((s) => s.youtubeApiKey);
-  return useAsync<HomeData>(`home:${sources.soundcloud}:${sources.youtube}:${!!key}`, () => api.home());
+  return useAsync<HomeData>(`home:${sources.soundcloud}:${sources.youtube}:${sources.deezer ?? true}:${!!key}`, () => api.home());
 }
 
 function Skeleton({ rows }: { rows?: boolean }) {
@@ -181,6 +181,14 @@ export function Home() {
               <SectionHead title={t('trendingYoutube')} onAll={() => push({ name: 'all', kind: 'youtube' })} />
               <div className="picks-grid">
                 <TrackList tracks={data.youtube.slice(0, 8)} context={{ title: t('trendingYoutube'), id: 'youtube' }} meta="plays" />
+              </div>
+            </section>
+          )}
+          {!!data.deezer?.length && (
+            <section className="section">
+              <SectionHead title={t('deezerChart')} />
+              <div className="picks-grid">
+                <TrackList tracks={data.deezer.slice(0, 10)} context={{ title: t('deezerChart'), id: 'deezer' }} />
               </div>
             </section>
           )}

@@ -1,3 +1,4 @@
+import { isCapacitor } from '../../platform';
 import { currentTier } from '../../platform/perf';
 import { FRAGMENT, VERTEX } from './shaders';
 
@@ -54,16 +55,30 @@ interface Maps {
 }
 
 const supportsRefraction = /Chrome\/|Edg\//.test(navigator.userAgent);
+/**
+ * Desktop WebKit (Linux WebKitGTK, macOS): backdrop-filter cannot run SVG filters, but a plain CSS
+ * filter can. The shader's refraction is therefore applied to the content *under* the floating
+ * glass (the visible tab stack): blur + displacement map + shape mask inside each glass rect.
+ */
+// Off: in a real WebKitGTK window (GPU compositing) the CSS filter is dropped on the tab stack,
+// which holds composited layers (WebGL canvases); it only renders in software snapshots.
+const CONTENT_REFRACTION_ENABLED = false;
+const contentRefraction = CONTENT_REFRACTION_ENABLED && !supportsRefraction && !isCapacitor && matchMedia('(pointer: fine)').matches;
+/** Glass that floats over the tab stack (not inside it) and gets content refraction. */
+const OVERLAY_GLASS = '.pbar, .tabbar, .mini, .handoff';
 /** Map resolution cap: the maps are smooth gradients, 1x is visually identical on phones. */
 const maxDpr = () => (currentTier() === 'high' ? 2 : 1);
 
 /** Which elements get the full shader treatment for the current graphics tier. */
 const KEY_GLASS = '.refract, .ctl-main, .tabbar, .mini, .pbar, .menu, .alert';
+const LOW_GLASS = '.tabbar, .mini, .pbar';
 function wantsShader(el: HTMLElement) {
   const tier = currentTier();
   if (tier === 'high') return true;
   if (tier === 'balanced') return el.matches(KEY_GLASS);
-  return false; // low: CSS blur only
+  // Battery saver: only the always-visible bars keep the real shader; maps are rendered at 1x and
+  // the SVG filter is paused while scrolling (see pauseRefractionWhileScrolling).
+  return el.matches(LOW_GLASS);
 }
 
 let gl: WebGL2RenderingContext | null = null;
@@ -143,7 +158,17 @@ const toBlobUrl = (c: HTMLCanvasElement) =>
     c.toBlob((b) => (b ? resolve(URL.createObjectURL(b)) : reject(new Error('toBlob failed'))), 'image/png'),
   );
 
-async function renderMaps(p: Params): Promise<Maps> {
+// All elements share one WebGL canvas and each map is read back asynchronously (toBlob), so
+// renders must not interleave: a concurrent render would resize the canvas mid-way and hand one
+// element another element's maps (a stretched ghost of a foreign rim inside the glass).
+let renderQueue: Promise<unknown> = Promise.resolve();
+function renderMaps(p: Params): Promise<Maps> {
+  const run = renderQueue.then(() => renderMapsNow(p));
+  renderQueue = run.catch(() => {});
+  return run;
+}
+
+async function renderMapsNow(p: Params): Promise<Maps> {
   const ctx = gl!;
   const dpr = Math.min(window.devicePixelRatio || 1, maxDpr());
   // Largest possible offset of glassDistortion in CSS px (|wave| ≤ √2·1.35, |lens| ≤ 2.25).
@@ -319,7 +344,8 @@ async function flush() {
   scheduled = false;
   const items = [...queue];
   queue = new Set();
-  for (const el of items) await apply(el);
+  // One failing element must not stall the rest of the queue.
+  for (const el of items) await apply(el).catch((e) => console.warn('[liquid-glass]', e));
 }
 
 async function apply(el: HTMLElement) {
@@ -332,7 +358,12 @@ async function apply(el: HTMLElement) {
   if (!cache.has(key)) {
     cache.set(
       key,
-      renderMaps(p).then((m) => (resolved.set(key, m), m)),
+      renderMaps(p)
+        .then((m) => (resolved.set(key, m), m))
+        .catch((e) => {
+          cache.delete(key); // retry later instead of caching the failure
+          throw e;
+        }),
     );
   }
   const maps = await cache.get(key)!;
@@ -347,6 +378,8 @@ async function apply(el: HTMLElement) {
     // WebKit: blur lives on the host itself (glass.css), only the rim light overlay is added.
     // A backdrop layer inside the host would capture the host's own text and blur it into a halo.
     el.style.setProperty('--lg-light-map', `url("${maps.light}")`);
+    setHostBlur(el);
+    scheduleContent();
     return;
   }
   const { layer } = st;
@@ -366,7 +399,19 @@ function strip(el: HTMLElement) {
   for (const v of ['--lg-pad', '--lg-light-map']) el.style.removeProperty(v);
 }
 
+/**
+ * WebKitGTK computes `-webkit-backdrop-filter: blur(var(--lg-blur))` to `none` (a var() inside the
+ * prefixed property is dropped), which left every glass element without blur on Linux. Resolve
+ * the value here and set it inline with a plain length.
+ */
+function setHostBlur(el: HTMLElement) {
+  if (supportsRefraction) return;
+  const blur = getComputedStyle(el).getPropertyValue('--lg-blur').trim() || '3px';
+  el.style.setProperty('-webkit-backdrop-filter', `blur(${blur})`);
+}
+
 function attach(el: HTMLElement) {
+  setHostBlur(el);
   if (state.has(el)) return;
   if (!wantsShader(el)) return;
   let layer = el.querySelector<HTMLElement>(':scope > .lg-layer');
@@ -385,9 +430,176 @@ function attach(el: HTMLElement) {
 function detach(el: HTMLElement) {
   const st = state.get(el);
   if (!st) return;
+  if (el.dataset.lgc) scheduleContent();
   st.ro.disconnect();
   release(st.key);
   state.delete(el);
+}
+
+// ───────────── Content refraction (desktop WebKit) ─────────────
+
+const content = { src: null as HTMLElement | null, filterId: '', sig: '', paused: false, offUntil: 0 };
+let contentRaf = 0;
+let contentSeq = 0;
+
+function scheduleContent() {
+  if (!contentRefraction || contentRaf) return;
+  contentRaf = requestAnimationFrame(() => {
+    contentRaf = 0;
+    updateContent();
+  });
+}
+
+function clearContent() {
+  content.src?.style.removeProperty('filter');
+  document.getElementById(content.filterId)?.remove();
+  document.querySelectorAll<HTMLElement>('[data-lgc]').forEach((e) => delete e.dataset.lgc);
+  content.src = null;
+  content.filterId = '';
+  content.sig = '';
+}
+
+function updateContent() {
+  if (content.paused || Date.now() < content.offUntil || currentTier() === 'low' || document.hidden) return clearContent();
+  const src = [...document.querySelectorAll<HTMLElement>('.tab-stack')].find((e) => e.style.display !== 'none');
+  if (!src) return clearContent();
+  const sr = src.getBoundingClientRect();
+  const items: { el: HTMLElement; m: Maps; x: number; y: number; blur: number }[] = [];
+  for (const el of document.querySelectorAll<HTMLElement>(OVERLAY_GLASS)) {
+    const st = state.get(el);
+    const m = st?.key ? resolved.get(st.key) : undefined;
+    if (!m || src.contains(el)) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width < 2 || r.bottom <= sr.top || r.top >= sr.bottom || r.right <= sr.left || r.left >= sr.right) continue;
+    if (Math.abs(r.width - el.offsetWidth) > 1) continue; // mid-animation (scaled): wait for it to settle
+    const blur = num(getComputedStyle(el).getPropertyValue('--lg-blur'), 3);
+    // WebKit resolves userSpaceOnUse for CSS filters on HTML in page coordinates (not the
+    // element's own box), so every rect below is in viewport px (the app itself never scrolls).
+    items.push({ el, m, x: Math.round(r.left) - m.pad, y: Math.round(r.top) - m.pad, blur });
+  }
+  if (!items.length) return clearContent();
+  const sig = [Math.round(sr.left), Math.round(sr.top), Math.round(sr.width), Math.round(sr.height), ...items.map((i) => `${i.m.filterId}@${i.x},${i.y},${i.blur}`)].join('|');
+  if (sig === content.sig && src === content.src) return;
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const make = (tag: string, attrs: Record<string, string | number>) => {
+    const n = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, String(v));
+    return n;
+  };
+  const id = `lgc-${ID_PREFIX}-${++contentSeq}`;
+  const f = make('filter', {
+    id,
+    filterUnits: 'userSpaceOnUse',
+    primitiveUnits: 'userSpaceOnUse',
+    x: Math.floor(sr.left),
+    y: Math.floor(sr.top),
+    width: Math.ceil(sr.width),
+    height: Math.ceil(sr.height),
+    'color-interpolation-filters': 'sRGB',
+  });
+  const merge = make('feMerge', {});
+  merge.appendChild(make('feMergeNode', { in: 'SourceGraphic' }));
+  items.forEach(({ m, x, y, blur }, i) => {
+    const box = { x, y, width: m.qw, height: m.qh };
+    // Blur a little beyond the glass so displaced samples near the rim still find content.
+    const ext = Math.ceil(m.dispScale / 2 + blur * 2);
+    f.append(
+      make('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: blur, x: x - ext, y: y - ext, width: m.qw + ext * 2, height: m.qh + ext * 2, result: `b${i}` }),
+      make('feImage', { href: m.disp, ...box, preserveAspectRatio: 'none', result: `d${i}` }),
+      make('feDisplacementMap', { in: `b${i}`, in2: `d${i}`, scale: m.dispScale, xChannelSelector: 'R', yChannelSelector: 'G', ...box, result: `r${i}` }),
+      make('feImage', { href: m.mask, ...box, preserveAspectRatio: 'none', result: `m${i}` }),
+      make('feComposite', { in: `r${i}`, in2: `m${i}`, operator: 'in', ...box, result: `g${i}` }),
+    );
+    merge.appendChild(make('feMergeNode', { in: `g${i}` }));
+  });
+  f.appendChild(merge);
+  ensureDefs().appendChild(f);
+
+  const oldId = content.filterId;
+  if (content.src && content.src !== src) content.src.style.removeProperty('filter');
+  src.style.filter = `url(#${id})`;
+  document.getElementById(oldId)?.remove();
+  const hosts = new Set(items.map((i) => i.el));
+  document.querySelectorAll<HTMLElement>('[data-lgc]').forEach((e) => !hosts.has(e) && delete e.dataset.lgc);
+  hosts.forEach((e) => (e.dataset.lgc = '1'));
+  Object.assign(content, { src, filterId: id, sig });
+  watchFrames();
+}
+
+/** While content refraction is on, fall back to plain blur if it makes frames slow. */
+let watching = false;
+function watchFrames() {
+  if (watching) return;
+  watching = true;
+  let last = performance.now();
+  let slow = 0;
+  let frames = 0;
+  const tick = (now: number) => {
+    if (!content.src) return void (watching = false);
+    const dt = now - last;
+    last = now;
+    if (dt < 250) {
+      frames++;
+      if (dt > 28) slow++;
+    }
+    if (frames >= 90) {
+      if (slow / frames > 0.3) {
+        content.offUntil = Date.now() + 30_000;
+        clearContent();
+        setTimeout(scheduleContent, 30_500);
+      }
+      frames = slow = 0;
+    }
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
+/** Scrolling under a filtered element repaints it every frame: drop the filter while it moves. */
+function pauseContentWhileScrolling() {
+  let t: ReturnType<typeof setTimeout> | undefined;
+  const onScroll = (e: Event) => {
+    const target = e.target as Node;
+    if (!(target instanceof HTMLElement) || !target.closest('.tab-stack')) return;
+    if (!content.paused) {
+      content.paused = true;
+      clearContent();
+    }
+    clearTimeout(t);
+    t = setTimeout(() => {
+      content.paused = false;
+      scheduleContent();
+    }, 180);
+  };
+  document.addEventListener('scroll', onScroll, { capture: true, passive: true });
+  document.addEventListener('visibilitychange', scheduleContent);
+  // Tab switches, menus, the mini player appearing… are cheap to re-check.
+  const iv = setInterval(scheduleContent, 400);
+  return () => {
+    document.removeEventListener('scroll', onScroll, { capture: true });
+    document.removeEventListener('visibilitychange', scheduleContent);
+    clearInterval(iv);
+    clearContent();
+  };
+}
+
+/**
+ * Phones: an SVG backdrop filter is re-rasterised every frame while content scrolls under it,
+ * which is what makes weak GPUs stutter. While a scroll is in progress the layers switch to a
+ * plain blur + tint (cheap, composited) and get the shader back 150 ms after it stops.
+ */
+function pauseRefractionWhileScrolling() {
+  if (!supportsRefraction || !matchMedia('(pointer: coarse)').matches) return () => {};
+  const root = document.documentElement;
+  let t: ReturnType<typeof setTimeout> | undefined;
+  const onScroll = () => {
+    if (root.dataset.scrolling !== '1') root.dataset.scrolling = '1';
+    clearTimeout(t);
+    t = setTimeout(() => delete root.dataset.scrolling, 150);
+  };
+  document.addEventListener('scroll', onScroll, { capture: true, passive: true });
+  return () => document.removeEventListener('scroll', onScroll, { capture: true });
 }
 
 /** Free every cached map set no element uses right now (background memory trim). */
@@ -405,6 +617,7 @@ export function purgeGlass() {
 export function refreshGlass(el?: HTMLElement) {
   const targets = el ? [el] : [...document.querySelectorAll<HTMLElement>('.glass')];
   for (const t of targets) {
+    setHostBlur(t);
     if (!wantsShader(t)) {
       if (state.has(t) || t.dataset.lg) strip(t);
       continue;
@@ -420,6 +633,8 @@ export function startLiquidGlass() {
   const ok = initGl();
   document.documentElement.dataset.lg = ok ? (supportsRefraction ? 'svg' : 'overlay') : '0';
   if (!ok) return;
+  const stopContent = contentRefraction ? pauseContentWhileScrolling() : undefined;
+  const stopScrollPause = pauseRefractionWhileScrolling();
   document.querySelectorAll<HTMLElement>('.glass').forEach(attach);
   const mo = new MutationObserver((records) => {
     for (const r of records) {
@@ -456,6 +671,8 @@ export function startLiquidGlass() {
   import.meta.hot?.dispose(() => {
     mo.disconnect();
     window.removeEventListener('resize', onResize);
+    stopContent?.();
+    stopScrollPause();
     defs?.closest('svg')?.remove();
     document.querySelectorAll<HTMLElement>('.glass[data-lg]').forEach((el) => delete el.dataset.lg);
   });

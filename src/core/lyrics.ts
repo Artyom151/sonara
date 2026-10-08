@@ -1,7 +1,13 @@
 import type { Fetcher, LyricLine, Lyrics, Track } from './types';
 
-/** Lyrics are fetched at runtime from LRCLIB (https://lrclib.net), an open lyrics database. */
+/**
+ * Lyrics are fetched at runtime, no keys needed:
+ *  1. LRCLIB (https://lrclib.net), an open lyrics database;
+ *  2. BetterLyrics (https://better-lyrics.boidu.dev), synced lyrics as TTML — good coverage for
+ *     YouTube / Deezer tracks that LRCLIB misses.
+ */
 const LRCLIB = 'https://lrclib.net/api';
+const BETTER_LYRICS = 'https://lyrics-api.boidu.dev/getLyrics';
 
 const clean = (s: string) =>
   s
@@ -42,7 +48,59 @@ const toLyrics = (r: any): Lyrics => ({
   instrumental: !!r.instrumental,
 });
 
+/** "1:02.5", "00:01:02.500", "62.5s" or "62.5" → seconds. */
+const ttmlTime = (v: string) => {
+  const parts = v.replace(/s$/, '').split(':').map(Number);
+  return parts.reduce((acc, x) => acc * 60 + x, 0);
+};
+const decode = (s: string) =>
+  s
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;|&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/** TTML <p begin=…> lines (word-timed spans are joined back into one line). */
+export function parseTtml(ttml: string): LyricLine[] {
+  const lines: LyricLine[] = [];
+  for (const m of ttml.matchAll(/<p\b[^>]*\bbegin="([^"]+)"[^>]*>([\s\S]*?)<\/p>/g)) {
+    // Background vocals (ttm:role="x-bg") stay out of the main line.
+    const body = m[2].replace(/<span[^>]*ttm:role="x-bg"[^>]*>[\s\S]*?<\/span>\s*<\/span>|<span[^>]*ttm:role="x-bg"[^>]*>[\s\S]*?<\/span>/g, '');
+    const text = decode(body.replace(/<\/span>\s*<span/g, '</span> <span').replace(/<\/span><span/g, '</span><span'));
+    if (text) lines.push({ time: ttmlTime(m[1]), text });
+  }
+  return lines.sort((a, b) => a.time - b.time);
+}
+
+async function betterLyrics(fetcher: Fetcher, track: Track): Promise<Lyrics | null> {
+  for (const { artist, title } of candidates(track).slice(0, 2)) {
+    const params = new URLSearchParams({ s: title, a: artist });
+    if (track.duration) params.set('d', String(Math.round(track.duration)));
+    try {
+      const r = await fetcher(`${BETTER_LYRICS}?${params}`);
+      if (!r.ok) continue;
+      const j = await r.json();
+      const synced = j?.ttml ? parseTtml(String(j.ttml)) : [];
+      if (synced.length > 2) return { synced, plain: synced.map((l) => l.text).join('\n') };
+    } catch {
+      /* next candidate */
+    }
+  }
+  return null;
+}
+
 export async function fetchLyrics(fetcher: Fetcher, track: Track): Promise<Lyrics | null> {
+  const lrc = await fetchLrclib(fetcher, track).catch(() => null);
+  // Prefer synced lyrics: LRCLIB first, BetterLyrics when LRCLIB has none (or only plain text).
+  if (lrc?.synced?.length || lrc?.instrumental) return lrc;
+  return (await betterLyrics(fetcher, track)) ?? lrc;
+}
+
+async function fetchLrclib(fetcher: Fetcher, track: Track): Promise<Lyrics | null> {
   const headers = { 'Lrclib-Client': 'Sonara (https://github.com/sonara)' };
   const list = candidates(track);
   for (const { artist, title } of list) {

@@ -5,7 +5,8 @@
  *   GET /api/home            trending genres, mixes, picks, YouTube trending
  *   GET /api/genre?urn=      SoundCloud "trending by genre" playlist
  *   GET /api/playlist?source=&id=
- *   GET /api/search?q=&source=all|soundcloud|youtube
+ *   GET /api/search?q=&source=all|soundcloud|youtube|deezer
+ *   GET /api/artist?source=&name=&id=   artist page: popular tracks, albums, related artists
  *   GET /api/related?track=  (JSON-encoded track)
  *   GET /api/stream?track=   -> { url, kind }
  *   GET /api/yt/stream/:id   proxied YouTube audio (Range supported)
@@ -21,9 +22,54 @@ import { cors } from 'hono/cors';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createCoreApi } from '../src/core/api';
-import type { ApiOptions, Source, Track } from '../src/core/types';
+import type { ApiOptions, Playlist, Source, Track } from '../src/core/types';
+import * as deezer from 'deezer-api-ts';
+import YouTubeMusicModule from 'youtube-music-ts-api';
+
+// CommonJS build: the class is on `.default` when imported from ESM.
+const YouTubeMusic = ((YouTubeMusicModule as any).default ?? YouTubeMusicModule) as typeof YouTubeMusicModule;
 
 const api = createCoreApi((url, init) => fetch(url, init));
+
+// Deezer catalogue through deezer-api-ts (search, artists, albums).
+api.dz.lib = {
+  searchTracks: (q) => deezer.searchTracks(q),
+  searchArtists: (q) => deezer.searchArtists(q),
+  searchPlaylists: (q) => deezer.searchPlaylists(q),
+  getArtist: (id) => deezer.getArtist(id),
+  getArtistAlbums: (id) => deezer.getArtistAlbums(id),
+  getAlbum: (id) => deezer.getAlbum(id),
+};
+
+// YouTube Music playlists / albums through youtube-music-ts-api (guest access); audio still
+// comes from youtubei.js (stream URLs) and is proxied by /api/yt/stream.
+const ytMusic = new YouTubeMusic().guest().catch(() => null);
+const ytThumb = (id: string) => `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+async function ytMusicPlaylist(id: string): Promise<Playlist | null> {
+  const ytm = await ytMusic;
+  if (!ytm) return null;
+  try {
+    const isAlbum = id.startsWith('MPREb');
+    const p: any = isAlbum ? await ytm.getAlbum(id) : await ytm.getPlaylist(id);
+    const tracks: Track[] = (p.tracks ?? [])
+      .filter((t: any) => t.id)
+      .map((t: any) => ({
+        key: `youtube:${t.id}`,
+        id: t.id,
+        source: 'youtube' as const,
+        title: t.title ?? '',
+        artist: (t.artists ?? []).map((a: any) => a.name).filter(Boolean).join(', '),
+        artwork: t.thumbnails?.[0]?.url ?? `https://i.ytimg.com/vi/${t.id}/mqdefault.jpg`,
+        artworkLarge: t.thumbnails?.at(-1)?.url ?? ytThumb(t.id),
+        duration: Math.round((t.durationMillis ?? 0) / 1000),
+        url: `https://music.youtube.com/watch?v=${t.id}`,
+      }));
+    if (!tracks.length) return null;
+    return { key: `youtube:${id}`, id, source: 'youtube', title: p.name ?? p.title ?? 'YouTube Music', subtitle: p.description, artwork: tracks[0].artworkLarge, trackCount: tracks.length, tracks };
+  } catch {
+    return null;
+  }
+}
 const app = new Hono();
 
 app.use('/api/*', cors());
@@ -34,6 +80,7 @@ const opts = (c: Context): ApiOptions => ({
   sources: {
     soundcloud: c.req.header('x-src-sc') !== '0',
     youtube: c.req.header('x-src-yt') !== '0',
+    deezer: c.req.header('x-src-dz') !== '0',
   },
 });
 
@@ -51,7 +98,22 @@ const handle = (fn: (c: Context) => Promise<unknown>) => async (c: Context) => {
 app.get('/api/health', (c) => c.json({ ok: true, name: 'sonara' }));
 app.get('/api/home', handle((c) => api.home(opts(c))));
 app.get('/api/genre', handle((c) => api.genre(c.req.query('urn')!)));
-app.get('/api/playlist', handle((c) => api.playlist(c.req.query('source') as Source, c.req.query('id')!)));
+app.get(
+  '/api/playlist',
+  handle(async (c) => {
+    const source = c.req.query('source') as Source;
+    const id = c.req.query('id')!;
+    if (source === 'youtube') {
+      const viaYtm = await ytMusicPlaylist(id);
+      if (viaYtm) return viaYtm;
+    }
+    return api.playlist(source, id);
+  }),
+);
+app.get(
+  '/api/artist',
+  handle((c) => api.artist({ source: c.req.query('source') as Source, name: c.req.query('name') ?? '', id: c.req.query('id') || undefined })),
+);
 app.get(
   '/api/search',
   handle((c) => api.search(c.req.query('q') ?? '', (c.req.query('source') as Source | 'all') ?? 'all', opts(c))),
@@ -67,6 +129,7 @@ app.get(
     const t = track(c);
     // googlevideo URLs are bound to the requesting client, so YouTube audio is proxied.
     if (t.source === 'youtube') return { url: `/api/yt/stream/${t.id}`, kind: 'progressive' };
+    if (t.source === 'deezer') return { url: `/api/yt/stream/${await api.dz.match(t)}`, kind: 'progressive' };
     return api.stream(t);
   }),
 );

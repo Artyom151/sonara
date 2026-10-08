@@ -742,24 +742,39 @@ img {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  contain: layout paint;
+}
+.marquee-track {
+  display: inline-flex;
+  max-width: 100%;
+  vertical-align: top;
+}
+.marquee > .marquee-track > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .marquee.run {
-  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  text-overflow: clip;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
 }
-.marquee > span {
-  display: inline-block;
-  padding-right: 48px;
+.marquee.run > .marquee-track > span {
+  overflow: visible;
+  flex: none;
 }
-.marquee.run > span {
-  animation: marquee var(--mq-dur, 12s) linear infinite;
+.marquee.run > .marquee-track {
+  max-width: none;
+  gap: 40px;
+  will-change: transform;
+  animation: marquee var(--mq-dur, 10s) linear infinite;
 }
 @keyframes marquee {
   0%,
-  12% {
-    transform: translateX(0);
+  15% {
+    transform: translate3d(0, 0, 0);
   }
   100% {
-    transform: translateX(-100%);
+    transform: translate3d(var(--mq-loop, 0px), 0, 0);
   }
 }
 

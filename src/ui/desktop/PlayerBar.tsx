@@ -5,6 +5,7 @@ import { useSettings } from '../../store/settings';
 import { useUi } from '../../store/ui';
 import { Art, Marquee, Slider } from '../components/controls';
 import { Scrubber } from '../components/Player';
+import { goToArtist } from '../artists';
 import { fmtTime, useT } from '../i18n';
 import {
   IconBackward,
@@ -50,7 +51,7 @@ export function PlayerBar() {
   };
 
   return (
-    <footer className={`pbar glass refract ${track ? '' : 'empty'}`}>
+    <footer className={`pbar glass refract ${track ? '' : 'idle'}`}>
       <div className="pbar-inner">
         <div className="pbar-track">
           {track ? (
@@ -60,7 +61,9 @@ export function PlayerBar() {
               </button>
               <div className="pbar-meta">
                 <Marquee className="pbar-title" text={track.title} />
-                <div className="pbar-artist">{track.artist}</div>
+                <button className="pbar-artist link" onClick={(e) => goToArtist(track, e.currentTarget.getBoundingClientRect())}>
+                  {track.artist}
+                </button>
               </div>
               <button className="pbar-icon" aria-label="More" onClick={(e) => open({ type: 'track', track, anchor: e.currentTarget.getBoundingClientRect() })}>
                 <IconMore size={18} />

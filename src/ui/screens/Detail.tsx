@@ -6,10 +6,13 @@ import { usePlayer } from '../../store/player';
 import { useUi, type Route } from '../../store/ui';
 import { imageColors, playerBackdrop } from '../../theme/color';
 import { Art, Menu } from '../components/controls';
-import { MixCover, coverPalette } from '../components/MixCover';
+import { MixCover, PlaylistCover, coverPalette } from '../components/MixCover';
+import { blobToDataUrl, squareImage } from '../../account/image';
+import { toast } from '../components/Toast';
+import { ArtistScreen } from './Artist';
 import { TrackList } from '../components/TrackRow';
 import { useT } from '../i18n';
-import { IconCheck, IconChevronLeft, IconHeart, IconMore, IconPencil, IconPlay, IconPlus, IconShuffle, IconTrash } from '../icons';
+import { IconCamera, IconCheck, IconChevronLeft, IconHeart, IconMore, IconPencil, IconPlay, IconPlus, IconShuffle, IconTrash } from '../icons';
 import { useAsync } from '../useAsync';
 import { usePersonalPicks } from '../../player/recommend';
 import { MixCard, TrendTile, useHome } from './Home';
@@ -22,7 +25,7 @@ function useHeroColor(src?: string) {
   return c;
 }
 
-function NavBar({ title, right }: { title: string; right?: React.ReactNode }) {
+export function NavBar({ title, right }: { title: string; right?: React.ReactNode }) {
   const pop = useUi((s) => s.pop);
   return (
     <div className="nav-bar">
@@ -160,7 +163,7 @@ function LocalPlaylist({ r }: { r: Extract<Route, { name: 'local' }> }) {
       <Collection
         title={p.title}
         subtitle={[p.description, `${p.tracks.length} ${t('tracks')}`].filter(Boolean).join(' · ')}
-        cover={<MixCover index={p.cover} />}
+        cover={<PlaylistCover p={p} />}
         tracks={p.tracks}
         contextId={`local:${p.id}`}
         playlistId={p.id}
@@ -185,11 +188,10 @@ function LocalPlaylist({ r }: { r: Extract<Route, { name: 'local' }> }) {
         onClose={() => setAnchor(null)}
         items={[
           { label: t('edit'), icon: <IconPencil size={18} />, onSelect: () => open({ type: 'createPlaylist', editId: p.id }) },
-          {
-            label: 'Cover',
-            icon: <IconShuffle size={18} />,
-            onSelect: () => useLibrary.getState().updatePlaylist(p.id, { cover: (p.cover + 1) % 8 }),
-          },
+          { label: t('choosePhoto'), icon: <IconCamera size={18} />, onSelect: () => pickCover(p.id, t('errUpload')) },
+          ...(p.image
+            ? [{ label: t('removePhoto'), icon: <IconTrash size={18} />, onSelect: () => useLibrary.getState().updatePlaylist(p.id, { image: undefined }) }]
+            : [{ label: t('otherCover'), icon: <IconShuffle size={18} />, onSelect: () => useLibrary.getState().updatePlaylist(p.id, { cover: (p.cover + 1) % 8 }) }]),
           {
             label: t('delete'),
             icon: <IconTrash size={18} />,
@@ -270,7 +272,27 @@ export function RouteView({ r }: { r: Route }) {
       return <RecentScreen />;
     case 'all':
       return <AllScreen r={r} />;
+    case 'artist':
+      return <ArtistScreen r={r} />;
     default:
       return null;
   }
+}
+
+/** Pick a photo, square-crop it to 512 px and use it as the playlist cover. */
+function pickCover(id: string, errorText: string) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = async () => {
+    const file = input.files?.[0];
+    if (!file) return;
+    try {
+      const image = await blobToDataUrl(await squareImage(file, 512));
+      useLibrary.getState().updatePlaylist(id, { image });
+    } catch {
+      toast(errorText);
+    }
+  };
+  input.click();
 }
