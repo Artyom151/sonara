@@ -1,4 +1,5 @@
 import type { Innertube } from 'youtubei.js';
+import { poToken } from './potoken';
 import type { Fetcher, Playlist, StreamInfo, Track } from './types';
 
 /** youtubei.js is large (~500 KB): load it only when YouTube is first used. */
@@ -17,7 +18,7 @@ const loadLib = () =>
   }));
 
 /** Clients ordered by how reliably they return plain (non-ciphered) audio URLs. */
-const CLIENTS = ['IOS', 'TV', 'WEB_EMBEDDED', 'MWEB', 'WEB'] as const;
+const CLIENTS = ['MWEB', 'IOS', 'TV', 'WEB_EMBEDDED', 'WEB'] as const;
 
 const parseIsoDuration = (iso: string) => {
   const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
@@ -206,9 +207,21 @@ export class YouTube {
         } catch {
           format = info.chooseFormat({ type: 'audio', quality: 'best' });
         }
-        const url = await format.decipher(yt.session.player);
+        let url = await format.decipher(yt.session.player);
+        // YouTube cuts un-tokened streams off after ~1.2 MB. The MWEB client accepts a `pot` token
+        // bound to the video id (see potoken.ts); other clients cannot be fixed that way.
+        if (client === 'MWEB') {
+          try {
+            url += `&pot=${await poToken(this.fetcher, id)}`;
+          } catch (e) {
+            console.warn('[youtube] PO token failed:', (e as Error).message);
+            lastError = e;
+            continue; // a truncated stream is worse than the next client's
+          }
+        }
         if (url) return { url, kind: 'progressive', mime: format.mime_type };
       } catch (e) {
+        console.warn(`[youtube] ${client} stream failed:`, (e as Error).message);
         lastError = e;
       }
     }

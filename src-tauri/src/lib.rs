@@ -1,4 +1,6 @@
 mod discord;
+mod media_proxy;
+mod pot;
 
 #[cfg(windows)]
 use tauri::Manager;
@@ -27,7 +29,7 @@ pub fn run() {
     .plugin(tauri_plugin_http::init())
     .plugin(tauri_plugin_opener::init())
     .manage(discord::Discord::start())
-    .invoke_handler(tauri::generate_handler![discord::discord_set, discord::discord_clear])
+    .invoke_handler(tauri::generate_handler![discord::discord_set, discord::discord_clear, media_proxy::media_proxy_base, pot::pot_mint])
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(

@@ -29,7 +29,8 @@ const resetSource = () => {
   blobUrl = null;
 };
 
-const YT_UA = 'com.google.ios.youtube/20.10.4 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X;)';
+// MWEB client identity: the stream URLs are issued to it (core/youtube.ts).
+const YT_UA = 'Mozilla/5.0 (iPad; CPU OS 16_7_10 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1,gzip(gfe)';
 const CHUNK = 1 << 20; // googlevideo throttles long un-ranged reads; 1 MB ranges come at full speed
 
 /**
@@ -42,7 +43,7 @@ async function viaNativeBlob(url: string, token: number) {
   if (!nativeFetch) throw new Error('unavailable');
   const get = async (from: number, to: number) => {
     for (let attempt = 0; ; attempt++) {
-      const r = await nativeFetch!(`${url}&range=${from}-${to}`, { headers: { 'User-Agent': YT_UA } });
+      const r = await nativeFetch!(url, { headers: { 'User-Agent': YT_UA, Range: `bytes=${from}-${to}` } });
       if (r.ok) return { buf: await r.arrayBuffer(), total: Number(r.headers.get('content-range')?.split('/')[1]) || 0, len: Number(r.headers.get('content-length')) || 0 };
       if (attempt >= 2) throw new Error(`HTTP ${r.status}`);
     }
@@ -72,6 +73,12 @@ async function viaNativeBlob(url: string, token: number) {
   return blobUrl;
 }
 
+let proxyBase: Promise<string | null> | null = null;
+const mediaProxyBase = () =>
+  (proxyBase ??= import('@tauri-apps/api/core')
+    .then(({ invoke }) => invoke<string | null>('media_proxy_base'))
+    .catch(() => null));
+
 const isYouTubeAudio = (t: Track) => t.source === 'youtube' || t.source === 'deezer';
 
 async function attach(url: string, kind: 'progressive' | 'hls') {
@@ -99,9 +106,11 @@ async function load(track: Track, autoplay: boolean, startAt = 0) {
     // Desktop (Tauri): always through the native fetch, see viaNativeBlob. Android plays the
     // URL directly and falls back to it in playSafe.
     if (isYouTubeAudio(track) && isTauri && /googlevideo\.com/.test(s.url)) {
-      const blob = await viaNativeBlob(s.url, token);
+      // Desktop: through the app's local media proxy (src-tauri/src/media_proxy.rs): streams,
+      // seeks with Range, and keeps megabytes of audio out of the IPC bridge.
+      const base = await mediaProxyBase();
       if (token !== loadToken) return;
-      await attach(blob, 'progressive');
+      await attach(base ? base + encodeURIComponent(s.url) : await viaNativeBlob(s.url, token), 'progressive');
     } else await attach(s.url, s.kind);
     // Resume position only once metadata is known; setting it earlier is ignored or aborts play().
     if (startAt > 1) {
@@ -138,7 +147,7 @@ async function playSafe(track: Track, url: string) {
       if (usePlayer.getState().playing) await audio.play();
       return;
     }
-    if (isYouTubeAudio(track) && nativeFetch && !url.startsWith('blob:')) {
+    if (isYouTubeAudio(track) && nativeFetch && !isTauri && !url.startsWith('blob:')) {
       audio.src = await viaNativeBlob(url, loadToken);
       await audio.play();
       return;
@@ -177,7 +186,8 @@ audio.addEventListener('pause', () => {
 audio.addEventListener('error', () => {
   const t = usePlayer.getState().current();
   if (!t || t.key !== loadedKey || !audio.src) return;
-  if ((t.source === 'youtube' || t.source === 'deezer') && nativeFetch && !blobUrl) {
+  // Android: retry through the native fetch. Desktop never does (megabytes over IPC freeze the page).
+  if (isYouTubeAudio(t) && nativeFetch && !isTauri && !blobUrl) {
     const src = audio.src;
     viaNativeBlob(src, loadToken)
       .then((u) => {

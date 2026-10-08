@@ -46,6 +46,21 @@
         },
         {
           "url": "https://lrclib.net/*"
+        },
+        {
+          "url": "https://api.deezer.com/*"
+        },
+        {
+          "url": "https://*.dzcdn.net/*"
+        },
+        {
+          "url": "https://lyrics-api.boidu.dev/*"
+        },
+        {
+          "url": "https://music.youtube.com/*"
+        },
+        {
+          "url": "https://*.googleusercontent.com/*"
         }
       ]
     }

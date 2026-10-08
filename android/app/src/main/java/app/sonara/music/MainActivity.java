@@ -11,6 +11,7 @@ public class MainActivity extends BridgeActivity {
         SplashScreen.installSplashScreen(this);
         registerPlugin(DynamicColorPlugin.class);
         registerPlugin(MediaControlsPlugin.class);
+        registerPlugin(PoTokenPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

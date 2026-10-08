@@ -14,16 +14,26 @@ const toRecord = (h?: HeadersInit) => {
 };
 
 /** CapacitorHttp performs the request natively: no CORS, any header allowed. */
+/** Media and images must come back as bytes: CapacitorHttp returns those base64-encoded. */
+const BINARY = /(^|\.)(googlevideo\.com|sndcdn\.com|dzcdn\.net|ytimg\.com)$/;
+const fromBase64 = (b64: string) => {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+};
+
 const capacitorFetch: Fetcher = async (url, init = {}) => {
   const headers = toRecord(init.headers);
+  const binary = BINARY.test(new URL(url).hostname);
   const r = await CapacitorHttp.request({
     url,
     method: init.method ?? 'GET',
     headers,
     data: init.body ?? undefined,
-    responseType: 'text',
+    responseType: binary ? 'blob' : 'text',
   });
-  const body = typeof r.data === 'string' ? r.data : JSON.stringify(r.data);
+  const body = binary && typeof r.data === 'string' ? fromBase64(r.data) : typeof r.data === 'string' ? r.data : JSON.stringify(r.data);
   return new Response(r.status === 204 ? null : body, { status: r.status, headers: r.headers });
 };
 

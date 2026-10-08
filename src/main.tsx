@@ -10,6 +10,7 @@ import './player/engine';
 import './player/likePulse';
 import './platform/mediaControls';
 import './platform/discord';
+import './platform/pot';
 import './platform/memory';
 import './account/sync';
 import './account/cloud';
