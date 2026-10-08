@@ -382,6 +382,9 @@ async function apply(el: HTMLElement) {
     scheduleContent();
     return;
   }
+  // Also kept on Chromium: while scrolling on phones the SVG filter is paused and this overlay
+  // (the shader's rim light / shade) is shown instead, so the glass keeps its look.
+  el.style.setProperty('--lg-light-map', `url("${maps.light}")`);
   const { layer } = st;
   layer.style.maskImage = layer.style.webkitMaskImage = `url("${maps.mask}")`;
   const blur = getComputedStyle(el).getPropertyValue('--lg-blur').trim() || '3px';

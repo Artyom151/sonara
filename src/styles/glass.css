@@ -87,6 +87,10 @@
   backdrop-filter: blur(var(--lg-blur)) !important;
   background: var(--lg-tint) !important;
 }
+/* …plus the shader's light map (rim light, inner glow, shade) as an overlay, like on WebKit. */
+:root[data-lg='svg'][data-scrolling='1'] .glass[data-lg]::before {
+  display: block;
+}
 /* Battery saver: lighter blur on the shader bars (blur radius is the main GPU cost). */
 :root[data-perf='low'] .glass[data-lg] {
   --lg-blur: 4px;
