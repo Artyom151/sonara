@@ -588,15 +588,18 @@ function pauseContentWhileScrolling() {
 }
 
 /**
- * Phones: an SVG backdrop filter is re-rasterised every frame while content scrolls under it,
- * which is what makes weak GPUs stutter. While a scroll is in progress the layers switch to a
- * plain blur + tint (cheap, composited) and get the shader back 150 ms after it stops.
+ * Phones in battery saver: an SVG backdrop filter is re-rasterised every frame while content
+ * scrolls under it, which is what makes weak GPUs stutter. While a scroll is in progress the
+ * layers switch to a plain blur + tint + the shader's light map and get the full filter back
+ * 150 ms after it stops. Maximum and Balanced never pause the shader.
  */
 function pauseRefractionWhileScrolling() {
   if (!supportsRefraction || !matchMedia('(pointer: coarse)').matches) return () => {};
   const root = document.documentElement;
   let t: ReturnType<typeof setTimeout> | undefined;
   const onScroll = () => {
+    // Only in battery saver: Maximum and Balanced keep the full shader while scrolling.
+    if (currentTier() !== 'low') return;
     if (root.dataset.scrolling !== '1') root.dataset.scrolling = '1';
     clearTimeout(t);
     t = setTimeout(() => delete root.dataset.scrolling, 150);
