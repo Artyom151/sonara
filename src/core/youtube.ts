@@ -18,6 +18,14 @@ const loadLib = () =>
   }));
 
 /** Clients ordered by how reliably they return plain (non-ciphered) audio URLs. */
+/**
+ * Audio container for stream URLs. YouTube's mp4 audio is fragmented (DASH): WebKitGTK's GStreamer
+ * cannot seek in it (a seek snaps back to the start), WebM/Opus seeks fine. The desktop and Android
+ * apps switch to webm (platform/pot.ts); iOS/Safari cannot play webm and keep mp4.
+ */
+let audioContainer: 'mp4' | 'webm' = 'mp4';
+export const setAudioContainer = (c: 'mp4' | 'webm') => void (audioContainer = c);
+
 const CLIENTS = ['MWEB', 'IOS', 'TV', 'WEB_EMBEDDED', 'WEB'] as const;
 
 const parseIsoDuration = (iso: string) => {
@@ -195,7 +203,7 @@ export class YouTube {
     return (v.items ?? []).map(this.mapDataItem);
   }
 
-  async stream(id: string): Promise<StreamInfo> {
+  async stream(id: string, container = audioContainer): Promise<StreamInfo> {
     const yt = await this.client();
     let lastError: unknown;
     for (const client of CLIENTS) {
@@ -203,7 +211,7 @@ export class YouTube {
         const info = await yt.getBasicInfo(id, { client });
         let format;
         try {
-          format = info.chooseFormat({ type: 'audio', quality: 'best', format: 'mp4' });
+          format = info.chooseFormat({ type: 'audio', quality: 'best', format: container });
         } catch {
           format = info.chooseFormat({ type: 'audio', quality: 'best' });
         }
