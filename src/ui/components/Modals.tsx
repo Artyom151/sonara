@@ -1,3 +1,4 @@
+import { sourceName } from '../sources';
 import { useState } from 'react';
 import { usePlayer } from '../../store/player';
 import { useLibrary } from '../../store/library';
@@ -71,7 +72,7 @@ function TrackMenu({ m }: { m: Extract<Modal, { type: 'track' }> }) {
     { label: liked ? t('unlike') : t('like'), icon: <IconHeart size={18} filled={liked} />, onSelect: () => useLibrary.getState().toggleLike(track), separatorBefore: true },
     { label: t('dislike'), icon: <IconBan size={18} />, checked: disliked, onSelect: () => useLibrary.getState().toggleDislike(track) },
     { label: t('share'), icon: <IconShare size={18} />, onSelect: () => shareTrack(track, t('copied')), separatorBefore: true },
-    ...(track.url ? [{ label: `${t('openIn')} ${track.source === 'youtube' ? 'YouTube' : track.source === 'deezer' ? 'Deezer' : 'SoundCloud'}`, icon: <IconExternal size={18} />, onSelect: () => openExternal(track.url!) }] : []),
+    ...(track.url ? [{ label: `${t('openIn')} ${sourceName(track.source)}`, icon: <IconExternal size={18} />, onSelect: () => openExternal(track.url!) }] : []),
     ...(m.playlistId
       ? [{ label: t('removeFromPlaylist'), icon: <IconTrash size={18} />, destructive: true, onSelect: () => useLibrary.getState().removeFromPlaylist(m.playlistId!, track.key) }]
       : []),

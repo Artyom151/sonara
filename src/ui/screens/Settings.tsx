@@ -1,3 +1,4 @@
+import { SOURCE_ORDER, SOURCES } from '../sources';
 import { useEffect, useState } from 'react';
 import { api } from '../../core';
 import { isAndroid, isTauri, platformName } from '../../platform';
@@ -9,7 +10,7 @@ import { Logo } from '../components/Brand';
 import { Select, Toggle } from '../components/controls';
 import { toast } from '../components/Toast';
 import { useT } from '../i18n';
-import { IconChevronLeft, IconChevronRight, IconDeezer, IconDiscord, IconMusic, IconQuote, IconSoundCloud, IconYouTube } from '../icons';
+import { IconChevronLeft, IconChevronRight,  IconDiscord, IconMusic, IconQuote } from '../icons';
 import { useAccount } from '../../account/store';
 import { pull, useCloud } from '../../account/cloud';
 import { Avatar } from '../components/Avatar';
@@ -114,15 +115,14 @@ export function Settings() {
 
       <div className="group-label">{t('sources')}</div>
       <div className="group">
-        <Cell icon={<IconSoundCloud size={18} />} color="#ff5500" label="SoundCloud">
-          <Toggle checked={s.sources.soundcloud} onChange={(v) => s.set({ sources: { ...s.sources, soundcloud: v } })} />
-        </Cell>
-        <Cell icon={<IconYouTube size={18} />} color="#ff0033" label="YouTube">
-          <Toggle checked={s.sources.youtube} onChange={(v) => s.set({ sources: { ...s.sources, youtube: v } })} />
-        </Cell>
-        <Cell icon={<IconDeezer size={18} />} color="#a238ff" label="Deezer">
-          <Toggle checked={s.sources.deezer ?? true} onChange={(v) => s.set({ sources: { ...s.sources, deezer: v } })} />
-        </Cell>
+        {SOURCE_ORDER.map((src) => {
+          const { name, Icon, color } = SOURCES[src];
+          return (
+            <Cell key={src} icon={<Icon size={18} />} color={color} label={name}>
+              <Toggle checked={s.sources[src] ?? true} onChange={(v) => s.set({ sources: { ...s.sources, [src]: v } })} />
+            </Cell>
+          );
+        })}
         <Cell noicon label={t('soundcloudClientId')}>
           <span className="cell-value mono">{clientId.length > 12 ? `${clientId.slice(0, 6)}…${clientId.slice(-4)}` : clientId}</span>
           <button

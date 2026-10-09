@@ -1,4 +1,4 @@
-export type Source = 'soundcloud' | 'youtube' | 'deezer';
+export type Source = 'soundcloud' | 'youtube' | 'deezer' | 'yandex' | 'vk';
 
 export type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -91,7 +91,7 @@ export interface Liker {
 export interface ApiOptions {
   youtubeApiKey?: string;
   region?: string;
-  sources?: { soundcloud: boolean; youtube: boolean; deezer?: boolean };
+  sources?: { soundcloud: boolean; youtube: boolean; deezer?: boolean; yandex?: boolean; vk?: boolean };
 }
 
 /** What the UI knows about an artist when opening their page. */

@@ -70,15 +70,17 @@ export function Segmented<T extends string>({
   value,
   options,
   onChange,
+  className = '',
 }: {
   value: T;
-  options: { value: T; label: ReactNode }[];
+  options: { value: T; label: ReactNode; title?: string }[];
   onChange: (v: T) => void;
+  className?: string;
 }) {
   const idx = Math.max(0, options.findIndex((o) => o.value === value));
   const [pressed, setPressed] = useState(false);
   return (
-    <div className="segmented glass" onPointerDown={() => setPressed(true)} onPointerUp={() => setPressed(false)} onPointerLeave={() => setPressed(false)}>
+    <div className={`segmented glass ${className}`} onPointerDown={() => setPressed(true)} onPointerUp={() => setPressed(false)} onPointerLeave={() => setPressed(false)}>
       <motion.div
         className="seg-lens"
         animate={{ left: `calc(${(idx * 100) / options.length}% + 3px)`, scale: pressed ? 1.08 : 1 }}
@@ -86,7 +88,7 @@ export function Segmented<T extends string>({
         transition={softSpring}
       />
       {options.map((o) => (
-        <button key={o.value} className={`seg ${o.value === value ? 'on' : ''}`} onClick={() => onChange(o.value)}>
+        <button key={o.value} className={`seg ${o.value === value ? 'on' : ''}`} title={o.title} aria-label={o.title} onClick={() => onChange(o.value)}>
           {o.label}
         </button>
       ))}

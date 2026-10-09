@@ -450,3 +450,22 @@
   place-items: center;
   color: var(--accent);
 }
+
+/* Search source picker: six sources do not fit as text on a phone. Logos only while the control is
+   narrower than the labels need; the names come back on wide windows. */
+.source-seg {
+  container-type: inline-size;
+}
+.source-seg .seg {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.source-seg .seg svg {
+  flex: none;
+}
+@container (max-width: 760px) {
+  .source-seg .seg-text {
+    display: none;
+  }
+}

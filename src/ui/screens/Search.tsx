@@ -6,7 +6,8 @@ import { useUi } from '../../store/ui';
 import { Art, Segmented } from '../components/controls';
 import { TrackList } from '../components/TrackRow';
 import { useT } from '../i18n';
-import { IconClose, IconSearch, IconSoundCloud, IconDeezer, IconYouTube } from '../icons';
+import { IconClose, IconSearch } from '../icons';
+import { SOURCE_ORDER, SOURCES, SourceIcon } from '../sources';
 import { useHome } from './Home';
 
 const YT_PLAYLIST = /[?&]list=([\w-]+)/;
@@ -18,6 +19,7 @@ export function Search() {
   const [source, setSource] = useState<'all' | Source>('all');
   const [result, setResult] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const recent = useLibrary((s) => s.recentSearches);
   const push = useUi((s) => s.push);
   const home = useHome();
@@ -35,11 +37,17 @@ export function Search() {
     if (SC_URL.test(query)) return;
     const id = ++seq.current;
     setLoading(true);
+    setError(null);
     const timer = setTimeout(() => {
       api
         .search(query, source)
         .then((r) => id === seq.current && setResult(r))
-        .catch(() => id === seq.current && setResult({ tracks: [], playlists: [] }))
+        .catch((e: Error) => {
+          if (id !== seq.current) return;
+          setResult({ tracks: [], playlists: [] });
+          // Yandex Music / VK without a token in .env.
+          if (/TOKEN/.test(e.message)) setError(t('sourceNeedsToken'));
+        })
         .finally(() => id === seq.current && setLoading(false));
     }, 350);
     return () => clearTimeout(timer);
@@ -69,11 +77,14 @@ export function Search() {
         <Segmented
           value={source}
           onChange={setSource}
+          className="source-seg"
           options={[
             { value: 'all', label: t('all') },
-            { value: 'soundcloud', label: (<><IconSoundCloud size={15} /> SoundCloud</>) },
-            { value: 'youtube', label: (<><IconYouTube size={15} /> YouTube</>) },
-            { value: 'deezer', label: (<><IconDeezer size={15} /> Deezer</>) },
+            ...SOURCE_ORDER.map((s) => {
+              const { name, Icon } = SOURCES[s];
+              // Phones show the logo only (CSS hides .seg-text); the name stays as the accessible label.
+              return { value: s, title: name, label: (<><Icon size={16} /><span className="seg-text">{name}</span></>) };
+            }),
           ]}
         />
       </div>
@@ -142,7 +153,7 @@ export function Search() {
                     </div>
                     <div className="track-title" style={{ marginTop: 6 }}>{p.title}</div>
                     <div className="track-sub">
-                      {p.source === 'youtube' ? <IconYouTube size={12} /> : p.source === 'deezer' ? <IconDeezer size={12} /> : <IconSoundCloud size={12} />}
+                      <SourceIcon source={p.source} />
                       {p.subtitle}
                     </div>
                   </button>
@@ -154,7 +165,7 @@ export function Search() {
             <div className="section-head">
               <h2>{t('songs')}</h2>
             </div>
-            {result.tracks.length ? <TrackList tracks={result.tracks} context={{ title: q.trim() }} meta="duration" /> : <div className="empty">{t('noResults')}</div>}
+            {result.tracks.length ? <TrackList tracks={result.tracks} context={{ title: q.trim() }} meta="duration" /> : <div className="empty">{error ?? t('noResults')}</div>}
           </section>
         </div>
       )}

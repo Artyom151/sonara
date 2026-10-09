@@ -29,7 +29,16 @@ import YouTubeMusicModule from 'youtube-music-ts-api';
 // CommonJS build: the class is on `.default` when imported from ESM.
 const YouTubeMusic = ((YouTubeMusicModule as any).default ?? YouTubeMusicModule) as typeof YouTubeMusicModule;
 
-const api = createCoreApi((url, init) => fetch(url, init));
+// Tokens of the keyed sources come from .env (same names as the apps use).
+try {
+  process.loadEnvFile();
+} catch {
+  /* no .env */
+}
+const api = createCoreApi((url, init) => fetch(url, init), undefined, {
+  yandex: () => process.env.VITE_YANDEX_MUSIC_TOKEN || undefined,
+  vk: () => process.env.VITE_VK_TOKEN || undefined,
+});
 
 // Deezer catalogue through deezer-api-ts (search, artists, albums).
 api.dz.lib = {
