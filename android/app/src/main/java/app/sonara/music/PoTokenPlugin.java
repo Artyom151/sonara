@@ -20,12 +20,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Mints YouTube PO tokens. BotGuard only attests pages on the youtube.com origin, so the minter
- * (assets/pot.js, built from src/core/pot-page.ts) runs in an invisible WebView whose document is
- * loaded with the base URL https://www.youtube.com/ (loadDataWithBaseURL): same origin, no
- * network request for the page itself. Tokens go to the web layer through a JS interface.
+ * (assets/pot.js, built from src/core/pot-page.ts) runs in an invisible WebView on a real
+ * youtube.com page (robots.txt: tiny, no scripts of its own), like the desktop app does. A
+ * document from loadDataWithBaseURL looks same-origin to JS but is not attested: GenerateIT then
+ * returns no integrity token. Tokens go to the web layer through a JS interface.
  */
 @CapacitorPlugin(name = "PoToken")
 public class PoTokenPlugin extends Plugin {
+
+    private static final String DESKTOP_UA =
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36";
 
     private WebView web;
     private boolean ready = false;
@@ -57,10 +61,14 @@ public class PoTokenPlugin extends Plugin {
             WebSettings s = web.getSettings();
             s.setJavaScriptEnabled(true);
             s.setDomStorageEnabled(true);
+            // With the WebView's mobile UA, www.youtube.com redirects to m.youtube.com, whose
+            // challenge GenerateIT answers without an integrity token. A desktop UA keeps www.
+            s.setUserAgentString(DESKTOP_UA);
             web.addJavascriptInterface(new Bridge(), "SonaraPot");
             web.setWebViewClient(new WebViewClient() {
                 @Override
                 public void onPageFinished(WebView view, String url) {
+                    if (ready || url == null || !url.startsWith("https://www.youtube.com/")) return;
                     try {
                         view.evaluateJavascript(loadScript(), v -> {
                             ready = true;
@@ -71,7 +79,7 @@ public class PoTokenPlugin extends Plugin {
                     }
                 }
             });
-            web.loadDataWithBaseURL("https://www.youtube.com/", "<!doctype html><html><head><title>pot</title></head><body></body></html>", "text/html", "utf-8", null);
+            web.loadUrl("https://www.youtube.com/robots.txt");
         } else {
             // Page still loading: retry shortly.
             main.postDelayed(() -> ensureWebView(onReady), 150);

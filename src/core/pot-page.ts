@@ -39,7 +39,8 @@ async function create(): Promise<WebPoMinter> {
 
   const bg = await BotGuardClient.create({ program: challenge.program, globalName: challenge.globalName, globalObject: window });
   const webPoSignalOutput: WebPoSignalOutput = [];
-  const snapshot = await bg.snapshot({ webPoSignalOutput });
+  // Slow phones (and emulators) need far more than the library's default 3 s.
+  const snapshot = await bg.snapshot({ webPoSignalOutput }, 30000);
   const res = await fetch(buildURL('GenerateIT', true), { method: 'POST', headers: getHeaders(), body: JSON.stringify([REQUEST_KEY, snapshot]) });
   const it = (await res.json()) as any[];
   if (typeof it?.[0] !== 'string') throw new Error('No integrity token');
