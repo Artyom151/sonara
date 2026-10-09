@@ -59,7 +59,7 @@ export function IslandPlayer({ desktop = false }: { desktop?: boolean }) {
   return (
     <>
       <AnimatePresence>
-        {open && <motion.div className="island-scrim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setOpen(false)} />}
+        {open && <motion.div className="island-scrim" initial={{ backgroundColor: 'rgba(0,0,0,0)' }} animate={{ backgroundColor: 'rgba(0,0,0,0.25)' }} exit={{ backgroundColor: 'rgba(0,0,0,0)' }} onClick={() => setOpen(false)} />}
       </AnimatePresence>
       <motion.div
         className={`island ${open ? 'open' : ''} ${desktop ? 'desk' : ''}`}

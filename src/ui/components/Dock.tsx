@@ -27,8 +27,9 @@ export function MiniPlayer() {
       layoutId="mini"
       className="mini glass refract"
       onClick={() => usePlayer.getState().setExpanded(true)}
-      initial={{ y: 30, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
+      // Transform only: an animated opacity would hide the glass blur until the end.
+      initial={{ y: 90 }}
+      animate={{ y: 0 }}
       transition={{ type: 'spring', stiffness: 400, damping: 34 }}
     >
       <div className="mini-art">

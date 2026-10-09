@@ -21,9 +21,10 @@ export function Handoff() {
         <motion.div
           key={np.at}
           className="handoff glass dark"
-          initial={{ opacity: 0, y: 24, scale: 0.94 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 16, scale: 0.96 }}
+          // Transform only on the glass, so its blur shows from the first frame.
+          initial={{ y: 140, scale: 0.94 }}
+          animate={{ y: 0, scale: 1 }}
+          exit={{ y: 140, scale: 0.96 }}
           transition={{ type: 'spring', stiffness: 380, damping: 32 }}
         >
           <div className="handoff-art">

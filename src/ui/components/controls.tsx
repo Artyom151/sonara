@@ -293,7 +293,9 @@ export function Sheet({ open, onClose, children, title, full }: { open: boolean;
   return createPortal(
     <AnimatePresence>
       {open && (
-        <motion.div className="sheet-scrim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+        // Scrims fade their colour, never opacity: an animated opacity makes the glass inside a
+        // backdrop root, which then shows no blur until the animation ends.
+        <motion.div className="sheet-scrim" initial={{ backgroundColor: 'rgba(0,0,0,0)' }} animate={{ backgroundColor: 'rgba(0,0,0,0.55)' }} exit={{ backgroundColor: 'rgba(0,0,0,0)' }} onClick={onClose}>
           <motion.div
             className={`sheet glass dark ${full ? 'full' : ''}`}
             initial={{ y: '100%' }}
@@ -347,16 +349,17 @@ export function Alert({
   return createPortal(
     <AnimatePresence>
       {open && (
-        <motion.div className="alert-scrim" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+        <motion.div className="alert-scrim" initial={{ backgroundColor: 'rgba(0,0,0,0)' }} animate={{ backgroundColor: 'rgba(0,0,0,0.55)' }} exit={{ backgroundColor: 'rgba(0,0,0,0)' }} onClick={onClose}>
           <motion.div
             className="alert glass dark refract"
-            initial={{ scale: 1.15, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.92, opacity: 0 }}
+            // Transform only on the glass (see the scrim); the content fades instead.
+            initial={{ scale: 0.6 }}
+            animate={{ scale: 1 }}
+            exit={{ scale: 0.6, transition: { duration: 0.15 } }}
             transition={{ type: 'spring', stiffness: 420, damping: 30 }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.1 } }}>
               <h3>{title}</h3>
               {message && <p>{message}</p>}
               {children}
@@ -372,7 +375,7 @@ export function Alert({
                   </button>
                 ))}
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         </motion.div>
       )}

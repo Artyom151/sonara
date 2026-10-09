@@ -132,7 +132,7 @@ function LikedBy({ track }: { track: Track }) {
         ? `${names.slice(0, -1).join(', ')} ${t('and')} ${names[names.length - 1]}`
         : names[0];
   return (
-    <motion.div key={track.key} className="liked-by glass" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+    <motion.div key={track.key} className="liked-by glass" initial={{ scale: 0.85, y: 6 }} animate={{ scale: 1, y: 0 }}>
       <div className="avatars">
         {state.people.map((p, i) => (p.preset ? <Avatar key={i} avatar={p.avatar} name={p.name} size={22} /> : p.avatar ? <img key={i} src={p.avatar} alt="" /> : <span key={i} />))}
       </div>

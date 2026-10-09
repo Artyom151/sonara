@@ -149,7 +149,7 @@ button:disabled {
   position: fixed;
   inset: 0;
   z-index: 69;
-  background: rgb(0 0 0 / 0.25);
+  /* colour animated in IslandPlayer (never opacity: see Sheet) */
 }
 .island-compact {
   display: flex;

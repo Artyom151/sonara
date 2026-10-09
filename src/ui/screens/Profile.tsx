@@ -40,7 +40,7 @@ export function Profile() {
           </button>
         </div>
       ) : (
-        <motion.div className="signin-card glass" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div className="signin-card glass" initial={{ scale: 0.96, y: 14 }} animate={{ scale: 1, y: 0 }}>
           <div>
             <span className="signin-icon">
               <IconPerson size={30} filled />

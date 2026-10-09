@@ -19,12 +19,15 @@ export function Toasts() {
           <motion.div
             key={t.id}
             className="toast glass dark"
-            initial={{ opacity: 0, y: -30, scale: 0.8 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.9, filter: 'blur(6px)' }}
+            // Transform only on the glass, so its blur is there from the first frame; the text fades.
+            initial={{ y: -80, scale: 0.8 }}
+            animate={{ y: 0, scale: 1 }}
+            exit={{ y: -80, scale: 0.9 }}
             transition={{ type: 'spring', stiffness: 420, damping: 30 }}
           >
-            <span>{t.text}</span>
+            <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              {t.text}
+            </motion.span>
           </motion.div>
         ))}
       </AnimatePresence>
