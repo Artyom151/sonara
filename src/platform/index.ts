@@ -38,6 +38,9 @@ const capacitorFetch: Fetcher = async (url, init = {}) => {
     headers,
     data: init.body ?? undefined,
     responseType: binary ? 'blob' : 'text',
+    // Never wait forever: a handshake DPI drops gets no answer at all.
+    connectTimeout: 15_000,
+    readTimeout: 30_000,
   });
   const body = binary && typeof r.data === 'string' ? fromBase64(r.data) : typeof r.data === 'string' ? r.data : JSON.stringify(r.data);
   return new Response(r.status === 204 ? null : body, { status: r.status, headers: r.headers });
@@ -70,7 +73,9 @@ const tauriNativeFetch: Fetcher = async (url, init = {}) => {
   // Through the built-in DPI bypass when it is on (platform/dpi.ts).
   const { bypassProxy } = await import('./dpi');
   const proxy = bypassProxy();
-  return tauriFetch(url, { ...init, headers, ...(proxy ? { proxy: { all: proxy } } : {}) } as RequestInit);
+  // Never wait forever: a handshake DPI drops gets no answer at all.
+  const signal = init.signal ?? AbortSignal.timeout(30_000);
+  return tauriFetch(url, { ...init, headers, signal, ...(proxy ? { proxy: { all: proxy } } : {}) } as RequestInit);
 };
 
 /** A fetch that bypasses CORS on native platforms. `null` on the plain web. */

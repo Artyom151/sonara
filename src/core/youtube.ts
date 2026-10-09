@@ -48,11 +48,17 @@ export class YouTube {
 
   private client(): Promise<Innertube> {
     if (!this.yt) {
-      this.yt = loadLib().then(({ Innertube }) => Innertube.create({
-        fetch: ((input: RequestInfo | URL, init?: RequestInit) => this.fetchAdapter(input, init)) as typeof fetch,
-        generate_session_locally: true,
-        retrieve_player: true,
-      })).catch((e) => {
+      // A request DPI swallows never answers: without a deadline the session stays pending and
+      // every later call waits on it forever. Fail instead, so the next call starts over.
+      const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('YouTube session timed out')), 30_000));
+      this.yt = Promise.race([
+        loadLib().then(({ Innertube }) => Innertube.create({
+          fetch: ((input: RequestInfo | URL, init?: RequestInit) => this.fetchAdapter(input, init)) as typeof fetch,
+          generate_session_locally: true,
+          retrieve_player: true,
+        })),
+        timeout,
+      ]).catch((e) => {
         this.yt = null;
         throw e;
       });
