@@ -234,8 +234,9 @@ fn handle(mut client: TcpStream) -> std::io::Result<()> {
     let mut it = line.split_whitespace();
     let (method, target) = (it.next().unwrap_or(""), it.next().unwrap_or(""));
     if method != "CONNECT" {
-        client.write_all(b"HTTP/1.1 405 Method Not Allowed\r\nContent-Length: 0\r\n\r\n")?;
-        return Ok(());
+        // WebKitGTK applies a webview proxy to the whole network session, so plain HTTP requests
+        // (absolute-form, e.g. the player's local media proxy) arrive here too: forward them.
+        return forward_http(client, &head, method, target);
     }
     let host = target.rsplit_once(':').map(|(h, _)| h).unwrap_or(target).trim_matches(['[', ']']).to_string();
     let addr = target.to_socket_addrs()?.next().ok_or_else(|| std::io::Error::other("no address"))?;
@@ -268,6 +269,38 @@ fn handle(mut client: TcpStream) -> std::io::Result<()> {
         None => up.write_all(&first)?,
     }
 
+    let (c2, u2) = (client.try_clone()?, up.try_clone()?);
+    let t = thread::spawn(move || pipe(c2, up));
+    pipe(u2, client);
+    let _ = t.join();
+    Ok(())
+}
+
+/// One plain-HTTP request: rewrite to origin-form, close after the response.
+fn forward_http(mut client: TcpStream, head: &[u8], method: &str, target: &str) -> std::io::Result<()> {
+    let Some(rest) = target.strip_prefix("http://") else {
+        client.write_all(b"HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n\r\n")?;
+        return Ok(());
+    };
+    let (authority, path) = rest.split_once('/').map(|(a, p)| (a, format!("/{p}"))).unwrap_or((rest, "/".into()));
+    let addr_s = if authority.contains(':') { authority.to_string() } else { format!("{authority}:80") };
+    let addr = addr_s.to_socket_addrs()?.next().ok_or_else(|| std::io::Error::other("no address"))?;
+    let mut up = TcpStream::connect_timeout(&addr, Duration::from_secs(10))?;
+    let text = String::from_utf8_lossy(head);
+    let mut lines = text.split("\r\n");
+    let version = lines.next().and_then(|l| l.rsplit(' ').next()).unwrap_or("HTTP/1.1").to_string();
+    let mut out = format!("{method} {path} {version}\r\n");
+    for l in lines.filter(|l| !l.is_empty()) {
+        let k = l.split(':').next().unwrap_or("").to_ascii_lowercase();
+        if k == "proxy-connection" || k == "connection" || k == "keep-alive" {
+            continue;
+        }
+        out.push_str(l);
+        out.push_str("\r\n");
+    }
+    // One request per tunnel: the next one may go to another host.
+    out.push_str("Connection: close\r\n\r\n");
+    up.write_all(out.as_bytes())?;
     let (c2, u2) = (client.try_clone()?, up.try_clone()?);
     let t = thread::spawn(move || pipe(c2, up));
     pipe(u2, client);
@@ -420,6 +453,28 @@ mod tests {
         // Upstream received the record-split hello: same handshake, one extra record header.
         assert_eq!(back.len(), h.len() + 5);
         dpi_configure(false, vec![]).unwrap();
+    }
+
+    #[test]
+    fn forwards_plain_http() {
+        let up = TcpListener::bind("127.0.0.1:0").unwrap();
+        let up_addr = up.local_addr().unwrap();
+        thread::spawn(move || {
+            let (mut s, _) = up.accept().unwrap();
+            let mut buf = [0u8; 2048];
+            let n = s.read(&mut buf).unwrap();
+            let req = String::from_utf8_lossy(&buf[..n]).to_string();
+            assert!(req.starts_with("GET /tok?u=x HTTP/1.1\r\n"), "{req}");
+            assert!(req.contains("Connection: close"));
+            s.write_all(b"HTTP/1.1 206 Partial Content\r\nContent-Length: 2\r\n\r\nok").unwrap();
+        });
+        let port = start();
+        let mut c = TcpStream::connect(("127.0.0.1", port)).unwrap();
+        write!(c, "GET http://{up_addr}/tok?u=x HTTP/1.1\r\nHost: {up_addr}\r\nProxy-Connection: keep-alive\r\nRange: bytes=0-1\r\n\r\n").unwrap();
+        let mut back = String::new();
+        c.read_to_string(&mut back).unwrap();
+        assert!(back.starts_with("HTTP/1.1 206"), "{back}");
+        assert!(back.ends_with("ok"));
     }
 }
 
