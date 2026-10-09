@@ -79,8 +79,7 @@ const mediaProxyBase = () =>
     .then(({ invoke }) => invoke<string | null>('media_proxy_base'))
     .catch(() => null));
 
-// Sources that can play through YouTube (Deezer always, Yandex without a Plus token).
-const isYouTubeAudio = (t: Track) => t.source === 'youtube' || t.source === 'deezer' || t.source === 'yandex';
+const isYouTubeAudio = (t: Track) => t.source === 'youtube' || t.source === 'deezer';
 
 async function attach(url: string, kind: 'progressive' | 'hls') {
   switching = true;

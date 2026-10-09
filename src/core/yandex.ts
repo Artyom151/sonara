@@ -1,13 +1,12 @@
 import { md5 } from '../lib/md5';
 import type { Fetcher, StreamInfo, Track } from './types';
-import type { YouTube } from './youtube';
 
 /**
  * Yandex Music (unofficial mobile API, https://api.music.yandex.net).
  * Search and similar tracks work without an account. Full tracks need an OAuth token issued to the
  * Yandex Music app (its music scopes) and a Plus subscription: VITE_YANDEX_MUSIC_TOKEN in .env.
  * A token from another app is refused ("missing-required-scopes"); then, and without a token,
- * tracks play through the matching YouTube recording, like Deezer.
+ * Yandex itself only serves its 30-second previews. Tracks never play from another service.
  */
 const API = 'https://api.music.yandex.net';
 // Constant salt of the official clients for signing download links.
@@ -22,8 +21,6 @@ export class YandexMusic {
   constructor(
     private fetcher: Fetcher,
     private token: () => string | undefined,
-    private matchYouTube: (t: Track) => Promise<string>,
-    private yt: YouTube,
   ) {}
 
   /** A token is set and Yandex has not refused it. */
@@ -72,25 +69,26 @@ export class YandexMusic {
     return ((r?.similarTracks ?? []) as any[]).map(this.mapTrack).filter(Boolean) as Track[];
   }
 
-  /** The full file from Yandex (token + Plus), or null when only a preview is offered. */
-  private async direct(id: string): Promise<StreamInfo | null> {
-    const infos = ((await this.get(`/tracks/${id}/download-info`)) ?? []) as any[];
-    const best = infos.filter((i) => !i.preview && i.codec === 'mp3').sort((a, b) => b.bitrateInKbps - a.bitrateInKbps)[0];
-    if (!best) return null;
-    const d = await (await this.fetcher(`${best.downloadInfoUrl}&format=json`)).json();
+  /** Signed file link of one download-info entry. */
+  private async link(info: any): Promise<StreamInfo> {
+    const d = await (await this.fetcher(`${info.downloadInfoUrl}&format=json`)).json();
     const sign = md5(SIGN_SALT + String(d.path).slice(1) + d.s);
     return { url: `https://${d.host}/get-mp3/${sign}/${d.ts}${d.path}`, kind: 'progressive', mime: 'audio/mpeg' };
   }
 
-  async stream(t: Track): Promise<StreamInfo> {
-    if (this.hasToken) {
-      try {
-        const s = await this.direct(t.id);
-        if (s) return s;
-      } catch (e) {
-        console.warn('[yandex] direct stream failed:', (e as Error).message);
-      }
-    }
-    return this.yt.stream(await this.matchYouTube(t));
+  /** The full file (token with music scopes + Plus), else null. */
+  async full(id: string): Promise<StreamInfo | null> {
+    if (!this.hasToken) return null;
+    const infos = ((await this.get(`/tracks/${id}/download-info`)) ?? []) as any[];
+    const best = infos.filter((i) => !i.preview && i.codec === 'mp3').sort((a, b) => b.bitrateInKbps - a.bitrateInKbps)[0];
+    return best ? this.link(best) : null;
+  }
+
+  /** 30-second preview, available to everyone. */
+  async preview(id: string): Promise<StreamInfo> {
+    const infos = ((await this.get(`/tracks/${id}/download-info`)) ?? []) as any[];
+    const best = infos.filter((i) => i.codec === 'mp3').sort((a, b) => b.bitrateInKbps - a.bitrateInKbps)[0] ?? infos[0];
+    if (!best) throw new Error('Yandex Music: no download info');
+    return this.link(best);
   }
 }

@@ -137,11 +137,11 @@ app.get(
     const t = track(c);
     // googlevideo URLs are bound to the requesting client, so YouTube audio is proxied.
     if (t.source === 'youtube') return { url: `/api/yt/stream/${t.id}`, kind: 'progressive' };
-    if (t.source === 'deezer') return { url: `/api/yt/stream/${await api.dz.match(t)}`, kind: 'progressive' };
-    // Yandex: the file itself with a Plus token; otherwise the YouTube recording, proxied like Deezer.
-    if (t.source === 'yandex') {
+    // Deezer: a SoundCloud or YouTube copy (core/match.ts) or its preview; a YouTube copy is proxied.
+    if (t.source === 'deezer') {
       const s = await api.stream(t);
-      return /googlevideo\.com/.test(s.url) ? { url: `/api/yt/stream/${await api.dz.match(t)}`, kind: 'progressive' } : s;
+      const m = /googlevideo\.com/.test(s.url) ? await api.match(t) : null;
+      return m?.source === 'youtube' ? { url: `/api/yt/stream/${m.id}`, kind: 'progressive' } : s;
     }
     return api.stream(t);
   }),

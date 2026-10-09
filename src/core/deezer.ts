@@ -3,8 +3,8 @@ import type { YouTube } from './youtube';
 
 /**
  * Deezer's public catalogue API (https://api.deezer.com, no key): search, charts, playlists.
- * Deezer only serves 30-second previews without a subscription, so a full track is played by
- * finding the same recording on YouTube (artist + title, closest duration).
+ * Deezer only serves 30-second previews without a subscription, so a full track is played from
+ * the same recording on YouTube or SoundCloud (core/match.ts); the preview is the last resort.
  */
 const API = 'https://api.deezer.com';
 
@@ -31,7 +31,6 @@ export interface DeezerLib {
 const norm2 = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 
 export class Deezer {
-  private matches = new Map<string, string>();
   lib: DeezerLib | null = null;
 
   constructor(
@@ -60,6 +59,7 @@ export class Deezer {
       duration: t.duration ?? 0,
       plays: t.rank,
       url: t.link,
+      preview: t.preview || undefined,
     };
   };
 
@@ -162,31 +162,5 @@ export class Deezer {
     if (!t.artistId) return [];
     const j = await this.get(`/artist/${t.artistId}/radio?limit=20`);
     return (j.data ?? []).map(this.mapTrack).filter(Boolean) as Track[];
-  }
-
-  /** YouTube video id of the same recording. */
-  async match(t: Track): Promise<string> {
-    const hit = this.matches.get(t.key);
-    if (hit) return hit;
-    const results = await this.yt.search(`${t.artist} ${t.title}`);
-    const title = norm(t.title);
-    const artist = norm(t.artist);
-    const score = (c: Track) => {
-      const ct = norm(`${c.title} ${c.artist}`);
-      let s = 0;
-      if (ct.includes(title)) s += 4;
-      if (ct.includes(artist)) s += 2;
-      if (t.duration && c.duration) s -= Math.min(6, Math.abs(c.duration - t.duration) / 4);
-      if (/\b(live|cover|karaoke|instrumental|8d|slowed|sped up|reverb|remix)\b/.test(ct) && !/\b(live|remix)\b/.test(title)) s -= 3;
-      return s;
-    };
-    const best = results.slice(0, 10).sort((a, b) => score(b) - score(a))[0];
-    if (!best) throw new Error('No playable source for this Deezer track');
-    this.matches.set(t.key, best.id);
-    return best.id;
-  }
-
-  async stream(t: Track): Promise<StreamInfo> {
-    return this.yt.stream(await this.match(t));
   }
 }

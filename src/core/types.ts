@@ -20,6 +20,8 @@ export interface Track {
   /** Style tags (SoundCloud tag_list + genre), lower-case. */
   tags?: string[];
   url?: string;
+  /** 30-second preview (Deezer), played when no full recording is found. */
+  preview?: string;
   /** SoundCloud-only data needed to resolve a stream */
   sc?: { auth?: string; transcodings?: ScTranscoding[] };
 }

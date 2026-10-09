@@ -63,12 +63,12 @@ test('soundcloud search returns only soundcloud tracks', { skip, timeout: 60000 
   assert.ok(t.length > 0 && t.every((x) => x.source === 'soundcloud'));
 });
 
-test('yandex music search works (with or without a token) and tracks stream past the cut-off', { skip, timeout: 240000 }, async () => {
-  const t = await search('daft punk one more time', 'yandex');
+test('yandex music: search works and tracks play from yandex itself', { skip, timeout: 240000 }, async () => {
+  const t = await search('SIDERR hate you', 'yandex');
   assert.ok(t.length > 0, 'no yandex results');
   assert.ok(t.every((x) => x.source === 'yandex'));
   const s = (await (await fetch(`${base}/api/stream?track=${encodeURIComponent(JSON.stringify(t[0]))}`)).json()) as any;
-  assert.ok(s.url, JSON.stringify(s));
-  const path = s.url.startsWith('/') ? s.url : null;
-  if (path) assert.equal((await range(path, '3000000-3000999')).status, 206);
+  assert.match(s.url, /yandex\.net/, 'a yandex track must not be replaced by another service');
+  const r = await fetch(s.url, { headers: { Range: 'bytes=0-999' } });
+  assert.ok(r.status === 200 || r.status === 206, `yandex file ${r.status}`);
 });

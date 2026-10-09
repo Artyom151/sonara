@@ -1,9 +1,10 @@
 import { LruMap } from '../lib/lru';
 import { fetchLyrics } from './lyrics';
 import { SoundCloud, type KeyValueStore } from './soundcloud';
-import type { ApiOptions, ArtistPage, ArtistRef, Fetcher, HomeData, Playlist, SearchResult, SonaraApi, Source, Track } from './types';
+import type { ApiOptions, ArtistPage, ArtistRef, Fetcher, HomeData, Playlist, SearchResult, SonaraApi, Source, StreamInfo, Track } from './types';
 import { YouTube } from './youtube';
 import { Deezer } from './deezer';
+import { RecordingMatcher } from './match';
 import { YandexMusic } from './yandex';
 
 /** Optional tokens (VITE_YANDEX_MUSIC_TOKEN in .env). */
@@ -39,7 +40,7 @@ export function createCoreApi(
   fetcher: Fetcher,
   store?: KeyValueStore,
   tokens: SourceTokens = {},
-): SonaraApi & { sc: SoundCloud; yt: YouTube; dz: Deezer; ym: YandexMusic } {
+): SonaraApi & { sc: SoundCloud; yt: YouTube; dz: Deezer; ym: YandexMusic; matcher: RecordingMatcher; match: (t: Track) => Promise<Track | null> } {
   const sc = new SoundCloud(fetcher, store);
   const yt = new YouTube(fetcher);
   const dz = new Deezer(fetcher, yt);
@@ -48,7 +49,29 @@ export function createCoreApi(
     const v = get?.()?.trim();
     return v && !v.startsWith('your_') ? v : undefined;
   };
-  const ym = new YandexMusic(fetcher, real(tokens.yandex), (t) => dz.match(t), yt);
+  const ym = new YandexMusic(fetcher, real(tokens.yandex));
+  const matcher = new RecordingMatcher(yt, sc);
+
+  /** Yandex plays only from Yandex: the full file with a music token + Plus, otherwise its preview. */
+  const yandexStream = async (t: Track): Promise<StreamInfo> => (await settle(ym.full(t.id), null)) ?? ym.preview(t.id);
+
+  /** Deezer: the same recording on YouTube or SoundCloud, else Deezer's own preview. */
+  const catalogueStream = async (t: Track): Promise<StreamInfo> => {
+    // Best copy first; one can still refuse to stream (region-blocked SoundCloud), then the next.
+    for (const m of await matcher.candidates(t)) {
+      try {
+        const s = await (m.source === 'youtube' ? yt.stream(m.id) : sc.stream(m));
+        // SoundCloud answers label tracks with a 30-second preview: not a full copy.
+        if (/\/preview\//.test(s.url)) throw new Error('only a preview');
+        return s;
+      } catch (e) {
+        console.warn(`[match] ${m.source} copy unplayable, trying the next:`, (e as Error).message);
+        matcher.drop(t, m);
+      }
+    }
+    if (t.preview) return { url: t.preview, kind: 'progressive', mime: 'audio/mpeg' };
+    throw new Error('No full recording of this track was found');
+  };
   const lyricsCache = new LruMap<string, Promise<any>>(40);
 
   return {
@@ -56,6 +79,8 @@ export function createCoreApi(
     yt,
     dz,
     ym,
+    matcher,
+    match: (t) => matcher.find(t),
     clientId: (refresh) => sc.clientId(refresh),
 
     async home(opts: ApiOptions = {}): Promise<HomeData> {
@@ -102,7 +127,7 @@ export function createCoreApi(
       t.source === 'youtube' ? yt.related(t.id) : t.source === 'deezer' ? dz.related(t) : t.source === 'yandex' ? ym.related(t.id) : sc.related(t.id),
 
     stream: (t) =>
-      t.source === 'youtube' ? yt.stream(t.id) : t.source === 'deezer' ? dz.stream(t) : t.source === 'yandex' ? ym.stream(t) : sc.stream(t),
+      t.source === 'youtube' ? yt.stream(t.id) : t.source === 'deezer' ? catalogueStream(t) : t.source === 'yandex' ? yandexStream(t) : sc.stream(t),
 
     likers: async (t) => (t.source === 'soundcloud' ? settle(sc.likers(t.id), []) : []),
 
