@@ -19,6 +19,8 @@ export interface Settings {
   youtubeApiKey: string;
   /** Yandex Music OAuth token, entered in Settings (kept on this device only). */
   yandexToken: string;
+  /** Built-in DPI bypass (platform/dpi.ts). */
+  bypass: { enabled: boolean; services: Record<'youtube' | 'soundcloud' | 'deezer' | 'yandex', { preset: 'off' | 'tlsrec' | 'split' | 'disorder' | 'strong' | 'custom'; custom: string }> };
   region: string;
   autoplay: boolean;
   skipUnavailable: boolean;
@@ -49,6 +51,15 @@ export const useSettings = create<Settings>()(
       sources: { soundcloud: true, youtube: true, deezer: true, yandex: true },
       youtubeApiKey: '',
       yandexToken: '',
+      bypass: {
+        enabled: false,
+        services: {
+          youtube: { preset: 'tlsrec', custom: '' },
+          soundcloud: { preset: 'tlsrec', custom: '' },
+          deezer: { preset: 'tlsrec', custom: '' },
+          yandex: { preset: 'off', custom: '' },
+        },
+      },
       region: 'US',
       autoplay: true,
       skipUnavailable: true,

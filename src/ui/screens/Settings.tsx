@@ -1,3 +1,4 @@
+import { BYPASS_HOSTS, type BypassPreset, type BypassService, type BypassServiceConfig } from '../../platform/dpi';
 import { SOURCE_ORDER, SOURCES } from '../sources';
 import { useEffect, useState } from 'react';
 import { api } from '../../core';
@@ -10,7 +11,7 @@ import { Logo } from '../components/Brand';
 import { Select, Toggle } from '../components/controls';
 import { toast } from '../components/Toast';
 import { useT } from '../i18n';
-import { IconChevronLeft, IconChevronRight,  IconDiscord, IconMusic, IconQuote } from '../icons';
+import { IconChevronLeft, IconChevronRight,  IconDiscord, IconMusic, IconQuote, IconShield } from '../icons';
 import { useAccount } from '../../account/store';
 import { pull, useCloud } from '../../account/cloud';
 import { Avatar } from '../components/Avatar';
@@ -33,6 +34,51 @@ function Cell({ icon, color, label, hint, children, noicon }: { icon?: React.Rea
       </span>
       {children}
     </div>
+  );
+}
+
+/** Built-in DPI bypass (platform/dpi.ts, src-tauri/src/dpi.rs). */
+function BypassSettings() {
+  const t = useT();
+  const s = useSettings();
+  const b = s.bypass;
+  const setService = (k: BypassService, patch: Partial<BypassServiceConfig>) =>
+    s.set({ bypass: { ...b, services: { ...b.services, [k]: { ...b.services[k], ...patch } } } });
+  const presets: { value: BypassPreset; label: string }[] = [
+    { value: 'off', label: t('bypassOff') },
+    { value: 'tlsrec', label: 'TLS record' },
+    { value: 'split', label: 'Split' },
+    { value: 'disorder', label: 'Disorder' },
+    { value: 'strong', label: t('bypassStrong') },
+    { value: 'custom', label: t('bypassCustom') },
+  ];
+  return (
+    <>
+      <div className="group-label">{t('bypass')}</div>
+      <div className="group">
+        <Cell icon={<IconShield size={18} />} color="#30d158" label={t('bypassEnable')}>
+          <Toggle checked={b.enabled} onChange={(v) => s.set({ bypass: { ...b, enabled: v } })} />
+        </Cell>
+        {b.enabled &&
+          (Object.keys(BYPASS_HOSTS) as BypassService[]).map((k) => {
+            const { name, Icon, color, fg } = SOURCES[k];
+            const c = b.services[k];
+            return (
+              <div key={k}>
+                <Cell icon={<Icon size={18} style={fg ? { color: fg } : undefined} />} color={color} label={name}>
+                  <Select value={c.preset} options={presets} onChange={(v) => setService(k, { preset: v })} />
+                </Cell>
+                {c.preset === 'custom' && (
+                  <Cell noicon label={t('bypassStrategy')}>
+                    <input className="cell-input mono" placeholder="tlsrec=sni+1,split=sni+3,disorder" value={c.custom} onChange={(e) => setService(k, { custom: e.target.value })} />
+                  </Cell>
+                )}
+              </div>
+            );
+          })}
+      </div>
+      <div className="group-foot">{t('bypassHint')}</div>
+    </>
   );
 }
 
@@ -147,6 +193,8 @@ export function Settings() {
         </Cell>
       </div>
       <div className="group-foot">{t('youtubeKeyHint')}</div>
+
+      {isTauri && <BypassSettings />}
 
       <div className="group-label">{t('playback')}</div>
       <div className="group">

@@ -19,8 +19,14 @@ fn window(app: &AppHandle) -> Result<WebviewWindow, String> {
     if let Some(w) = app.get_webview_window(LABEL) {
         return Ok(w);
     }
-    WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External("https://www.youtube.com/robots.txt".parse().map_err(|e| format!("{e}"))?))
-        .title("Sonara")
+    let mut b = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External("https://www.youtube.com/robots.txt".parse().map_err(|e| format!("{e}"))?));
+    // Through the DPI bypass when it is on (src/dpi.rs); fixed for the window's lifetime.
+    if let Some(port) = crate::dpi::active_port() {
+        if let Ok(u) = format!("http://127.0.0.1:{port}").parse() {
+            b = b.proxy_url(u);
+        }
+    }
+    b.title("Sonara")
         .visible(false)
         .decorations(false)
         .skip_taskbar(true)

@@ -64,7 +64,10 @@ const tauriNativeFetch: Fetcher = async (url, init = {}) => {
     if (!headers.has('origin')) headers.set('Origin', origin);
     if (!headers.has('referer')) headers.set('Referer', `${origin}/`);
   }
-  return tauriFetch(url, { ...init, headers });
+  // Through the built-in DPI bypass when it is on (platform/dpi.ts).
+  const { bypassProxy } = await import('./dpi');
+  const proxy = bypassProxy();
+  return tauriFetch(url, { ...init, headers, ...(proxy ? { proxy: { all: proxy } } : {}) } as RequestInit);
 };
 
 /** A fetch that bypasses CORS on native platforms. `null` on the plain web. */

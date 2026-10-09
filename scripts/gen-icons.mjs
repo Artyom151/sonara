@@ -56,6 +56,7 @@ const map = {
   IconDownload: ['arrow_down_circle', 'arrow_down_circle_fill'],
   IconTimer: ['timer'],
   IconLink: ['link'],
+  IconShield: ['shield_lefthalf_fill'],
 };
 
 const inner = (name) => {

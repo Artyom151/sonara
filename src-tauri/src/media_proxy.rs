@@ -49,6 +49,17 @@ fn decode(s: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
+/// Plain agent, or through the DPI bypass proxy when it is on (src/dpi.rs).
+fn agent() -> ureq::Agent {
+    let mut b = ureq::AgentBuilder::new();
+    if let Some(port) = crate::dpi::active_port() {
+        if let Ok(p) = ureq::Proxy::new(format!("http://127.0.0.1:{port}")) {
+            b = b.proxy(p);
+        }
+    }
+    b.build()
+}
+
 fn allowed(url: &str) -> bool {
     let Some(rest) = url.strip_prefix("https://") else { return false };
     let host = rest.split(['/', '?']).next().unwrap_or("");
@@ -82,7 +93,7 @@ impl Chunked {
         let range = format!("bytes={}-{}", self.pos, to);
         let mut last = None;
         for _ in 0..3 {
-            match ureq::get(&self.url).set("User-Agent", ua_for(&self.url)).set("Range", &range).call() {
+            match agent().get(&self.url).set("User-Agent", ua_for(&self.url)).set("Range", &range).call() {
                 Ok(r) => {
                     let mut data = Vec::with_capacity((to - self.pos + 1) as usize);
                     r.into_reader().read_to_end(&mut data)?;
@@ -123,7 +134,7 @@ fn total_len(url: &str) -> Option<u64> {
             return Some(n);
         }
     }
-    let r = ureq::get(url).set("User-Agent", ua_for(url)).set("Range", "bytes=0-0").call().ok()?;
+    let r = agent().get(url).set("User-Agent", ua_for(url)).set("Range", "bytes=0-0").call().ok()?;
     r.header("Content-Range")?.rsplit('/').next()?.parse().ok()
 }
 
@@ -229,13 +240,13 @@ mod tests {
         let (port, token) = super::start();
         let base = format!("http://127.0.0.1:{port}/{token}?u={}", url.replace('%', "%25").replace('&', "%26"));
         let total: u64 = {
-            let r = ureq::get(&base).set("Range", "bytes=0-0").call().unwrap();
+            let r = agent().get(&base).set("Range", "bytes=0-0").call().unwrap();
             assert_eq!(r.status(), 206);
             r.header("Content-Range").unwrap().rsplit('/').next().unwrap().parse().unwrap()
         };
         // What WebKit does on a seek: an open-ended range from the middle.
         for start in [0, total / 2, total - 5000] {
-            let r = ureq::get(&base).set("Range", &format!("bytes={start}-")).call().unwrap();
+            let r = agent().get(&base).set("Range", &format!("bytes={start}-")).call().unwrap();
             assert_eq!(r.status(), 206, "start {start}");
             let mut buf = vec![0u8; 4096];
             assert!(r.header("Content-Length").is_some(), "no Content-Length: WebKit then seeks only once");

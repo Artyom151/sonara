@@ -24,6 +24,8 @@ const edit = (file, fn) => {
 edit('package.json', (s) => s.replace(/"version":\s*"[^"]+"/, `"version": "${raw}"`));
 edit('src-tauri/tauri.conf.json', (s) => s.replace(/"version":\s*"[^"]+"/, `"version": "${raw}"`));
 edit('src-tauri/Cargo.toml', (s) => s.replace(/^version = "[^"]+"/m, `version = "${raw}"`));
+// The lock file records the package version too (left behind uncommitted otherwise).
+edit('src-tauri/Cargo.lock', (s) => s.replace(/(name = "sonara"\nversion = )"[^"]+"/, `$1"${raw}"`));
 edit('android/app/build.gradle', (s) =>
   s.replace(/versionCode \d+/, `versionCode ${versionCode}`).replace(/versionName "[^"]+"/, `versionName "${raw}"`),
 );
