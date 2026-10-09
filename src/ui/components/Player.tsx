@@ -76,6 +76,27 @@ const activeLine = (lyrics: Lyrics | null | undefined, pos: number) => {
   return i;
 };
 
+/** Lead-in before the first line, an empty line, or a gap of 6 s+ before the next line. */
+const isGap = (lyrics: Lyrics | null | undefined, i: number) => {
+  const s = lyrics?.synced;
+  if (!s?.length) return false;
+  if (i < 0) return s[0].time > 3;
+  if (!s[i].text.trim()) return true;
+  return false;
+};
+
+/** Note while waiting, then 3 · 2 · 1 in the last three seconds before the next line. */
+function GapMark({ next, size }: { next: number; size: number }) {
+  const left = usePlayer((s) => Math.ceil(next - s.position));
+  if (left >= 1 && left <= 3)
+    return (
+      <motion.span key={left} className="lyric-count" initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.25 }}>
+        {left}
+      </motion.span>
+    );
+  return <IconNote size={size} />;
+}
+
 function LikedBy({ track }: { track: Track }) {
   const t = useT();
   const provider = useAccount((s) => s.provider);
@@ -177,16 +198,18 @@ export function LyricsView({ lyrics, className }: { lyrics: Lyrics | null | unde
   const box = useRef<HTMLDivElement>(null);
   const userScroll = useRef(0);
 
+  // The lead-in row (note / countdown) sits before the first line.
+  const introRow = isGap(lyrics, -1) ? 1 : 0;
   useEffect(() => {
-    if (idx < 0 || !box.current || Date.now() - userScroll.current < 3000) return;
-    const el = box.current.children[idx] as HTMLElement | undefined;
+    if (idx + introRow < 0 || !box.current || Date.now() - userScroll.current < 3000) return;
+    const el = box.current.children[idx + introRow] as HTMLElement | undefined;
     // Scroll only the lyrics container. scrollIntoView() would also scroll every
     // scrollable ancestor (including the page root) and shift the whole interface up.
     if (el) {
       const b = box.current;
       b.scrollTo({ top: el.offsetTop - b.clientHeight / 2 + el.offsetHeight / 2, behavior: 'smooth' });
     }
-  }, [idx]);
+  }, [idx, introRow]);
 
   if (lyrics === undefined) return <div className={`lyrics ${className ?? ''}`} />;
   if (!lyrics || (!lyrics.synced && !lyrics.plain))
@@ -201,11 +224,18 @@ export function LyricsView({ lyrics, className }: { lyrics: Lyrics | null | unde
         <p>{lyrics.plain}</p>
       </div>
     );
+  const s = lyrics.synced;
+  const intro = isGap(lyrics, -1);
   return (
     <div ref={box} className={`lyrics ${className ?? ''}`} onWheel={() => (userScroll.current = Date.now())} onTouchMove={() => (userScroll.current = Date.now())}>
-      {lyrics.synced.map((l, i) => (
-        <p key={i} className={i === idx ? 'active' : i < idx ? 'past' : ''} onClick={() => seek(l.time)}>
-          {l.text || <IconNote size={22} />}
+      {intro && (
+        <p className={`lyric-gap ${idx < 0 ? 'active' : 'past'}`} onClick={() => seek(0)}>
+          <GapMark next={s[0].time} size={26} />
+        </p>
+      )}
+      {s.map((l, i) => (
+        <p key={i} className={`${i === idx ? 'active' : i < idx ? 'past' : ''} ${l.text.trim() ? '' : 'lyric-gap'}`} onClick={() => seek(l.time)}>
+          {l.text.trim() ? l.text : i === idx && s[i + 1] ? <GapMark next={s[i + 1].time} size={26} /> : <IconNote size={26} />}
         </p>
       ))}
     </div>
@@ -215,7 +245,9 @@ export function LyricsView({ lyrics, className }: { lyrics: Lyrics | null | unde
 /** Isolated so only this pill re-renders on time updates, not the whole player. */
 function LyricPill({ lyrics, onOpen }: { lyrics: Lyrics | null | undefined; onOpen: () => void }) {
   const index = usePlayer((s) => activeLine(lyrics, s.position));
-  const line = index >= 0 ? lyrics!.synced![index].text : '';
+  const synced = lyrics?.synced;
+  const line = index >= 0 ? synced![index].text : '';
+  const next = synced?.[index + 1]?.time;
   return (
     <button className="lyric-pill glass" onClick={onOpen}>
       <AnimatePresence mode="wait">
@@ -226,7 +258,7 @@ function LyricPill({ lyrics, onOpen }: { lyrics: Lyrics | null | undefined; onOp
           exit={{ opacity: 0, y: -8, filter: 'blur(4px)' }}
           transition={{ duration: 0.3 }}
         >
-          {line || <IconNote size={14} />}
+          {line || (next != null ? <GapMark next={next} size={14} /> : <IconNote size={14} />)}
         </motion.span>
       </AnimatePresence>
     </button>

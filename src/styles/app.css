@@ -1563,3 +1563,22 @@ button.cell:active {
     flex-direction: column;
   }
 }
+
+/* Lyrics gaps: a note while the music plays, then a 3 · 2 · 1 countdown to the next line. */
+.lyrics p.lyric-gap {
+  display: flex;
+  align-items: center;
+  min-height: 1.2em;
+}
+.lyrics p.lyric-gap svg {
+  display: block;
+  flex: none;
+}
+.lyric-count {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+}
+.lyric-pill span svg {
+  display: inline-block;
+  vertical-align: -2px;
+}
