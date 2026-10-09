@@ -75,6 +75,19 @@ async function fetchRelease() {
   return r.json();
 }
 
+/** Turn a GitHub release JSON into the store state. `show`: bring the notice back even if closed. */
+function apply(j: any, show: boolean) {
+  const { setState } = useUpdates;
+  const version = String(j.tag_name ?? '').replace(/^v/, '');
+  if (!version || !newer(version, __APP_VERSION__)) return setState({ status: 'latest', info: null });
+  const info: UpdateInfo = { version, pageUrl: j.html_url, downloadUrl: pickAsset(j.assets ?? []) ?? j.html_url };
+  if (show) {
+    write(DISMISSED, null);
+    setState({ dismissed: null });
+  }
+  setState({ status: 'available', info });
+}
+
 export const useUpdates = create<UpdateState>((set, get) => ({
   status: 'idle',
   info: null,
@@ -84,16 +97,7 @@ export const useUpdates = create<UpdateState>((set, get) => ({
     set({ status: 'checking' });
     try {
       // Native fetch: no CORS / mixed-content limits (the test feed is plain http on Android).
-      const j = FEED.startsWith('{') ? JSON.parse(FEED) : await fetchRelease();
-      const version = String(j.tag_name ?? '').replace(/^v/, '');
-      if (!version || !newer(version, __APP_VERSION__)) return set({ status: 'latest', info: null });
-      const info: UpdateInfo = { version, pageUrl: j.html_url, downloadUrl: pickAsset(j.assets ?? []) ?? j.html_url };
-      // Checking by hand shows the notice again even if it was closed for this version.
-      if (manual) {
-        write(DISMISSED, null);
-        set({ dismissed: null });
-      }
-      set({ status: 'available', info });
+      apply(FEED.startsWith('{') ? JSON.parse(FEED) : await fetchRelease(), manual);
     } catch {
       set({ status: manual ? 'error' : 'idle' });
     }
@@ -111,4 +115,21 @@ export const usePendingUpdate = () => useUpdates((s) => (s.status === 'available
 if (updatesSupported) {
   setTimeout(() => void useUpdates.getState().check(), 5000);
   setInterval(() => void useUpdates.getState().check(), CHECK_EVERY);
+}
+
+// Dev only: scripts/fake-update.mjs serves a pretend release here; every start of the script
+// (a new nonce) shows the notice again in the running app, no restart needed.
+if (import.meta.env?.DEV && updatesSupported) {
+  let lastNonce: unknown;
+  setInterval(async () => {
+    try {
+      const r = await fetch('http://127.0.0.1:8787/');
+      const j = await r.json();
+      if (j.nonce === lastNonce) return;
+      lastNonce = j.nonce;
+      apply(j, true);
+    } catch {
+      /* no fake feed running */
+    }
+  }, 2500);
 }
