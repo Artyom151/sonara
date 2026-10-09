@@ -1,10 +1,14 @@
 package app.sonara.music;
 
-import android.os.ParcelFileDescriptor;
+import android.system.ErrnoException;
 import android.system.Os;
 import android.system.OsConstants;
+import android.system.StructTimeval;
 import android.util.Log;
 import java.io.ByteArrayOutputStream;
+import java.io.FileDescriptor;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -298,10 +302,114 @@ public final class DpiProxy {
         }
     }
 
-    private static Socket connect(String host, int p) throws IOException {
-        Socket up = new Socket();
-        up.connect(new InetSocketAddress(host, p), 10_000);
-        return up;
+    /** Upstream connection on a socket we own, so IP_TTL can be set on its descriptor directly. */
+    static final class Upstream implements java.io.Closeable {
+        final Socket socket; // JVM fallback (unit tests), else null
+        final FileDescriptor fd;
+        final InputStream in;
+        final OutputStream out;
+        final boolean v6;
+
+        Upstream(Socket s) throws IOException {
+            socket = s;
+            fd = null;
+            in = s.getInputStream();
+            out = s.getOutputStream();
+            v6 = s.getInetAddress() instanceof Inet6Address;
+        }
+
+        Upstream(FileDescriptor fd, boolean v6) {
+            socket = null;
+            this.fd = fd;
+            in = new FileInputStream(fd);
+            out = new FileOutputStream(fd);
+            this.v6 = v6;
+        }
+
+        void noDelay() {
+            try {
+                if (socket != null) socket.setTcpNoDelay(true);
+                else Os.setsockoptInt(fd, OsConstants.IPPROTO_TCP, OsConstants.TCP_NODELAY, 1);
+            } catch (Exception ignored) {
+            }
+        }
+
+        void ttl(int ttl) {
+            if (fd == null) return;
+            try {
+                if (v6) Os.setsockoptInt(fd, OsConstants.IPPROTO_IPV6, OsConstants.IPV6_UNICAST_HOPS, ttl);
+                else Os.setsockoptInt(fd, OsConstants.IPPROTO_IP, 2 /* IP_TTL */, ttl);
+            } catch (Exception e) {
+                Log.d(TAG, "ttl: " + e.getMessage());
+            }
+        }
+
+        void shutdownOutput() {
+            try {
+                if (socket != null) socket.shutdownOutput();
+                else Os.shutdown(fd, OsConstants.SHUT_WR);
+            } catch (Exception ignored) {
+            }
+        }
+
+        @Override
+        public void close() {
+            try {
+                if (socket != null) socket.close();
+                else Os.close(fd);
+            } catch (Exception ignored) {
+            }
+        }
+    }
+
+    private static final int CONNECT_TIMEOUT_MS = 7_000;
+
+    /**
+     * The first reachable address, IPv4 first: a broken IPv6 route on mobile networks would
+     * otherwise stall every tunnel (the WebView alone falls back with happy eyeballs).
+     */
+    private static Upstream connect(String host, int p) throws IOException {
+        InetAddress[] all = InetAddress.getAllByName(host);
+        List<InetAddress> order = new ArrayList<>();
+        for (InetAddress a : all) if (!(a instanceof Inet6Address)) order.add(a);
+        for (InetAddress a : all) if (a instanceof Inet6Address) order.add(a);
+        IOException last = new IOException("no address: " + host);
+        for (InetAddress a : order) {
+            try {
+                return open(a, p);
+            } catch (IOException e) {
+                last = e;
+            }
+        }
+        throw last;
+    }
+
+    private static Upstream open(InetAddress a, int p) throws IOException {
+        boolean v6 = a instanceof Inet6Address;
+        FileDescriptor fd = null;
+        try {
+            fd = Os.socket(v6 ? OsConstants.AF_INET6 : OsConstants.AF_INET, OsConstants.SOCK_STREAM, 0);
+        } catch (Throwable ignored) {
+            // not on Android (unit tests)
+        }
+        if (fd == null || !fd.valid()) {
+            Socket s = new Socket();
+            s.connect(new InetSocketAddress(a, p), CONNECT_TIMEOUT_MS);
+            return new Upstream(s);
+        }
+        try {
+            // connect() honours SO_SNDTIMEO on Linux: a timeout without a non-blocking dance.
+            Os.setsockoptTimeval(fd, OsConstants.SOL_SOCKET, OsConstants.SO_SNDTIMEO, StructTimeval.fromMillis(CONNECT_TIMEOUT_MS));
+            Os.connect(fd, a, p);
+            Os.setsockoptTimeval(fd, OsConstants.SOL_SOCKET, OsConstants.SO_SNDTIMEO, StructTimeval.fromMillis(0));
+            return new Upstream(fd, v6);
+        } catch (ErrnoException | java.net.SocketException e) {
+            try {
+                Os.close(fd);
+            } catch (ErrnoException ignored) {
+            }
+            throw new IOException(a.getHostAddress() + ": " + e.getMessage());
+        }
     }
 
     private static void handle(Socket client) throws IOException {
@@ -341,7 +449,7 @@ public final class DpiProxy {
             }
             byte[] pb = new byte[2];
             readFully(in, pb);
-            Socket up;
+            Upstream up;
             try {
                 up = connect(host, u16(pb, 0));
             } catch (IOException e) {
@@ -371,7 +479,7 @@ public final class DpiProxy {
         int colon = target.lastIndexOf(':');
         String host = (colon < 0 ? target : target.substring(0, colon)).replace("[", "").replace("]", "");
         int p = colon < 0 ? 443 : Integer.parseInt(target.substring(colon + 1));
-        Socket up;
+        Upstream up;
         try {
             up = connect(host, p);
         } catch (IOException e) {
@@ -389,7 +497,7 @@ public final class DpiProxy {
     }
 
     /** Desync the first client bytes for {@code host}, then relay both ways. */
-    private static void tunnel(Socket client, Socket up, String host) throws IOException {
+    private static void tunnel(Socket client, Upstream up, String host) throws IOException {
         try {
             InputStream in = client.getInputStream();
             byte[] buf = new byte[16 * 1024];
@@ -412,43 +520,32 @@ public final class DpiProxy {
             byte[] first = Arrays.copyOf(buf, n);
             Strategy st = strategyFor(host);
             if (st != null) sendDesync(up, first, st);
-            else up.getOutputStream().write(first);
+            else up.out.write(first);
+            Log.i(TAG, host + (st != null ? " desync" : " direct"));
             relay(client, up);
         } finally {
-            closeQuietly(up);
+            up.close();
         }
     }
 
-    private static void sendDesync(Socket up, byte[] first, Strategy st) throws IOException {
+    private static void sendDesync(Upstream up, byte[] first, Strategy st) throws IOException {
         Plan p = plan(first, st);
-        up.setTcpNoDelay(true);
-        OutputStream out = up.getOutputStream();
+        up.noDelay();
         if (p.split < 0) {
-            out.write(p.data);
+            up.out.write(p.data);
             return;
         }
-        boolean v6 = up.getInetAddress() instanceof Inet6Address;
-        if (st.disorder) setTtl(up, v6, 1);
-        out.write(p.data, 0, p.split);
-        out.flush();
+        if (st.disorder) up.ttl(1);
+        up.out.write(p.data, 0, p.split);
+        up.out.flush();
         if (st.disorder) {
             // Let the short-lived segment leave before the TTL is restored for the rest.
             sleep(Math.max(st.delayMs, 3));
-            setTtl(up, v6, 64);
+            up.ttl(64);
         } else if (st.delayMs > 0) {
             sleep(st.delayMs);
         }
-        out.write(p.data, p.split, p.data.length - p.split);
-    }
-
-    /** IP_TTL / IPV6_UNICAST_HOPS on the socket (java.net.Socket has no setter for them). */
-    private static void setTtl(Socket s, boolean v6, int ttl) {
-        try (ParcelFileDescriptor pfd = ParcelFileDescriptor.fromSocket(s)) {
-            if (v6) Os.setsockoptInt(pfd.getFileDescriptor(), OsConstants.IPPROTO_IPV6, OsConstants.IPV6_UNICAST_HOPS, ttl);
-            else Os.setsockoptInt(pfd.getFileDescriptor(), OsConstants.IPPROTO_IP, 2 /* IP_TTL */, ttl);
-        } catch (Exception e) {
-            Log.d(TAG, "ttl: " + e.getMessage());
-        }
+        up.out.write(p.data, p.split, p.data.length - p.split);
     }
 
     private static void sleep(long ms) {
@@ -459,10 +556,19 @@ public final class DpiProxy {
         }
     }
 
-    private static void relay(Socket client, Socket up) {
-        Thread t = new Thread(() -> pipe(client, up));
+    private static void relay(Socket client, Upstream up) throws IOException {
+        InputStream cin = client.getInputStream();
+        OutputStream cout = client.getOutputStream();
+        Thread t = new Thread(() -> {
+            pipe(cin, up.out);
+            up.shutdownOutput();
+        });
         t.start();
-        pipe(up, client);
+        pipe(up.in, cout);
+        try {
+            client.shutdownOutput();
+        } catch (IOException ignored) {
+        }
         try {
             t.join();
         } catch (InterruptedException e) {
@@ -470,19 +576,13 @@ public final class DpiProxy {
         }
     }
 
-    private static void pipe(Socket from, Socket to) {
+    private static void pipe(InputStream in, OutputStream out) {
         byte[] buf = new byte[32 * 1024];
         try {
-            InputStream in = from.getInputStream();
-            OutputStream out = to.getOutputStream();
             int n;
             while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
         } catch (IOException ignored) {
             // closed
-        }
-        try {
-            to.shutdownOutput();
-        } catch (IOException ignored) {
         }
     }
 
@@ -499,7 +599,7 @@ public final class DpiProxy {
         int colon = authority.lastIndexOf(':');
         String host = colon < 0 ? authority : authority.substring(0, colon);
         int p = colon < 0 ? 80 : Integer.parseInt(authority.substring(colon + 1));
-        Socket up = connect(host, p);
+        Upstream up = connect(host, p);
         try {
             String[] lines = head.split("\r\n");
             String[] reqLine = lines[0].split(" ");
@@ -514,10 +614,10 @@ public final class DpiProxy {
             }
             // One request per connection: the next one may go to another host.
             sb.append("Connection: close\r\n\r\n");
-            up.getOutputStream().write(sb.toString().getBytes(StandardCharsets.ISO_8859_1));
+            up.out.write(sb.toString().getBytes(StandardCharsets.ISO_8859_1));
             relay(client, up);
         } finally {
-            closeQuietly(up);
+            up.close();
         }
     }
 
