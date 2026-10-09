@@ -71,6 +71,78 @@ public class BypassPlugin extends Plugin {
         });
     }
 
+    /**
+     * Tries each strategy against real URLs of one service, through the proxy, with fresh
+     * connections: the fastest one that loads every URL wins. The caller re-applies its own
+     * rules afterwards (configure).
+     */
+    @PluginMethod
+    public void probe(PluginCall call) {
+        JSArray hs = call.getArray("hosts", new JSArray());
+        JSArray ss = call.getArray("strategies", new JSArray());
+        JSArray us = call.getArray("urls", new JSArray());
+        new Thread(() -> {
+            try {
+                String[] hosts = new String[hs.length()];
+                for (int i = 0; i < hosts.length; i++) hosts[i] = hs.getString(i).toLowerCase(Locale.ROOT);
+                JSArray results = new JSArray();
+                for (int i = 0; i < ss.length(); i++) {
+                    String st = ss.getString(i);
+                    int port = DpiProxy.configure(true, Collections.singletonList(new DpiProxy.Rule(hosts, DpiProxy.Strategy.parse(st))));
+                    Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("127.0.0.1", port));
+                    long t0 = System.currentTimeMillis();
+                    long bytes = 0;
+                    boolean ok = true;
+                    for (int j = 0; j < us.length() && ok; j++) {
+                        long b = fetch(us.getString(j), proxy);
+                        ok = b >= 0;
+                        bytes += Math.max(b, 0);
+                    }
+                    JSObject r = new JSObject();
+                    r.put("strategy", st);
+                    r.put("ok", ok);
+                    r.put("ms", System.currentTimeMillis() - t0);
+                    r.put("bytes", bytes);
+                    Log.i(TAG, "probe " + st + ": " + (ok ? "ok" : "fail") + " " + (System.currentTimeMillis() - t0) + " ms");
+                    results.put(r);
+                }
+                JSObject res = new JSObject();
+                res.put("results", results);
+                call.resolve(res);
+            } catch (Exception e) {
+                call.reject("probe: " + e.getMessage());
+            }
+        }, "sonara-dpi-probe").start();
+    }
+
+    /** Bytes of the body, or -1 on any failure (8 s budget, a new connection each time). */
+    private static long fetch(String url, Proxy proxy) {
+        try {
+            java.net.HttpURLConnection c = (java.net.HttpURLConnection) new java.net.URL(url).openConnection(proxy);
+            c.setConnectTimeout(6000);
+            c.setReadTimeout(6000);
+            c.setRequestProperty("Connection", "close");
+            c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0 Mobile Safari/537.36");
+            long deadline = System.currentTimeMillis() + 8000;
+            int code = c.getResponseCode();
+            if (code >= 400) return -1;
+            long n = 0;
+            try (java.io.InputStream in = c.getInputStream()) {
+                byte[] buf = new byte[16 * 1024];
+                int k;
+                while ((k = in.read(buf)) > 0) {
+                    n += k;
+                    if (System.currentTimeMillis() > deadline) return -1;
+                }
+            } finally {
+                c.disconnect();
+            }
+            return n;
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
     /** HttpURLConnection: the bypass hosts through the proxy, everything else as before. */
     private static synchronized void applySelector(int port) {
         if (systemSelector == null) systemSelector = ProxySelector.getDefault();

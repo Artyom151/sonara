@@ -61,8 +61,8 @@ const en = {
   cancelDownloads: 'Stop downloading', clearDownloads: 'Delete all downloads', allDownloaded: 'Everything is downloaded', offlineOnly: 'Downloaded',
   sleepTimer: 'Sleep timer', sleepOff: 'Off', sleepEndOfTrack: 'End of track', minutesShort: 'min', sleepSet: 'Sleep timer set',
   importPlaylist: 'Import by link', importHint: 'Link to a playlist or album: Yandex Music, YouTube, SoundCloud, Deezer', importAction: 'Import', importFailed: 'Could not import this link', imported: 'Imported',
-  bypass: 'Bypass blocking', bypassEnable: 'Built-in bypass', bypassOff: 'Off', bypassStrong: 'Strong', bypassCustom: 'Custom', bypassStrategy: 'Strategy',
-  bypassHint: 'Works like zapret / ByeDPI for Sonara only, no VPN or driver: the start of each secure connection is split so DPI cannot read the site name. Helps against DPI blocking, not against blocked IP addresses. Try another strategy if a service still does not load. Custom: tlsrec=POS, split=POS, disorder, delay=MS; POS is a number or sni, sni+2, sni-1.',
+  bypass: 'Bypass blocking', bypassEnable: 'Built-in bypass', bypassOff: 'Off', bypassStrong: 'Strong', bypassCustom: 'Custom', bypassStrategy: 'Strategy', bypassAuto: 'Pick automatically', bypassAutoRunning: 'Testing strategies…', bypassAutoNone: 'no strategy got through, the service may be blocked by IP',
+  bypassHint: 'Works like zapret / ByeDPI for Sonara only, no VPN or driver: the start of each secure connection is split so DPI cannot read the site name. Helps against DPI blocking, not against blocked IP addresses. Try another strategy if a service still does not load. Custom: tlsrec=POS, split=POS, disorder, oob (Android), delay=MS; POS is a number or sni, sni+2, sni-1.',
   yandexLibrary: 'Yandex Music', yandexToken: 'Yandex Music token',
 };
 
@@ -127,8 +127,8 @@ const ru: typeof en = {
   cancelDownloads: 'Остановить загрузку', clearDownloads: 'Удалить все загрузки', allDownloaded: 'Всё уже скачано', offlineOnly: 'Скачанные',
   sleepTimer: 'Таймер сна', sleepOff: 'Выключен', sleepEndOfTrack: 'В конце трека', minutesShort: 'мин', sleepSet: 'Таймер сна включён',
   importPlaylist: 'Импорт по ссылке', importHint: 'Ссылка на плейлист или альбом: Яндекс Музыка, YouTube, SoundCloud, Deezer', importAction: 'Импортировать', importFailed: 'Не удалось импортировать ссылку', imported: 'Импортировано',
-  bypass: 'Обход блокировок', bypassEnable: 'Встроенный обход', bypassOff: 'Выключен', bypassStrong: 'Усиленная', bypassCustom: 'Своя', bypassStrategy: 'Стратегия',
-  bypassHint: 'Работает как zapret / ByeDPI, только для Sonara, без VPN и драйверов: начало каждого защищённого соединения дробится, и DPI не видит имя сайта. Помогает от блокировок по DPI, но не от блокировки IP-адресов. Если сервис не грузится, попробуйте другую стратегию. Своя: tlsrec=ПОЗ, split=ПОЗ, disorder, delay=МС; ПОЗ — число или sni, sni+2, sni-1.',
+  bypass: 'Обход блокировок', bypassEnable: 'Встроенный обход', bypassOff: 'Выключен', bypassStrong: 'Усиленная', bypassCustom: 'Своя', bypassStrategy: 'Стратегия', bypassAuto: 'Подобрать автоматически', bypassAutoRunning: 'Проверяю стратегии…', bypassAutoNone: 'ни одна стратегия не прошла, похоже, сервис заблокирован по IP',
+  bypassHint: 'Работает как zapret / ByeDPI, только для Sonara, без VPN и драйверов: начало каждого защищённого соединения дробится, и DPI не видит имя сайта. Помогает от блокировок по DPI, но не от блокировки IP-адресов. Если сервис не грузится, попробуйте другую стратегию. Своя: tlsrec=ПОЗ, split=ПОЗ, disorder, oob (Android), delay=МС; ПОЗ — число или sni, sni+2, sni-1.',
   yandexLibrary: 'Яндекс Музыка', yandexToken: 'Токен Яндекс Музыки',
 };
 

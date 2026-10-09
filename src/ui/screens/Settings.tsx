@@ -1,4 +1,4 @@
-import { BYPASS_HOSTS, bypassSupported, type BypassPreset, type BypassService, type BypassServiceConfig } from '../../platform/dpi';
+import { autoPickBypass, bypassAutoSupported, BYPASS_HOSTS, bypassSupported, type BypassPreset, type BypassService, type BypassServiceConfig } from '../../platform/dpi';
 import { SOURCE_ORDER, SOURCES } from '../sources';
 import { useEffect, useState } from 'react';
 import { api } from '../../core';
@@ -42,6 +42,14 @@ function BypassSettings() {
   const t = useT();
   const s = useSettings();
   const b = s.bypass;
+  const [picking, setPicking] = useState<BypassService | null>(null);
+  const autoPick = (k: BypassService) => {
+    setPicking(k);
+    autoPickBypass(k)
+      .then((r) => toast(r ? `${SOURCES[k].name}: ${r.strategy || t('bypassOff')} · ${(r.ms / 1000).toFixed(1)} s` : `${SOURCES[k].name}: ${t('bypassAutoNone')}`))
+      .catch((e) => toast(String((e as Error).message ?? e)))
+      .finally(() => setPicking(null));
+  };
   const setService = (k: BypassService, patch: Partial<BypassServiceConfig>) =>
     s.set({ bypass: { ...b, services: { ...b.services, [k]: { ...b.services[k], ...patch } } } });
   const presets: { value: BypassPreset; label: string }[] = [
@@ -68,6 +76,11 @@ function BypassSettings() {
                 <Cell icon={<Icon size={18} style={fg ? { color: fg } : undefined} />} color={color} label={name}>
                   <Select value={c.preset} options={presets} onChange={(v) => setService(k, { preset: v })} />
                 </Cell>
+                {bypassAutoSupported && (
+                  <button className="cell noicon" onClick={() => autoPick(k)} disabled={picking !== null}>
+                    {picking === k ? t('bypassAutoRunning') : t('bypassAuto')}
+                  </button>
+                )}
                 {c.preset === 'custom' && (
                   <Cell noicon label={t('bypassStrategy')}>
                     <input className="cell-input mono" placeholder="tlsrec=sni+1,split=sni+3,disorder" value={c.custom} onChange={(e) => setService(k, { custom: e.target.value })} />

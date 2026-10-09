@@ -17,6 +17,7 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.json.JSONObject;
 
 /**
  * Mints YouTube PO tokens. BotGuard only attests pages on the youtube.com origin, so the minter
@@ -117,7 +118,73 @@ public class PoTokenPlugin extends Plugin {
         }, 45_000);
     }
 
+    /** fetch() inside the youtube.com page, injected next to the minter. */
+    private static final String FETCH_JS =
+        "window.__sonaraFetch=function(k,u,o,bin,ms){"
+        + "var c=new AbortController();var t=setTimeout(function(){c.abort()},ms||20000);"
+        + "o.signal=c.signal;o.credentials='omit';o.cache='no-store';if(o.mode==null)delete o.mode;"
+        + "fetch(u,o).then(function(r){var h={};r.headers.forEach(function(v,n){h[n]=v});"
+        + "return (bin?r.arrayBuffer().then(function(b){var a=new Uint8Array(b),s='',i;"
+        + "for(i=0;i<a.length;i+=32768)s+=String.fromCharCode.apply(null,a.subarray(i,i+32768));return btoa(s)}):r.text())"
+        + ".then(function(body){clearTimeout(t);SonaraPot.fetched(k,r.status,JSON.stringify(h),body)})})"
+        + ".catch(function(e){clearTimeout(t);SonaraPot.err(k,String(e&&e.message||e))})};";
+
+    /**
+     * A request made by Chromium from the youtube.com page instead of HttpURLConnection. With the
+     * DPI bypass on this is what gets YouTube through: Chromium's ClientHello is large (post-quantum
+     * key share, two TCP segments), and DPI that reassembles a small one sees through every split.
+     */
+    @PluginMethod
+    public void fetch(PluginCall call) {
+        final String url = call.getString("url", "");
+        if (!url.startsWith("https://")) {
+            call.reject("bad url");
+            return;
+        }
+        JSObject init = new JSObject();
+        init.put("method", call.getString("method", "GET"));
+        JSObject headers = call.getObject("headers", new JSObject());
+        init.put("headers", headers);
+        String mode = call.getString("mode");
+        if (mode != null) init.put("mode", mode);
+        String body = call.getString("body");
+        if (body != null) init.put("body", body);
+        final boolean binary = Boolean.TRUE.equals(call.getBoolean("binary", false));
+        final int timeout = call.getInt("timeout", 20000);
+        final int key = seq.incrementAndGet();
+        synchronized (calls) {
+            calls.put(key, call);
+        }
+        final String js = "window.__sonaraFetch(" + key + "," + JSONObject.quote(url) + "," + init + "," + binary + "," + timeout + ")";
+        main.post(() -> ensureWebView(() -> web.evaluateJavascript(FETCH_JS + js, null)));
+        main.postDelayed(() -> {
+            PluginCall c;
+            synchronized (calls) {
+                c = calls.remove(key);
+            }
+            if (c != null) c.reject("fetch timed out");
+        }, timeout + 5000L);
+    }
+
     private class Bridge {
+        @JavascriptInterface
+        public void fetched(int key, int status, String headers, String body) {
+            PluginCall c;
+            synchronized (calls) {
+                c = calls.remove(key);
+            }
+            if (c == null) return;
+            JSObject r = new JSObject();
+            r.put("status", status);
+            try {
+                r.put("headers", new JSObject(headers));
+            } catch (Exception e) {
+                r.put("headers", new JSObject());
+            }
+            r.put("data", body);
+            c.resolve(r);
+        }
+
         @JavascriptInterface
         public void ok(int key, String token) {
             PluginCall c;

@@ -29,6 +29,9 @@ const capacitorFetch: Fetcher = async (url, init = {}) => {
   const headers = toRecord(init.headers);
   const binary = BINARY.test(new URL(url).hostname) || BINARY_HINT in headers;
   delete headers[BINARY_HINT];
+  // YouTube through the DPI bypass: from Chromium, see platform/dpi.ts.
+  const dpi = await import('./dpi');
+  if (dpi.viaPage(new URL(url).hostname)) return dpi.pageFetch(url, { ...init, headers }, binary);
   const r = await CapacitorHttp.request({
     url,
     method: init.method ?? 'GET',
