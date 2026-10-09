@@ -46,6 +46,8 @@ const ORIGINS: [RegExp, string][] = [
   [/(^|\.)googleapis\.com$/, 'https://www.youtube.com'],
   [/(^|\.)(soundcloud\.com|sndcdn\.com|soundcloud\.cloud)$/, 'https://soundcloud.com'],
   [/(^|\.)lrclib\.net$/, 'https://lrclib.net'],
+  // The Yandex Music API answers 403 to foreign origins such as tauri://localhost.
+  [/(^|\.)yandex\.net$/, 'https://music.yandex.ru'],
 ];
 
 let tauriFetch: Fetcher | null = null;
