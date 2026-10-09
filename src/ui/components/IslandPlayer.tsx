@@ -75,7 +75,7 @@ export function IslandPlayer({ desktop = false }: { desktop?: boolean }) {
           {open && <motion.div className="island-scrim" initial={{ backgroundColor: 'rgba(0,0,0,0)' }} animate={{ backgroundColor: 'rgba(0,0,0,0.25)' }} exit={{ backgroundColor: 'rgba(0,0,0,0)' }} onClick={close} />}
         </AnimatePresence>
         <motion.div
-          className={`island ${open ? 'open' : ''} ${desktop ? 'desk' : ''}`}
+          className={`island update ${open ? 'open' : ''} ${desktop ? 'desk' : ''}`}
           layout
           transition={spring}
           style={{ borderRadius: open ? (desktop ? 28 : 34) : desktop ? 17 : 22 }}

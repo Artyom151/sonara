@@ -510,6 +510,12 @@ button.link:hover {
   text-decoration: underline;
 }
 
+/* The update card in the island is only as wide as its text: no track-length minimum. */
+.island.update:not(.open),
+.island.update.open {
+  min-width: 0;
+}
+
 /* Update notice (UpdateNotice.tsx): glass card at the top, or the island's update state */
 .update-notice {
   position: fixed;
