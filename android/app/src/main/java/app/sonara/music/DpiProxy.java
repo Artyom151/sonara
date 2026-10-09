@@ -66,6 +66,8 @@ public final class DpiProxy {
         Pos tlsrec = Pos.NONE;
         Pos split = Pos.NONE;
         boolean disorder;
+        /** Send one extra byte with TCP URG after the first segment: the server drops it, DPI does not. */
+        boolean oob;
         long delayMs;
 
         /** "tlsrec=sni+1,split=sni+3,disorder,delay=5" */
@@ -84,6 +86,10 @@ public final class DpiProxy {
                     case "split":
                         out.split = parsePos(v);
                         break;
+                    case "oob":
+                        out.oob = true;
+                        if (!v.isEmpty()) out.split = parsePos(v);
+                        break;
                     case "disorder":
                         out.disorder = true;
                         if (!v.isEmpty()) out.split = parsePos(v);
@@ -99,7 +105,7 @@ public final class DpiProxy {
                         throw new IllegalArgumentException("unknown option: " + k);
                 }
             }
-            if (out.disorder && out.split.equals(Pos.NONE)) out.split = new Pos(2, 1);
+            if ((out.disorder || out.oob) && out.split.equals(Pos.NONE)) out.split = new Pos(2, 1);
             return out;
         }
     }
@@ -309,6 +315,7 @@ public final class DpiProxy {
         final InputStream in;
         final OutputStream out;
         final boolean v6;
+        String ip = "?";
 
         Upstream(Socket s) throws IOException {
             socket = s;
@@ -331,6 +338,16 @@ public final class DpiProxy {
                 if (socket != null) socket.setTcpNoDelay(true);
                 else Os.setsockoptInt(fd, OsConstants.IPPROTO_TCP, OsConstants.TCP_NODELAY, 1);
             } catch (Exception ignored) {
+            }
+        }
+
+        /** One urgent byte (MSG_OOB): not part of the stream the server reads. */
+        void urgent() throws IOException {
+            try {
+                if (socket != null) socket.sendUrgentData('a');
+                else Os.sendto(fd, new byte[] {'a'}, 0, 1, OsConstants.MSG_OOB, null, 0);
+            } catch (ErrnoException | java.net.SocketException e) {
+                throw new IOException("oob: " + e.getMessage());
             }
         }
 
@@ -369,7 +386,7 @@ public final class DpiProxy {
      * otherwise stall every tunnel (the WebView alone falls back with happy eyeballs).
      */
     private static Upstream connect(String host, int p) throws IOException {
-        InetAddress[] all = InetAddress.getAllByName(host);
+        InetAddress[] all = resolve(host);
         List<InetAddress> order = new ArrayList<>();
         for (InetAddress a : all) if (!(a instanceof Inet6Address)) order.add(a);
         for (InetAddress a : all) if (a instanceof Inet6Address) order.add(a);
@@ -384,6 +401,76 @@ public final class DpiProxy {
         throw last;
     }
 
+    /** DNS-over-HTTPS servers, by IP so they need no DNS themselves. */
+    private static final String[] DOH = {
+        "https://1.1.1.1/dns-query?type=A&name=",
+        "https://8.8.8.8/resolve?type=A&name=",
+        "https://9.9.9.9:5053/dns-query?type=A&name=",
+    };
+    private static final java.util.regex.Pattern A_RECORD =
+        java.util.regex.Pattern.compile("\"type\"\\s*:\\s*1\\s*,[^}]*?\"data\"\\s*:\\s*\"(\\d{1,3}(?:\\.\\d{1,3}){3})\"");
+    private static final java.util.Map<String, Object[]> dnsCache = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * Providers also block by DNS (www.youtube.com: "No address associated with hostname"), and
+     * then no desync helps. Hosts under a bypass rule resolve over DoH first, the rest fall back
+     * to it when the system resolver fails.
+     */
+    static InetAddress[] resolve(String host) throws IOException {
+        if (isIpLiteral(host)) return InetAddress.getAllByName(host);
+        boolean bypass = strategyFor(host) != null;
+        if (bypass) {
+            InetAddress[] a = doh(host);
+            if (a != null) return a;
+        }
+        try {
+            InetAddress[] a = InetAddress.getAllByName(host);
+            if (a.length > 0 && !a[0].isAnyLocalAddress() && !a[0].isLoopbackAddress()) return a;
+        } catch (IOException e) {
+            if (bypass) throw e;
+        }
+        InetAddress[] a = bypass ? null : doh(host);
+        if (a == null) throw new java.net.UnknownHostException(host);
+        return a;
+    }
+
+    private static boolean isIpLiteral(String host) {
+        return host.indexOf(':') >= 0 || host.matches("\\d{1,3}(\\.\\d{1,3}){3}");
+    }
+
+    static InetAddress[] doh(String host) {
+        Object[] hit = dnsCache.get(host);
+        if (hit != null && (long) hit[1] > System.currentTimeMillis()) return (InetAddress[]) hit[0];
+        for (String server : DOH) {
+            try {
+                java.net.HttpURLConnection c = (java.net.HttpURLConnection)
+                    new java.net.URL(server + java.net.URLEncoder.encode(host, "UTF-8")).openConnection(java.net.Proxy.NO_PROXY);
+                c.setConnectTimeout(4000);
+                c.setReadTimeout(4000);
+                c.setRequestProperty("Accept", "application/dns-json");
+                if (c.getResponseCode() != 200) continue;
+                String body;
+                try (InputStream in = c.getInputStream()) {
+                    ByteArrayOutputStream b = new ByteArrayOutputStream();
+                    byte[] buf = new byte[4096];
+                    int n;
+                    while ((n = in.read(buf)) > 0) b.write(buf, 0, n);
+                    body = b.toString("UTF-8");
+                }
+                List<InetAddress> out = new ArrayList<>();
+                java.util.regex.Matcher m = A_RECORD.matcher(body);
+                while (m.find()) out.add(InetAddress.getByName(m.group(1)));
+                if (out.isEmpty()) continue;
+                InetAddress[] arr = out.toArray(new InetAddress[0]);
+                dnsCache.put(host, new Object[] {arr, System.currentTimeMillis() + 5 * 60_000});
+                return arr;
+            } catch (Exception e) {
+                Log.d(TAG, "doh " + server + ": " + e.getMessage());
+            }
+        }
+        return null;
+    }
+
     private static Upstream open(InetAddress a, int p) throws IOException {
         boolean v6 = a instanceof Inet6Address;
         FileDescriptor fd = null;
@@ -395,14 +482,18 @@ public final class DpiProxy {
         if (fd == null || !fd.valid()) {
             Socket s = new Socket();
             s.connect(new InetSocketAddress(a, p), CONNECT_TIMEOUT_MS);
-            return new Upstream(s);
+            Upstream u = new Upstream(s);
+            u.ip = a.getHostAddress();
+            return u;
         }
         try {
             // connect() honours SO_SNDTIMEO on Linux: a timeout without a non-blocking dance.
             Os.setsockoptTimeval(fd, OsConstants.SOL_SOCKET, OsConstants.SO_SNDTIMEO, StructTimeval.fromMillis(CONNECT_TIMEOUT_MS));
             Os.connect(fd, a, p);
             Os.setsockoptTimeval(fd, OsConstants.SOL_SOCKET, OsConstants.SO_SNDTIMEO, StructTimeval.fromMillis(0));
-            return new Upstream(fd, v6);
+            Upstream u = new Upstream(fd, v6);
+            u.ip = a.getHostAddress();
+            return u;
         } catch (ErrnoException | java.net.SocketException e) {
             try {
                 Os.close(fd);
@@ -521,7 +612,14 @@ public final class DpiProxy {
             Strategy st = strategyFor(host);
             if (st != null) sendDesync(up, first, st);
             else up.out.write(first);
-            Log.i(TAG, host + (st != null ? " desync" : " direct"));
+            if (st != null) {
+                int[] sni = sniOffset(first, first.length);
+                Plan pl = plan(first, st);
+                Log.i(TAG, host + " desync ip=" + up.ip + " hello=" + first.length + " rec=" + (first.length >= 5 ? u16(first, 3) + 5 : -1)
+                    + " sni=" + (sni != null ? sni[0] : -1) + " out=" + pl.data.length + " split=" + pl.split);
+            } else {
+                Log.i(TAG, host + " direct");
+            }
             relay(client, up);
         } finally {
             up.close();
@@ -537,6 +635,7 @@ public final class DpiProxy {
         }
         if (st.disorder) up.ttl(1);
         up.out.write(p.data, 0, p.split);
+        if (st.oob) up.urgent();
         up.out.flush();
         if (st.disorder) {
             // Let the short-lived segment leave before the TTL is restored for the rest.

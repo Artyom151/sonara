@@ -57,6 +57,8 @@ public class DpiProxyTest {
         assertEquals(5, s.delayMs);
         assertEquals(new DpiProxy.Pos(2, 1), DpiProxy.Strategy.parse("disorder").split);
         assertEquals(new DpiProxy.Pos(2, -1), DpiProxy.Strategy.parse("split=sni-1").split);
+        assertTrue(DpiProxy.Strategy.parse("oob").oob);
+        assertEquals(new DpiProxy.Pos(1, 1), DpiProxy.Strategy.parse("oob=1").split);
         try {
             DpiProxy.Strategy.parse("fake");
             fail();

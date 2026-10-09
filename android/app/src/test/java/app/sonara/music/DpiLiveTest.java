@@ -15,4 +15,12 @@ public class DpiLiveTest {
         java.nio.file.Files.write(java.nio.file.Paths.get(System.getenv("SONARA_DPI_LIVE")), String.valueOf(port).getBytes());
         Thread.sleep(90_000);
     }
+
+    @Test
+    public void resolvesOverDoh() throws Exception {
+        if (System.getenv("SONARA_DOH_LIVE") == null) return;
+        java.net.InetAddress[] a = DpiProxy.doh("www.youtube.com");
+        System.out.println("DOH " + java.util.Arrays.toString(a));
+        org.junit.Assert.assertNotNull(a);
+    }
 }
