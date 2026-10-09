@@ -53,7 +53,8 @@ fn decode(s: &str) -> String {
 fn agent() -> ureq::Agent {
     let mut b = ureq::AgentBuilder::new();
     if let Some(port) = crate::dpi::active_port() {
-        if let Ok(p) = ureq::Proxy::new(format!("http://127.0.0.1:{port}")) {
+        // SOCKS5, not HTTP: ureq's HTTP-proxy mode sends absolute-form requests (see dpi.rs).
+        if let Ok(p) = ureq::Proxy::new(format!("socks5://127.0.0.1:{port}")) {
             b = b.proxy(p);
         }
     }
@@ -237,6 +238,10 @@ mod tests {
     #[ignore]
     fn serves_ranges_like_a_seeking_player() {
         let url = std::env::var("SONARA_GV_URL").expect("SONARA_GV_URL");
+        // SONARA_DPI=<strategy>: upstream requests go through the DPI bypass proxy (src/dpi.rs).
+        if let Ok(st) = std::env::var("SONARA_DPI") {
+            crate::dpi::configure_for_test(&st);
+        }
         let (port, token) = super::start();
         let base = format!("http://127.0.0.1:{port}/{token}?u={}", url.replace('%', "%25").replace('&', "%26"));
         let total: u64 = {

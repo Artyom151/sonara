@@ -220,7 +220,61 @@ fn send_desync(up: &mut TcpStream, first: &[u8], st: &Strategy) -> std::io::Resu
     up.write_all(&data[at..])
 }
 
+/// SOCKS5 greeting + CONNECT (no auth). Returns the target host and port.
+/// ureq sends absolute-form request lines through an HTTP proxy even inside a CONNECT tunnel,
+/// which Yandex answers with 403, so the native media proxy talks SOCKS5 instead.
+fn socks5_accept(client: &mut TcpStream) -> std::io::Result<(String, u16)> {
+    let mut b = [0u8; 2];
+    client.read_exact(&mut b)?; // ver=5, nmethods (the 0x05 was already peeked, not consumed)
+    let mut methods = vec![0u8; b[1] as usize];
+    client.read_exact(&mut methods)?;
+    client.write_all(&[5, 0])?; // no authentication
+    let mut req = [0u8; 4];
+    client.read_exact(&mut req)?; // ver cmd rsv atyp
+    if req[1] != 1 {
+        client.write_all(&[5, 7, 0, 1, 0, 0, 0, 0, 0, 0])?;
+        return Err(std::io::Error::other("socks: only CONNECT"));
+    }
+    let host = match req[3] {
+        1 => {
+            let mut ip = [0u8; 4];
+            client.read_exact(&mut ip)?;
+            std::net::Ipv4Addr::from(ip).to_string()
+        }
+        3 => {
+            let mut l = [0u8; 1];
+            client.read_exact(&mut l)?;
+            let mut name = vec![0u8; l[0] as usize];
+            client.read_exact(&mut name)?;
+            String::from_utf8_lossy(&name).into_owned()
+        }
+        4 => {
+            let mut ip = [0u8; 16];
+            client.read_exact(&mut ip)?;
+            std::net::Ipv6Addr::from(ip).to_string()
+        }
+        _ => return Err(std::io::Error::other("socks: bad address")),
+    };
+    let mut port = [0u8; 2];
+    client.read_exact(&mut port)?;
+    Ok((host, u16::from_be_bytes(port)))
+}
+
 fn handle(mut client: TcpStream) -> std::io::Result<()> {
+    let mut first_byte = [0u8; 1];
+    if client.peek(&mut first_byte)? == 1 && first_byte[0] == 5 {
+        let (host, port) = socks5_accept(&mut client)?;
+        let addr = (host.as_str(), port).to_socket_addrs()?.next().ok_or_else(|| std::io::Error::other("no address"))?;
+        let up = match TcpStream::connect_timeout(&addr, Duration::from_secs(10)) {
+            Ok(s) => s,
+            Err(e) => {
+                client.write_all(&[5, 5, 0, 1, 0, 0, 0, 0, 0, 0])?;
+                return Err(e);
+            }
+        };
+        client.write_all(&[5, 0, 0, 1, 0, 0, 0, 0, 0, 0])?;
+        return tunnel(client, up, &host);
+    }
     // Read the request head (CONNECT host:port HTTP/1.1 ... \r\n\r\n).
     let mut head = Vec::with_capacity(1024);
     let mut byte = [0u8; 1];
@@ -248,7 +302,11 @@ fn handle(mut client: TcpStream) -> std::io::Result<()> {
         }
     };
     client.write_all(b"HTTP/1.1 200 Connection Established\r\n\r\n")?;
+    tunnel(client, up, &host)
+}
 
+/// Desync the first client bytes for `host`, then relay both ways.
+fn tunnel(mut client: TcpStream, mut up: TcpStream, host: &str) -> std::io::Result<()> {
     // First client bytes: the TLS ClientHello (one record; read until it is complete).
     let mut first = vec![0u8; 16 * 1024];
     let mut n = client.read(&mut first)?;
@@ -264,7 +322,7 @@ fn handle(mut client: TcpStream) -> std::io::Result<()> {
         let _ = client.set_read_timeout(None);
     }
     first.truncate(n);
-    match strategy_for(&host) {
+    match strategy_for(host) {
         Some(st) => send_desync(&mut up, &first, &st)?,
         None => up.write_all(&first)?,
     }
@@ -351,6 +409,11 @@ pub fn dpi_configure(enabled: bool, rules: Vec<RuleIn>) -> Result<Option<String>
         s.rules = parsed;
     }
     Ok(active_port().map(|p| format!("http://127.0.0.1:{p}")))
+}
+
+#[cfg(test)]
+pub fn configure_for_test(strategy: &str) {
+    dpi_configure(true, vec![RuleIn { hosts: vec!["googlevideo.com".into(), "yandex.net".into(), "youtube.com".into()], strategy: strategy.into() }]).unwrap();
 }
 
 #[cfg(test)]
