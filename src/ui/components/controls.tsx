@@ -310,8 +310,12 @@ export function Sheet({ open, onClose, children, title, full }: { open: boolean;
             onClick={(e) => e.stopPropagation()}
           >
             <div className="sheet-inner">
-              <div className="grabber" />
-              {title && <div className="sheet-title">{title}</div>}
+              {/* Drag handle: the grabber and the title. touch-action: none keeps the browser from
+                  claiming the touch for scrolling, which cancelled the drag on phones. */}
+              <div className="sheet-handle">
+                <div className="grabber" />
+                {title && <div className="sheet-title">{title}</div>}
+              </div>
               <div className="sheet-body">
                 {children}
               </div>
