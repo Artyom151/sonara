@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { api } from '../../core';
 import type { Track } from '../../core/types';
-import { cancelDownloads, download, useOffline } from '../../player/offline';
+import { cancelDownloads, clearDownloads, download, useOffline } from '../../player/offline';
 import { useLibrary } from '../../store/library';
 import { useUi } from '../../store/ui';
 import { useT } from '../i18n';
@@ -51,6 +51,7 @@ export function DownloadAllButton({ tracks }: { tracks: Track[] }) {
 /** Library screen with every downloaded track (plays offline). */
 export function DownloadsScreen() {
   const t = useT();
+  const open = useUi((s) => s.open);
   const items = useOffline((s) => s.items);
   const queue = useOffline((s) => s.queue);
   const tracks = Object.values(items)
@@ -68,6 +69,24 @@ export function DownloadsScreen() {
       {queue.length > 0 && (
         <button className="see-all" style={{ margin: '0 var(--gutter) 10px' }} onClick={cancelDownloads}>
           {t('cancelDownloads')}
+        </button>
+      )}
+      {tracks.length > 0 && (
+        <button
+          className="see-all"
+          style={{ margin: '0 var(--gutter) 10px', color: 'var(--danger, #ff453a)' }}
+          onClick={() =>
+            open({
+              type: 'confirm',
+              title: t('clearDownloads'),
+              message: `${tracks.length} ${t('tracks')} · ${(size / 1024 / 1024).toFixed(0)} MB`,
+              action: t('delete'),
+              destructive: true,
+              onConfirm: () => void clearDownloads(),
+            })
+          }
+        >
+          {t('clearDownloads')}
         </button>
       )}
       {tracks.length ? <TrackList tracks={tracks} context={{ title: t('downloads'), id: 'downloads' }} meta="duration" /> : <div className="empty">{t('downloadsEmpty')}</div>}

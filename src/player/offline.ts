@@ -154,6 +154,16 @@ export async function removeDownload(key: string) {
   });
 }
 
+/** Delete every download (files, covers, list). */
+export async function clearDownloads() {
+  cancelDownloads();
+  await tx(FILES, 'readwrite', (s) => s.clear()).catch(() => {});
+  await tx(META, 'readwrite', (s) => s.clear()).catch(() => {});
+  for (const u of artUrls.values()) URL.revokeObjectURL(u);
+  artUrls.clear();
+  useOffline.setState({ items: {}, failed: [] });
+}
+
 /** Stop queued downloads (the one in progress finishes). */
 export const cancelDownloads = () => useOffline.setState((s) => ({ queue: s.queue.slice(0, 1) }));
 
