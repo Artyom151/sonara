@@ -138,7 +138,10 @@ export class YandexMusic {
   }
 
   async search(q: string): Promise<Track[]> {
-    const r = await this.get(`/search?text=${encodeURIComponent(q)}&type=track&page=0&nocorrect=false`);
+    const path = `/search?text=${encodeURIComponent(q)}&type=track&page=0&nocorrect=false`;
+    let r = await this.get(path);
+    // Some accounts get an empty result where the anonymous search finds the track.
+    if (!r?.tracks?.results?.length && this.hasToken) r = await this.get(path, false);
     return ((r?.tracks?.results ?? []) as any[]).map(this.mapTrack).filter(Boolean).slice(0, 25) as Track[];
   }
 
