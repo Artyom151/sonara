@@ -5,6 +5,30 @@ Russian version: [CHANGELOG_ru.md](CHANGELOG_ru.md).
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-09
+
+### Added
+- **Offline downloads**: download a track, a whole playlist or all liked songs together with the cover, title and artists. Downloaded tracks play without internet; a Downloads screen lists them with their size and can delete them all.
+- **Yandex Music** as a source: search and similar tracks without an account; with a Yandex Music token and Plus, full tracks, "Мне нравится", your playlists and albums (set `VITE_YANDEX_MUSIC_TOKEN` in `.env`).
+- **Import by link**: a playlist or album from Yandex Music, YouTube, SoundCloud or Deezer becomes one of your playlists.
+- **Sleep timer** in the track menu: 15 to 60 minutes or the end of the track.
+- Lyrics show a note during intros and pauses and count down 3, 2, 1 before the next line.
+- Real logos of every source.
+
+### Changed
+- Tracks start faster: stream links are reused while valid and the next track's link is prepared in advance.
+- Deezer tracks only play a copy whose title, artist and length match; otherwise its preview, never a different song.
+- The search source picker shows logos only on phones, so all sources fit.
+- Glass panels, alerts, toasts and the mini player keep their blur during the whole opening animation.
+
+### Fixed
+- Seeking in YouTube and Deezer tracks on desktop worked only once.
+- YouTube and Deezer did not play on Android (no PO token on the phone).
+- Sheets could not be dragged down by the grabber on phones.
+- A downloaded track could become permanently "unavailable"; damaged downloads are now replaced by the stream.
+- The track length showed 0:00 for streams without a known length.
+- Empty YouTube playlists.
+
 ## [1.1.0] - 2026-10-09
 
 ### Added
