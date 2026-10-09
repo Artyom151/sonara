@@ -141,10 +141,13 @@ button:disabled {
   height: 40px;
   /* Fits its content (track name, update text) up to a cap; animated by the layout spring. */
   width: max-content;
-  max-width: min(74vw, 290px);
+  /* Wider floor for a track: short titles keep a comfortable pill instead of a sliver. */
+  min-width: min(64vw, 240px);
+  max-width: min(80vw, 330px);
 }
 .island.open {
   width: max-content;
+  min-width: min(80vw, 320px);
   max-width: min(92vw, 380px);
   cursor: default;
 }
