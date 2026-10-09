@@ -143,9 +143,33 @@ app.get(
       const m = /googlevideo\.com/.test(s.url) ? await api.match(t) : null;
       return m?.source === 'youtube' ? { url: `/api/yt/stream/${m.id}`, kind: 'progressive' } : s;
     }
+    // Yandex CDN refuses browser origins: proxy the file.
+    if (t.source === 'yandex') {
+      const s = await api.stream(t);
+      return { ...s, url: `/api/ym/stream?u=${encodeURIComponent(s.url)}` };
+    }
     return api.stream(t);
   }),
 );
+
+app.get('/api/ym/stream', async (c) => {
+  const u = c.req.query('u') ?? '';
+  let host = '';
+  try {
+    host = new URL(u).hostname;
+  } catch {
+    /* invalid */
+  }
+  if (!host.endsWith('.yandex.net')) return c.text('not allowed', 403);
+  const range = c.req.header('range');
+  const upstream = await fetch(u, { headers: range ? { Range: range } : {} });
+  const out = new Headers({ 'content-type': 'audio/mpeg', 'accept-ranges': 'bytes' });
+  for (const h of ['content-length', 'content-range']) {
+    const v = upstream.headers.get(h);
+    if (v) out.set(h, v);
+  }
+  return new Response(upstream.body, { status: upstream.status, headers: out });
+});
 
 const ytUrls = new Map<string, { url: string; mime?: string; at: number }>();
 app.get('/api/yt/stream/:id', async (c) => {

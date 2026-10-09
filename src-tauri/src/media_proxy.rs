@@ -4,7 +4,8 @@
 //! on them, and moving megabytes through the Tauri HTTP plugin (JSON over IPC) freezes the page.
 //! The player instead plays `http://127.0.0.1:<port>/<token>?u=<googlevideo url>`; this thread
 //! forwards the request (with Range) and streams the body straight back.
-//! Only googlevideo hosts are proxied and a random per-launch token is required.
+//! Also Yandex Music files: its CDN refuses the webview's Origin (the player is crossOrigin for the
+//! visualiser). Only googlevideo and yandex.net hosts are proxied, behind a random per-launch token.
 
 use std::io::Read;
 use std::sync::OnceLock;
@@ -51,7 +52,16 @@ fn decode(s: &str) -> String {
 fn allowed(url: &str) -> bool {
     let Some(rest) = url.strip_prefix("https://") else { return false };
     let host = rest.split(['/', '?']).next().unwrap_or("");
-    host.ends_with(".googlevideo.com")
+    host.ends_with(".googlevideo.com") || host.ends_with(".yandex.net")
+}
+
+/// googlevideo URLs are bound to the MWEB client; other hosts get a plain browser UA.
+fn ua_for(url: &str) -> &'static str {
+    if url.contains(".googlevideo.com/") {
+        UA
+    } else {
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
+    }
 }
 
 /// googlevideo answers bounded ranges only (open-ended ones are refused); this reader fetches the
@@ -72,7 +82,7 @@ impl Chunked {
         let range = format!("bytes={}-{}", self.pos, to);
         let mut last = None;
         for _ in 0..3 {
-            match ureq::get(&self.url).set("User-Agent", UA).set("Range", &range).call() {
+            match ureq::get(&self.url).set("User-Agent", ua_for(&self.url)).set("Range", &range).call() {
                 Ok(r) => {
                     let mut data = Vec::with_capacity((to - self.pos + 1) as usize);
                     r.into_reader().read_to_end(&mut data)?;
@@ -113,7 +123,7 @@ fn total_len(url: &str) -> Option<u64> {
             return Some(n);
         }
     }
-    let r = ureq::get(url).set("User-Agent", UA).set("Range", "bytes=0-0").call().ok()?;
+    let r = ureq::get(url).set("User-Agent", ua_for(url)).set("Range", "bytes=0-0").call().ok()?;
     r.header("Content-Range")?.rsplit('/').next()?.parse().ok()
 }
 
@@ -121,7 +131,8 @@ fn mime_of(url: &str) -> String {
     url.split(['?', '&'])
         .find_map(|kv| kv.strip_prefix("mime="))
         .map(decode)
-        .unwrap_or_else(|| "audio/mp4".into())
+        // Yandex serves its mp3 files as application/octet-stream.
+        .unwrap_or_else(|| if url.contains(".yandex.net/") { "audio/mpeg".into() } else { "audio/mp4".into() })
 }
 
 fn handle(req: tiny_http::Request, token: &str) {

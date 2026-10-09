@@ -67,7 +67,7 @@ async function viaNativeBlob(url: string, token: number) {
     if (token !== loadToken) throw new Error('superseded');
     parts.push(...out);
   }
-  const mime = new URL(url).searchParams.get('mime') ?? 'audio/mp4';
+  const mime = new URL(url).searchParams.get('mime') ?? (/\.yandex\.net\//.test(url) ? 'audio/mpeg' : 'audio/mp4');
   if (blobUrl) URL.revokeObjectURL(blobUrl);
   blobUrl = URL.createObjectURL(new Blob(parts, { type: mime }));
   return blobUrl;
@@ -79,7 +79,9 @@ const mediaProxyBase = () =>
     .then(({ invoke }) => invoke<string | null>('media_proxy_base'))
     .catch(() => null));
 
-const isYouTubeAudio = (t: Track) => t.source === 'youtube' || t.source === 'deezer';
+/** Audio the webview cannot fetch itself: YouTube (client-bound URLs) and Yandex (CDN refuses our Origin). */
+const isYouTubeAudio = (t: Track) => t.source === 'youtube' || t.source === 'deezer' || t.source === 'yandex';
+const PROXIED = /\.googlevideo\.com\/|\.yandex\.net\//;
 
 async function attach(url: string, kind: 'progressive' | 'hls') {
   switching = true;
@@ -105,7 +107,7 @@ async function load(track: Track, autoplay: boolean, startAt = 0) {
     if (token !== loadToken) return;
     // Desktop (Tauri): always through the native fetch, see viaNativeBlob. Android plays the
     // URL directly and falls back to it in playSafe.
-    if (isYouTubeAudio(track) && isTauri && /googlevideo\.com/.test(s.url)) {
+    if (isYouTubeAudio(track) && isTauri && PROXIED.test(s.url)) {
       // Desktop: through the app's local media proxy (src-tauri/src/media_proxy.rs): streams,
       // seeks with Range, and keeps megabytes of audio out of the IPC bridge.
       const base = await mediaProxyBase();
