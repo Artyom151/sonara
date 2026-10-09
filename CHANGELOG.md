@@ -5,8 +5,16 @@ Russian version: [CHANGELOG_ru.md](CHANGELOG_ru.md).
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-10-09
+
 ### Added
-- **Bypass blocking** (Settings → Bypass blocking): a built-in DPI bypass in the spirit of zapret / ByeDPI for YouTube, SoundCloud, Deezer and Yandex, on desktop and Android. Only Sonara's own traffic, no VPN, root or driver; a preset or a custom strategy per service.
+- **Bypass sanctions and blocking** (for example in Russia; Settings → Bypass blocking): a built-in DPI bypass in the spirit of zapret / ByeDPI for YouTube, SoundCloud, Deezer and Yandex, on desktop and Android. Only Sonara's own traffic, no VPN, root or driver; a preset or a custom strategy per service.
+- **Pick automatically**: tries every strategy on your own network and keeps the fastest one that gets through.
+- Strategies for stricter DPI: `tlsfrag` (the start of the connection in one-byte TLS records), `chunk` (sent as small TCP packets) and `oob`.
+- Sites hidden by the provider's DNS still open: bypass hosts resolve over DNS-over-HTTPS.
+
+### Fixed
+- YouTube no longer hangs forever after a blocked request: requests time out and the next search starts a new session.
 
 ## [1.1.1] - 2026-10-09
 
