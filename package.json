@@ -1,6 +1,6 @@
 {
   "name": "sonara",
-  "version": "1.1.2",
+  "version": "1.1.21",
   "description": "Sonara — music streaming client (SoundCloud + YouTube)",
   "scripts": {
     "dev": "concurrently -k -n server,web -c magenta,cyan \"pnpm dev:server\" \"vite\"",
