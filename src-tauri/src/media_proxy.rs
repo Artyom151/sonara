@@ -240,13 +240,13 @@ mod tests {
         let (port, token) = super::start();
         let base = format!("http://127.0.0.1:{port}/{token}?u={}", url.replace('%', "%25").replace('&', "%26"));
         let total: u64 = {
-            let r = agent().get(&base).set("Range", "bytes=0-0").call().unwrap();
+            let r = ureq::get(&base).set("Range", "bytes=0-0").call().unwrap();
             assert_eq!(r.status(), 206);
             r.header("Content-Range").unwrap().rsplit('/').next().unwrap().parse().unwrap()
         };
         // What WebKit does on a seek: an open-ended range from the middle.
         for start in [0, total / 2, total - 5000] {
-            let r = agent().get(&base).set("Range", &format!("bytes={start}-")).call().unwrap();
+            let r = ureq::get(&base).set("Range", &format!("bytes={start}-")).call().unwrap();
             assert_eq!(r.status(), 206, "start {start}");
             let mut buf = vec![0u8; 4096];
             assert!(r.header("Content-Length").is_some(), "no Content-Length: WebKit then seeks only once");
