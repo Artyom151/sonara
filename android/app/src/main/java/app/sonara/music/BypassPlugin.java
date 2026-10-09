@@ -130,7 +130,8 @@ public class BypassPlugin extends Plugin {
             try (java.io.InputStream in = c.getInputStream()) {
                 byte[] buf = new byte[16 * 1024];
                 int k;
-                while ((k = in.read(buf)) > 0) {
+                // The start is enough: a throttled service still passed the handshake.
+                while (n < 16 * 1024 && (k = in.read(buf)) > 0) {
                     n += k;
                     if (System.currentTimeMillis() > deadline) return -1;
                 }

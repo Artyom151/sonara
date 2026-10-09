@@ -103,7 +103,7 @@ export const bypassAutoSupported = isAndroid || isTauri;
 
 /** Small real responses per service: page, image CDN and media CDN where the service has one. */
 const PROBE_URLS: Record<BypassService, string[]> = {
-  youtube: ['https://www.youtube.com/', 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg', 'https://redirector.googlevideo.com/generate_204'],
+  youtube: ['https://www.youtube.com/robots.txt', 'https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg', 'https://redirector.googlevideo.com/generate_204'],
   soundcloud: ['https://soundcloud.com/robots.txt', 'https://a-v2.sndcdn.com/assets/'],
   deezer: ['https://www.deezer.com/robots.txt', 'https://api.deezer.com/infos'],
   yandex: ['https://music.yandex.ru/robots.txt', 'https://api.music.yandex.net/'],

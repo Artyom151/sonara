@@ -434,7 +434,18 @@ fn tunnel(mut client: TcpStream, mut up: TcpStream, host: &str) -> std::io::Resu
     }
     first.truncate(n);
     match strategy_for(host) {
-        Some(st) => send_desync(&mut up, &first, &st)?,
+        Some(st) => {
+            send_desync(&mut up, &first, &st)?;
+            let (data, split) = plan(&first, &st);
+            log::info!(
+                "dpi {host} ip={} hello={} sni={:?} out={} split={:?}",
+                up.peer_addr().map(|a| a.ip().to_string()).unwrap_or_default(),
+                first.len(),
+                sni_offset(&first).map(|s| s.0),
+                data.len(),
+                split
+            );
+        }
         None => up.write_all(&first)?,
     }
 
@@ -532,22 +543,23 @@ pub struct ProbeResult {
     bytes: u64,
 }
 
-/// Bytes of the body through the proxy on a fresh connection, or None (8 s budget).
-fn probe_fetch(url: &str, port: u16) -> Option<u64> {
+/// Time to the first bytes of the body through the proxy on a fresh connection. Only the start
+/// is read: a throttled service still passes the handshake, which is what the bypass decides.
+fn probe_fetch(url: &str, port: u16) -> Result<u64, String> {
     let agent = ureq::AgentBuilder::new()
-        .proxy(ureq::Proxy::new(format!("socks5://127.0.0.1:{port}")).ok()?)
+        .proxy(ureq::Proxy::new(format!("socks5://127.0.0.1:{port}")).map_err(|e| e.to_string())?)
         .timeout_connect(Duration::from_secs(6))
-        .timeout(Duration::from_secs(8))
+        .timeout(Duration::from_secs(6))
         .max_idle_connections(0)
         .build();
     let r = match agent.get(url).set("User-Agent", "Mozilla/5.0").call() {
         Ok(r) => r,
         Err(ureq::Error::Status(_, r)) => r, // an HTTP answer means the handshake got through
-        Err(_) => return None,
+        Err(e) => return Err(e.to_string()),
     };
     let mut buf = Vec::new();
-    r.into_reader().take(4 << 20).read_to_end(&mut buf).ok()?;
-    Some(buf.len() as u64)
+    r.into_reader().take(16 * 1024).read_to_end(&mut buf).map_err(|e| e.to_string())?;
+    Ok(buf.len() as u64)
 }
 
 /// Try each strategy for one service against real URLs; the caller re-applies its rules after.
@@ -560,7 +572,17 @@ pub async fn dpi_probe(hosts: Vec<String>, strategies: Vec<String>, urls: Vec<St
             let port = active_port().ok_or("proxy not running")?;
             let t0 = std::time::Instant::now();
             let mut bytes = 0;
-            let ok = urls.iter().all(|u| probe_fetch(u, port).map(|b| bytes += b).is_some());
+            let mut ok = true;
+            for u in &urls {
+                match probe_fetch(u, port) {
+                    Ok(b) => bytes += b,
+                    Err(e) => {
+                        log::info!("dpi probe {st}: {u}: {e}");
+                        ok = false;
+                        break;
+                    }
+                }
+            }
             log::info!("dpi probe {st}: {} {} ms", if ok { "ok" } else { "fail" }, t0.elapsed().as_millis());
             out.push(ProbeResult { strategy: st, ok, ms: t0.elapsed().as_millis() as u64, bytes });
         }
