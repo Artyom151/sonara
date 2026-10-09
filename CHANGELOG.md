@@ -5,6 +5,9 @@ Russian version: [CHANGELOG_ru.md](CHANGELOG_ru.md).
 
 ## [Unreleased]
 
+### Added
+- **Update notice** on every platform: a short, dismissible card (or the island, when the island player is on) when a new version is out, with a Download button. Settings → About → Check for updates.
+
 ## [1.1.2] - 2026-10-09
 
 ### Added

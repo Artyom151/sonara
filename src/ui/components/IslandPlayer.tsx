@@ -21,6 +21,8 @@ import {
 } from '../icons';
 import { Art, Marquee, Slider } from './controls';
 import { Scrubber } from './Player';
+import { IslandUpdate } from './UpdateNotice';
+import { usePendingUpdate } from '../../platform/updates';
 import { EqBars } from './TrackRow';
 
 const spring = { type: 'spring', stiffness: 420, damping: 32, mass: 0.9 } as const;
@@ -31,6 +33,7 @@ const spring = { type: 'spring', stiffness: 420, damping: 32, mass: 0.9 } as con
  * Desktop layout: sits in the title bar and replaces the bottom player bar.
  * Tap: expands into a live-activity card with controls; tap the art/title: full player.
  * Collapses by itself after a few idle seconds (desktop: while the pointer is outside).
+ * A new release takes the island for a few seconds (tap: Download / Later), then the track returns.
  */
 export function IslandPlayer({ desktop = false }: { desktop?: boolean }) {
   const t = useT();
@@ -51,8 +54,39 @@ export function IslandPlayer({ desktop = false }: { desktop?: boolean }) {
     if (open) touch();
   }, [open]);
 
+  // Update: shown until tapped away, or for 10 s when ignored (then only in Settings this session).
+  const update = usePendingUpdate();
+  const [seen, setSeen] = useState<string | null>(null);
+  const showUpdate = !!update && seen !== update.version;
+  useEffect(() => {
+    if (!update || open) return;
+    const t = setTimeout(() => setSeen(update.version), 10_000);
+    return () => clearTimeout(t);
+  }, [update, open]);
+
   // Hidden while the full-screen player is open (it shows everything the island would).
-  if (!track || expanded) return null;
+  if (expanded || (!track && !showUpdate)) return null;
+
+  if (showUpdate) {
+    const close = () => (setOpen(false), setSeen(update.version));
+    return (
+      <>
+        <AnimatePresence>
+          {open && <motion.div className="island-scrim" initial={{ backgroundColor: 'rgba(0,0,0,0)' }} animate={{ backgroundColor: 'rgba(0,0,0,0.25)' }} exit={{ backgroundColor: 'rgba(0,0,0,0)' }} onClick={close} />}
+        </AnimatePresence>
+        <motion.div
+          className={`island ${open ? 'open' : ''} ${desktop ? 'desk' : ''}`}
+          layout
+          transition={spring}
+          style={{ borderRadius: open ? (desktop ? 28 : 34) : desktop ? 17 : 22 }}
+          onClick={() => !open && setOpen(true)}
+        >
+          <IslandUpdate info={update} open={open} />
+        </motion.div>
+      </>
+    );
+  }
+  if (!track) return null;
 
   const openPlayer = () => (setOpen(false), usePlayer.getState().setExpanded(true));
 

@@ -501,3 +501,106 @@ button.link {
 button.link:hover {
   text-decoration: underline;
 }
+
+/* Update notice (UpdateNotice.tsx): glass card at the top, or the island's update state */
+.update-notice {
+  position: fixed;
+  z-index: 140;
+  top: calc(var(--sat) + 10px);
+  left: 50%;
+  translate: -50% 0;
+  width: min(420px, calc(100vw - 24px));
+  padding: 10px 12px;
+  --g-radius: 26px;
+  --lg-tint: rgb(24 24 27 / 0.78);
+  --lg-blur: 24px;
+}
+.update-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.update-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--on-accent);
+  background: var(--accent);
+}
+.update-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  color: inherit;
+}
+.update-text b {
+  font-size: 15px;
+  font-weight: 600;
+}
+.update-text small {
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.update-get {
+  flex: none;
+  height: 32px;
+  padding: 0 16px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--on-accent);
+  background: var(--accent);
+}
+.update-get:active {
+  transform: scale(0.95);
+}
+.update-close {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: var(--text-2);
+  background: rgb(60 60 67 / 0.9);
+  backdrop-filter: blur(12px);
+}
+.island-update-dot {
+  width: 26px;
+  height: 26px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--on-accent);
+  background: var(--accent);
+}
+.island-update .island-line {
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.island-update-open {
+  padding: 16px 16px 12px;
+}
+.island-update-open .update-text small {
+  color: rgb(255 255 255 / 0.6);
+}
+.island-update-later {
+  display: block;
+  margin: 10px auto 0;
+  padding: 4px 12px;
+  font-size: 13px;
+  color: rgb(255 255 255 / 0.6);
+}

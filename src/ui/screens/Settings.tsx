@@ -1,3 +1,4 @@
+import { updatesSupported, useUpdates } from '../../platform/updates';
 import { autoPickBypass, bypassAutoSupported, BYPASS_HOSTS, bypassSupported, type BypassPreset, type BypassService, type BypassServiceConfig } from '../../platform/dpi';
 import { SOURCE_ORDER, SOURCES } from '../sources';
 import { useEffect, useState } from 'react';
@@ -10,6 +11,7 @@ import { getSystemPalette } from '../../theme/dynamic';
 import { Logo } from '../components/Brand';
 import { Select, Toggle } from '../components/controls';
 import { toast } from '../components/Toast';
+import { openExternal } from '../components/actions';
 import { useT } from '../i18n';
 import { IconChevronLeft, IconChevronRight,  IconDiscord, IconMusic, IconQuote, IconShield } from '../icons';
 import { useAccount } from '../../account/store';
@@ -91,6 +93,32 @@ function BypassSettings() {
           })}
       </div>
       <div className="group-foot">{t('bypassHint')}</div>
+    </>
+  );
+}
+
+/** Check for updates by hand; a newer release gets a Download row. */
+function UpdateCells() {
+  const t = useT();
+  const u = useUpdates();
+  const status =
+    u.status === 'checking' ? t('checkingUpdates') : u.status === 'available' ? `${t('updateAvailable')} · ${u.info?.version}` : u.status === 'latest' ? t('upToDate') : u.status === 'error' ? t('updateError') : '';
+  return (
+    <>
+      <button className="cell noicon" onClick={() => void u.check(true)} disabled={u.status === 'checking'}>
+        <span className="cell-label">
+          {t('checkUpdates')}
+          {status && <small>{status}</small>}
+        </span>
+        {u.status === 'checking' ? <span className="spinner" style={{ width: 16, height: 16 }} /> : <IconChevronRight size={16} style={{ opacity: 0.4 }} />}
+      </button>
+      {u.status === 'available' && u.info && (
+        <button className="cell noicon" onClick={() => void openExternal(u.info!.downloadUrl)}>
+          <span className="cell-label" style={{ color: 'var(--accent)' }}>
+            {t('updateDownload')} {u.info.version}
+          </span>
+        </button>
+      )}
     </>
   );
 }
@@ -320,6 +348,7 @@ export function Settings() {
             </small>
           </span>
         </div>
+        {updatesSupported && <UpdateCells />}
       </div>
       <div className="group-foot">Lyrics: LRCLIB · Icons: Framework7 Icons (MIT)</div>
     </div>

@@ -24,3 +24,6 @@ promo/
 
 # Individual school project (personal, not part of the app)
 project/
+
+# Local test: pretend a newer release is out (scripts/fake-update.mjs)
+scripts/fake-update.mjs
