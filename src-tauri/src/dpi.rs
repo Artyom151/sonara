@@ -9,7 +9,14 @@
 //!  - `split=POS`   send the bytes in two TCP segments, cut at POS;
 //!  - `disorder`    send the first segment with TTL 1 (it dies at the first router; the kernel
 //!                  retransmits it later with the normal TTL, so the server gets it out of order);
-//!  - `delay=MS`    pause between segments.
+//!  - `delay=MS`    pause between segments;
+//!  - `oob`         after the first segment send one byte with TCP URG: the server's stack drops it
+//!                  from the stream, DPI reads it as data and loses track of the hello;
+//!  - `tlsfrag=N`   cut the first N bytes of the hello into one-byte TLS records. The handshake is
+//!                  unchanged, the record headers inflate it past one TCP segment: DPI that reassembles
+//!                  a small split hello (most desktop and Android TLS stacks send ~300-520 bytes) gives
+//!                  up on one that is this long and fragmented.
+//! Bypass hosts resolve over DNS-over-HTTPS: providers also hide them from DNS.
 //! POS is a byte offset (`3`) or relative to the SNI host name (`sni`, `sni+2`, `sni-1`).
 //! Content-changing tricks (SNI case, fake packets with a wrong checksum) are deliberately left out:
 //! they would break the handshake or need raw sockets.
@@ -35,6 +42,8 @@ pub struct Strategy {
     pub tlsrec: Pos,
     pub split: Pos,
     pub disorder: bool,
+    pub oob: bool,
+    pub frag: usize,
     pub delay_ms: u64,
 }
 
@@ -53,11 +62,18 @@ impl Strategy {
                         out.split = parse_pos(v)?;
                     }
                 }
+                "oob" => {
+                    out.oob = true;
+                    if !v.is_empty() {
+                        out.split = parse_pos(v)?;
+                    }
+                }
+                "tlsfrag" => out.frag = v.parse().map_err(|_| format!("bad tlsfrag: {v}"))?,
                 "delay" => out.delay_ms = v.parse().map_err(|_| format!("bad delay: {v}"))?,
                 _ => return Err(format!("unknown option: {k}")),
             }
         }
-        if out.disorder && out.split == Pos::None {
+        if (out.disorder || out.oob) && out.split == Pos::None {
             out.split = Pos::Sni(1);
         }
         Ok(out)
@@ -117,6 +133,25 @@ fn resolve(pos: &Pos, sni: Option<(usize, usize)>, len: usize) -> Option<usize> 
 /// The bytes to send and where to cut them into TCP segments.
 pub fn plan(first: &[u8], st: &Strategy) -> (Vec<u8>, Option<usize>) {
     let sni = sni_offset(first);
+    if st.frag > 0 && first.len() > 5 && first[0] == 0x16 {
+        let rec_len = u16::from_be_bytes([first[3], first[4]]) as usize;
+        if 5 + rec_len <= first.len() {
+            let payload = &first[5..5 + rec_len];
+            let n = st.frag.min(rec_len.saturating_sub(1));
+            let mut out = Vec::with_capacity(first.len() + 5 * n);
+            for b in &payload[..n] {
+                out.extend_from_slice(&[0x16, first[1], first[2], 0, 1, *b]);
+            }
+            out.extend_from_slice(&[0x16, first[1], first[2]]);
+            out.extend_from_slice(&((rec_len - n) as u16).to_be_bytes());
+            out.extend_from_slice(&payload[n..]);
+            out.extend_from_slice(&first[5 + rec_len..]);
+            // Positions count in the original hello; past the one-byte records each moved by 5 per record.
+            let map = |p: usize| if p <= 5 { p } else if p - 5 <= n { 5 + (p - 5) * 6 } else { p + 5 * n + 5 };
+            let split = resolve(&st.split, sni, first.len()).map(map).filter(|&p| p < out.len());
+            return (out, split);
+        }
+    }
     let mut data = first.to_vec();
     let mut shift_after = usize::MAX; // positions >= this moved by 5 (the second record header)
     if let Some(at) = resolve(&st.tlsrec, sni, first.len()) {
@@ -210,6 +245,9 @@ fn send_desync(up: &mut TcpStream, first: &[u8], st: &Strategy) -> std::io::Resu
     }
     up.write_all(&data[..at])?;
     up.flush()?;
+    if st.oob {
+        socket2::SockRef::from(&*up).send_out_of_band(b"a")?;
+    }
     if st.disorder {
         // Let the short-lived segment leave before the TTL is restored for the rest.
         thread::sleep(Duration::from_millis(st.delay_ms.max(3)));
@@ -260,12 +298,85 @@ fn socks5_accept(client: &mut TcpStream) -> std::io::Result<(String, u16)> {
     Ok((host, u16::from_be_bytes(port)))
 }
 
+/** DNS-over-HTTPS servers, by IP so they need no DNS themselves. */
+const DOH: [&str; 3] = ["https://1.1.1.1/dns-query?type=A&name=", "https://8.8.8.8/resolve?type=A&name=", "https://9.9.9.9:5053/dns-query?type=A&name="];
+
+fn dns_cache() -> &'static std::sync::Mutex<std::collections::HashMap<String, (Vec<std::net::IpAddr>, std::time::Instant)>> {
+    static C: OnceLock<std::sync::Mutex<std::collections::HashMap<String, (Vec<std::net::IpAddr>, std::time::Instant)>>> = OnceLock::new();
+    C.get_or_init(Default::default)
+}
+
+/// A records over DoH (cached 5 minutes).
+pub fn doh(host: &str) -> Option<Vec<std::net::IpAddr>> {
+    if let Some((ips, until)) = dns_cache().lock().ok()?.get(host).cloned() {
+        if until > std::time::Instant::now() {
+            return Some(ips);
+        }
+    }
+    let agent = ureq::AgentBuilder::new().timeout(Duration::from_secs(4)).build();
+    for server in DOH {
+        let Ok(r) = agent.get(&format!("{server}{host}")).set("Accept", "application/dns-json").call() else { continue };
+        let Ok(v) = r.into_json::<serde_json::Value>() else { continue };
+        let ips: Vec<std::net::IpAddr> = v["Answer"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|a| a["type"] == 1)
+            .filter_map(|a| a["data"].as_str()?.parse().ok())
+            .collect();
+        if !ips.is_empty() {
+            if let Ok(mut c) = dns_cache().lock() {
+                c.insert(host.to_string(), (ips.clone(), std::time::Instant::now() + Duration::from_secs(300)));
+            }
+            return Some(ips);
+        }
+    }
+    None
+}
+
+/// Providers also block by DNS: bypass hosts resolve over DoH first, the rest fall back to it.
+fn resolve_host(host: &str, port: u16) -> std::io::Result<Vec<std::net::SocketAddr>> {
+    if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+        return Ok(vec![(ip, port).into()]);
+    }
+    let bypass = strategy_for(host).is_some();
+    if bypass {
+        if let Some(ips) = doh(host) {
+            return Ok(ips.into_iter().map(|ip| (ip, port).into()).collect());
+        }
+    }
+    match (host, port).to_socket_addrs() {
+        Ok(a) => {
+            let a: Vec<_> = a.filter(|a| !a.ip().is_unspecified() && !a.ip().is_loopback() || host == "localhost").collect();
+            if !a.is_empty() {
+                return Ok(a);
+            }
+        }
+        Err(e) if bypass => return Err(e),
+        Err(_) => {}
+    }
+    doh(host).map(|ips| ips.into_iter().map(|ip| (ip, port).into()).collect()).ok_or_else(|| std::io::Error::other(format!("cannot resolve {host}")))
+}
+
+/// First reachable address, IPv4 first (a dead IPv6 route would stall every tunnel).
+fn connect(host: &str, port: u16) -> std::io::Result<TcpStream> {
+    let mut addrs = resolve_host(host, port)?;
+    addrs.sort_by_key(|a| a.is_ipv6());
+    let mut last = std::io::Error::other("no address");
+    for a in addrs {
+        match TcpStream::connect_timeout(&a, Duration::from_secs(7)) {
+            Ok(s) => return Ok(s),
+            Err(e) => last = e,
+        }
+    }
+    Err(last)
+}
+
 fn handle(mut client: TcpStream) -> std::io::Result<()> {
     let mut first_byte = [0u8; 1];
     if client.peek(&mut first_byte)? == 1 && first_byte[0] == 5 {
         let (host, port) = socks5_accept(&mut client)?;
-        let addr = (host.as_str(), port).to_socket_addrs()?.next().ok_or_else(|| std::io::Error::other("no address"))?;
-        let up = match TcpStream::connect_timeout(&addr, Duration::from_secs(10)) {
+        let up = match connect(&host, port) {
             Ok(s) => s,
             Err(e) => {
                 client.write_all(&[5, 5, 0, 1, 0, 0, 0, 0, 0, 0])?;
@@ -293,8 +404,8 @@ fn handle(mut client: TcpStream) -> std::io::Result<()> {
         return forward_http(client, &head, method, target);
     }
     let host = target.rsplit_once(':').map(|(h, _)| h).unwrap_or(target).trim_matches(['[', ']']).to_string();
-    let addr = target.to_socket_addrs()?.next().ok_or_else(|| std::io::Error::other("no address"))?;
-    let mut up = match TcpStream::connect_timeout(&addr, Duration::from_secs(10)) {
+    let port = target.rsplit_once(':').and_then(|(_, p)| p.parse().ok()).unwrap_or(443);
+    let up = match connect(&host, port) {
         Ok(s) => s,
         Err(e) => {
             client.write_all(b"HTTP/1.1 502 Bad Gateway\r\nContent-Length: 0\r\n\r\n")?;
@@ -341,9 +452,11 @@ fn forward_http(mut client: TcpStream, head: &[u8], method: &str, target: &str) 
         return Ok(());
     };
     let (authority, path) = rest.split_once('/').map(|(a, p)| (a, format!("/{p}"))).unwrap_or((rest, "/".into()));
-    let addr_s = if authority.contains(':') { authority.to_string() } else { format!("{authority}:80") };
-    let addr = addr_s.to_socket_addrs()?.next().ok_or_else(|| std::io::Error::other("no address"))?;
-    let mut up = TcpStream::connect_timeout(&addr, Duration::from_secs(10))?;
+    let (h, port) = match authority.rsplit_once(':') {
+        Some((h, p)) => (h, p.parse().unwrap_or(80)),
+        None => (authority, 80),
+    };
+    let mut up = connect(h, port)?;
     let text = String::from_utf8_lossy(head);
     let mut lines = text.split("\r\n");
     let version = lines.next().and_then(|l| l.rsplit(' ').next()).unwrap_or("HTTP/1.1").to_string();
@@ -411,6 +524,52 @@ pub fn dpi_configure(enabled: bool, rules: Vec<RuleIn>) -> Result<Option<String>
     Ok(active_port().map(|p| format!("http://127.0.0.1:{p}")))
 }
 
+#[derive(serde::Serialize)]
+pub struct ProbeResult {
+    strategy: String,
+    ok: bool,
+    ms: u64,
+    bytes: u64,
+}
+
+/// Bytes of the body through the proxy on a fresh connection, or None (8 s budget).
+fn probe_fetch(url: &str, port: u16) -> Option<u64> {
+    let agent = ureq::AgentBuilder::new()
+        .proxy(ureq::Proxy::new(format!("socks5://127.0.0.1:{port}")).ok()?)
+        .timeout_connect(Duration::from_secs(6))
+        .timeout(Duration::from_secs(8))
+        .max_idle_connections(0)
+        .build();
+    let r = match agent.get(url).set("User-Agent", "Mozilla/5.0").call() {
+        Ok(r) => r,
+        Err(ureq::Error::Status(_, r)) => r, // an HTTP answer means the handshake got through
+        Err(_) => return None,
+    };
+    let mut buf = Vec::new();
+    r.into_reader().take(4 << 20).read_to_end(&mut buf).ok()?;
+    Some(buf.len() as u64)
+}
+
+/// Try each strategy for one service against real URLs; the caller re-applies its rules after.
+#[tauri::command]
+pub async fn dpi_probe(hosts: Vec<String>, strategies: Vec<String>, urls: Vec<String>) -> Result<Vec<ProbeResult>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut out = Vec::new();
+        for st in strategies {
+            dpi_configure(true, vec![RuleIn { hosts: hosts.clone(), strategy: st.clone() }])?;
+            let port = active_port().ok_or("proxy not running")?;
+            let t0 = std::time::Instant::now();
+            let mut bytes = 0;
+            let ok = urls.iter().all(|u| probe_fetch(u, port).map(|b| bytes += b).is_some());
+            log::info!("dpi probe {st}: {} {} ms", if ok { "ok" } else { "fail" }, t0.elapsed().as_millis());
+            out.push(ProbeResult { strategy: st, ok, ms: t0.elapsed().as_millis() as u64, bytes });
+        }
+        Ok(out)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
 #[cfg(test)]
 pub fn configure_for_test(strategy: &str) {
     dpi_configure(true, vec![RuleIn { hosts: vec!["googlevideo.com".into(), "yandex.net".into(), "youtube.com".into()], strategy: strategy.into() }]).unwrap();
@@ -460,6 +619,8 @@ mod tests {
         assert_eq!(s.delay_ms, 5);
         assert_eq!(Strategy::parse("disorder").unwrap().split, Pos::Sni(1));
         assert!(Strategy::parse("fake").is_err());
+        assert!(Strategy::parse("oob").unwrap().oob);
+        assert_eq!(Strategy::parse("tlsfrag=200").unwrap().frag, 200);
     }
 
     #[test]
@@ -481,6 +642,22 @@ mod tests {
         let needle = b"googlevideo";
         let at = split.unwrap();
         assert!(!data[..at].windows(needle.len()).any(|w| w == needle) || !data[at..].windows(needle.len()).any(|w| w == needle));
+    }
+
+    #[test]
+    fn fragments_the_hello_into_one_byte_records() {
+        let h = hello("www.youtube.com");
+        let (data, split) = plan(&h, &Strategy::parse("tlsfrag=40").unwrap());
+        assert_eq!(data.len(), h.len() + 5 * 40);
+        assert!(split.is_none());
+        // Reassembling every record payload gives the original handshake message.
+        let (mut p, mut joined) = (0, Vec::new());
+        while p < data.len() {
+            let l = u16::from_be_bytes([data[p + 3], data[p + 4]]) as usize;
+            joined.extend_from_slice(&data[p + 5..p + 5 + l]);
+            p += 5 + l;
+        }
+        assert_eq!(joined, h[5..]);
     }
 
     #[test]

@@ -98,8 +98,8 @@ export async function pageFetch(url: string, init: RequestInit, binary: boolean)
   return new Response(r.status === 204 || r.status === 304 ? null : body, { status: r.status, headers: r.headers });
 }
 
-/** Android can try every strategy on the phone's own network and keep the fastest. */
-export const bypassAutoSupported = isAndroid;
+/** The app can try every strategy on the device's own network and keep the fastest. */
+export const bypassAutoSupported = isAndroid || isTauri;
 
 /** Small real responses per service: page, image CDN and media CDN where the service has one. */
 const PROBE_URLS: Record<BypassService, string[]> = {
@@ -111,8 +111,11 @@ const PROBE_URLS: Record<BypassService, string[]> = {
 
 /** Presets plus the usual ByeDPI variants worth trying. */
 const PROBE_STRATEGIES = [
-  // OOB first (Android): an urgent byte the server drops but DPI counts as data. It gets past
-  // DPI that reassembles TLS records and TCP segments, where tlsrec / split alone do not.
+  // Inflate the hello with one-byte TLS records: gets past DPI that reassembles a small split
+  // hello (Android and desktop TLS stacks send ~300-520 bytes), where every other trick fails.
+  'tlsfrag=240',
+  'tlsfrag=120,oob=sni+1',
+  // OOB: an urgent byte the server drops but DPI counts as data.
   'tlsrec=sni+1,oob=sni+3',
   'oob=1',
   'oob=sni+1',
@@ -137,6 +140,7 @@ const PROBE_STRATEGIES = [
 const YT_PROBE_HOSTS = ['www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'i.ytimg.com', 's.ytimg.com', 'i1.ytimg.com', 'i2.ytimg.com', 'i3.ytimg.com', 'i4.ytimg.com', 'tv.youtube.com', 'studio.youtube.com'];
 const YT_PROBE_STRATEGIES = [
   BYPASS_PRESETS.tlsrec,
+  'tlsfrag=240',
   'tlsrec=1',
   'tlsrec=sni+1,oob=sni+3',
   BYPASS_PRESETS.split,
@@ -166,13 +170,19 @@ async function probeYoutube(): Promise<ProbeResult[]> {
   return out;
 }
 
+async function probeDesktop(service: BypassService): Promise<ProbeResult[]> {
+  const { invoke } = await import('@tauri-apps/api/core');
+  return invoke<ProbeResult[]>('dpi_probe', { hosts: BYPASS_HOSTS[service], strategies: PROBE_STRATEGIES, urls: PROBE_URLS[service] });
+}
+
 export async function autoPickBypass(service: BypassService): Promise<{ strategy: string; ms: number } | null> {
-  if (!Bypass) return null;
+  if (!bypassAutoSupported) return null;
   try {
-    const results =
-      service === 'youtube'
+    const results = isTauri
+      ? await probeDesktop(service)
+      : service === 'youtube'
         ? await probeYoutube()
-        : (await Bypass.probe({ hosts: BYPASS_HOSTS[service], strategies: PROBE_STRATEGIES, urls: PROBE_URLS[service] })).results;
+        : (await Bypass!.probe({ hosts: BYPASS_HOSTS[service], strategies: PROBE_STRATEGIES, urls: PROBE_URLS[service] })).results;
     const best = results.filter((r) => r.ok).sort((a, b) => a.ms - b.ms)[0];
     if (!best) return null;
     const preset = (Object.keys(BYPASS_PRESETS) as (keyof typeof BYPASS_PRESETS)[]).find((k) => k !== 'off' && BYPASS_PRESETS[k] === best.strategy);

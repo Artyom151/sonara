@@ -28,7 +28,9 @@ tauri-plugin-opener = "2"
 discord-rich-presence = "1.1.0"
 # Local media proxy for YouTube audio (src/media_proxy.rs).
 tiny_http = "0.12"
-ureq = { version = "2", features = ["socks-proxy"] }
+ureq = { version = "2", features = ["socks-proxy", "json"] }
+# Urgent (OOB) bytes for the DPI bypass (src/dpi.rs).
+socket2 = { version = "0.6", features = ["all"] }
 
 [profile.release]
 codegen-units = 1
