@@ -5,6 +5,9 @@ Russian version: [CHANGELOG_ru.md](CHANGELOG_ru.md).
 
 ## [Unreleased]
 
+### Added
+- **Bypass blocking** (Settings → Bypass blocking): a built-in DPI bypass in the spirit of zapret / ByeDPI for YouTube, SoundCloud, Deezer and Yandex, on desktop and Android. Only Sonara's own traffic, no VPN, root or driver; a preset or a custom strategy per service.
+
 ## [1.1.1] - 2026-10-09
 
 ### Added

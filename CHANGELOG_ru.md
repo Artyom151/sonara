@@ -5,6 +5,9 @@ English version: [CHANGELOG.md](CHANGELOG.md).
 
 ## [Unreleased]
 
+### Добавлено
+- **Обход блокировок** (Настройки → Обход блокировок): встроенный обход DPI в духе zapret / ByeDPI для YouTube, SoundCloud, Deezer и Яндекса, на ПК и Android. Только для трафика Sonara, без VPN, root и драйверов; пресет или своя стратегия для каждого сервиса.
+
 ## [1.1.1] - 2026-10-09
 
 ### Добавлено
