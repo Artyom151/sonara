@@ -1,4 +1,4 @@
-import { BYPASS_HOSTS, type BypassPreset, type BypassService, type BypassServiceConfig } from '../../platform/dpi';
+import { BYPASS_HOSTS, bypassSupported, type BypassPreset, type BypassService, type BypassServiceConfig } from '../../platform/dpi';
 import { SOURCE_ORDER, SOURCES } from '../sources';
 import { useEffect, useState } from 'react';
 import { api } from '../../core';
@@ -194,7 +194,7 @@ export function Settings() {
       </div>
       <div className="group-foot">{t('youtubeKeyHint')}</div>
 
-      {isTauri && <BypassSettings />}
+      {bypassSupported && <BypassSettings />}
 
       <div className="group-label">{t('playback')}</div>
       <div className="group">

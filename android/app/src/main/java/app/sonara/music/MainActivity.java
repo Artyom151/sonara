@@ -12,6 +12,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(DynamicColorPlugin.class);
         registerPlugin(MediaControlsPlugin.class);
         registerPlugin(PoTokenPlugin.class);
+        registerPlugin(BypassPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }
