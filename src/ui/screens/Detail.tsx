@@ -1,3 +1,4 @@
+import { DownloadAllButton, DownloadsScreen } from '../components/Downloads';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../core';
 import type { Playlist, Track } from '../../core/types';
@@ -87,6 +88,11 @@ function Collection({
             <span>{t('shuffle')}</span>
           </button>
         </div>
+        {tracks.length > 0 && (
+          <div className="hero-actions" style={{ marginTop: 8 }}>
+            <DownloadAllButton tracks={tracks} />
+          </div>
+        )}
         {extra}
       </div>
       {loading && (
@@ -268,6 +274,8 @@ export function RouteView({ r }: { r: Route }) {
       return <LocalPlaylist r={r} />;
     case 'liked':
       return <LikedScreen />;
+    case 'downloads':
+      return <DownloadsScreen />;
     case 'recent':
       return <RecentScreen />;
     case 'all':

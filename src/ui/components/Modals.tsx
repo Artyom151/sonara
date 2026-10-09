@@ -1,3 +1,6 @@
+import { ImportSheet } from './Downloads';
+import { download, removeDownload, useOffline } from '../../player/offline';
+import { useSleep } from '../../player/sleep';
 import { sourceName } from '../sources';
 import { useState } from 'react';
 import { usePlayer } from '../../store/player';
@@ -18,6 +21,8 @@ import {
   IconRepeat,
   IconShare,
   IconTrash,
+  IconTimer,
+  IconDownload,
 } from '../icons';
 import { Alert, Art, Field, Menu, Sheet, type MenuItem } from './controls';
 import { MixCover, PlaylistCover } from './MixCover';
@@ -63,12 +68,33 @@ function TrackMenu({ m }: { m: Extract<Modal, { type: 'track' }> }) {
       ? { label: t('goToArtist'), icon: <IconPerson size={18} />, children: artists.map((n) => ({ label: n, icon: <IconPerson size={18} />, onSelect: () => openArtistPage(track, n, false) })) }
       : { label: t('goToArtist'), icon: <IconPerson size={18} />, onSelect: () => openArtistPage(track, artists[0] ?? track.artist, true) };
 
+  const sleep = useSleep();
+  const sleepLeft = sleep.until ? Math.max(1, Math.round((sleep.until - Date.now()) / 60_000)) : 0;
+  const sleepItem: MenuItem[] = isCurrent
+    ? [
+        {
+          label: t('sleepTimer'),
+          icon: <IconTimer size={18} />,
+          detail: sleep.endOfTrack ? t('sleepEndOfTrack') : sleep.until ? `${sleepLeft} ${t('minutesShort')}` : t('sleepOff'),
+          children: [
+            { label: t('sleepOff'), checked: !sleep.until && !sleep.endOfTrack, onSelect: () => sleep.set(null) },
+            ...[15, 30, 45, 60].map((n) => ({ label: `${n} ${t('minutesShort')}`, onSelect: () => (sleep.set(n), toast(`${t('sleepSet')}: ${n} ${t('minutesShort')}`)) })),
+            { label: t('sleepEndOfTrack'), checked: sleep.endOfTrack, onSelect: () => (sleep.set('track'), toast(t('sleepSet'))) },
+          ],
+        },
+      ]
+    : [];
+  const downloaded = useOffline((s) => !!s.items[track.key]);
   const items: MenuItem[] = [
     ...playback,
+    ...sleepItem,
     { ...toArtist, separatorBefore: isCurrent },
     { label: t('playNext'), separatorBefore: true, icon: <IconQueue size={18} />, onSelect: () => (usePlayer.getState().playNext(track), toast(t('added'))) },
     { label: t('addToQueue'), icon: <IconMusicList size={18} />, onSelect: () => (usePlayer.getState().addToQueue([track]), toast(t('added'))) },
     { label: t('addToPlaylist'), icon: <IconPlus size={18} />, onSelect: () => setTimeout(() => open({ type: 'addToPlaylist', tracks: [track] })) },
+    downloaded
+      ? { label: t('removeDownload'), icon: <IconDownload size={18} filled />, onSelect: () => void removeDownload(track.key) }
+      : { label: t('download'), icon: <IconDownload size={18} />, onSelect: () => (download([track]), toast(t('downloadQueued'))) },
     { label: liked ? t('unlike') : t('like'), icon: <IconHeart size={18} filled={liked} />, onSelect: () => useLibrary.getState().toggleLike(track), separatorBefore: true },
     { label: t('dislike'), icon: <IconBan size={18} />, checked: disliked, onSelect: () => useLibrary.getState().toggleDislike(track) },
     { label: t('share'), icon: <IconShare size={18} />, onSelect: () => shareTrack(track, t('copied')), separatorBefore: true },
@@ -329,6 +355,8 @@ export function Modals() {
             return <CommentsSheet key={i} />;
           case 'artists':
             return <ArtistChooser key={i} m={m} />;
+          case 'import':
+            return <ImportSheet key={i} />;
         }
       })}
     </>

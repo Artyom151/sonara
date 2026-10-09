@@ -134,4 +134,6 @@ export interface SonaraApi {
   artist(ref: ArtistRef): Promise<ArtistPage>;
   /** A playlist or album from a Yandex Music, YouTube or SoundCloud link, with its tracks. */
   importLink(url: string): Promise<Playlist>;
+  /** Drop a cached stream link (it failed to play). */
+  forgetStream(key: string): void;
 }

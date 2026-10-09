@@ -4,12 +4,13 @@ import { IconDeezer, IconSoundCloud, IconYandexMusic, IconYouTube } from './icon
 
 type Icon = ComponentType<SVGProps<SVGSVGElement> & { size?: number }>;
 
-/** Every music source: display name, logo and brand colour (Settings cell tint). */
-export const SOURCES: Record<Source, { name: string; Icon: Icon; color: string }> = {
+/** Every music source: display name, logo, brand background (Settings cell) and logo colour. */
+export const SOURCES: Record<Source, { name: string; Icon: Icon; color: string; fg?: string }> = {
   soundcloud: { name: 'SoundCloud', Icon: IconSoundCloud, color: '#ff5500' },
   youtube: { name: 'YouTube', Icon: IconYouTube, color: '#ff0033' },
   deezer: { name: 'Deezer', Icon: IconDeezer, color: '#a238ff' },
-  yandex: { name: 'Яндекс Музыка', Icon: IconYandexMusic, color: '#ffbc0d' },
+  // Brand look: the yellow mark on black.
+  yandex: { name: 'Яндекс Музыка', Icon: IconYandexMusic, color: '#000', fg: '#ffbc0d' },
 };
 
 export const SOURCE_ORDER: Source[] = ['soundcloud', 'youtube', 'deezer', 'yandex'];

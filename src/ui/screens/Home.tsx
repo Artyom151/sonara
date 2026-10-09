@@ -176,6 +176,28 @@ export function Home() {
               )}
             </section>
           )}
+          {!!data.yandex?.length && (
+            <section className="section">
+              <SectionHead title={t('yandexLibrary')} />
+              <div className="hscroll">
+                {data.yandex.map((p) => (
+                  <button
+                    key={p.key}
+                    style={{ width: 130, textAlign: 'left' }}
+                    onClick={() => push({ name: 'playlist', source: 'yandex', id: p.id, title: p.title, artwork: p.artwork, preview: p })}
+                  >
+                    <div style={{ width: 130, height: 130, borderRadius: 14, overflow: 'hidden', background: 'var(--surface-2)' }}>
+                      <Art src={p.artwork} seed={p.key} className="cover-img" />
+                    </div>
+                    <div className="track-title" style={{ marginTop: 6 }}>{p.title}</div>
+                    <div className="track-sub">
+                      {p.trackCount} {t('tracks')}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
           {data.youtube.length > 0 && (
             <section className="section">
               <SectionHead title={t('trendingYoutube')} onAll={() => push({ name: 'all', kind: 'youtube' })} />

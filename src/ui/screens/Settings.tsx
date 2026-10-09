@@ -116,9 +116,9 @@ export function Settings() {
       <div className="group-label">{t('sources')}</div>
       <div className="group">
         {SOURCE_ORDER.map((src) => {
-          const { name, Icon, color } = SOURCES[src];
+          const { name, Icon, color, fg } = SOURCES[src];
           return (
-            <Cell key={src} icon={<Icon size={18} />} color={color} label={name}>
+            <Cell key={src} icon={<Icon size={18} style={fg ? { color: fg } : undefined} />} color={color} label={name}>
               <Toggle checked={s.sources[src] ?? true} onChange={(v) => s.set({ sources: { ...s.sources, [src]: v } })} />
             </Cell>
           );

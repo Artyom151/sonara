@@ -15,7 +15,9 @@ const toRecord = (h?: HeadersInit) => {
 
 /** CapacitorHttp performs the request natively: no CORS, any header allowed. */
 /** Media and images must come back as bytes: CapacitorHttp returns those base64-encoded. */
-const BINARY = /(^|\.)(googlevideo\.com|sndcdn\.com|dzcdn\.net|ytimg\.com)$/;
+const BINARY = /(^|\.)(googlevideo\.com|sndcdn\.com|soundcloud\.cloud|dzcdn\.net|ytimg\.com|yandex\.net|googleusercontent\.com)$/;
+/** Callers that need bytes from any host send this header; it is not forwarded. */
+export const BINARY_HINT = 'x-sonara-binary';
 const fromBase64 = (b64: string) => {
   const bin = atob(b64);
   const out = new Uint8Array(bin.length);
@@ -25,7 +27,8 @@ const fromBase64 = (b64: string) => {
 
 const capacitorFetch: Fetcher = async (url, init = {}) => {
   const headers = toRecord(init.headers);
-  const binary = BINARY.test(new URL(url).hostname);
+  const binary = BINARY.test(new URL(url).hostname) || BINARY_HINT in headers;
+  delete headers[BINARY_HINT];
   const r = await CapacitorHttp.request({
     url,
     method: init.method ?? 'GET',
@@ -56,6 +59,7 @@ const tauriNativeFetch: Fetcher = async (url, init = {}) => {
   const host = new URL(url).hostname;
   const origin = ORIGINS.find(([re]) => re.test(host))?.[1];
   const headers = new Headers(init.headers);
+  headers.delete(BINARY_HINT);
   if (origin) {
     if (!headers.has('origin')) headers.set('Origin', origin);
     if (!headers.has('referer')) headers.set('Referer', `${origin}/`);

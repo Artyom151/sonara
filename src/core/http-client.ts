@@ -36,6 +36,7 @@ export function createHttpApi(base = '', getOptions: () => ApiOptions = () => ({
     },
     lyrics: (track) => get('lyrics', { track: t(track) }),
     importLink: (url) => get('import', { url }),
+    forgetStream: () => {},
     artist: (ref) => get('artist', { source: ref.source, name: ref.name, ...(ref.id ? { id: ref.id } : {}) }),
     likers: (track) => get('likers', { track: t(track) }),
     clientId: async (refresh) => (await get<{ clientId: string }>('client-id', refresh ? { refresh: '1' } : {})).clientId,

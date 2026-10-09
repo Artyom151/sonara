@@ -4,7 +4,8 @@ import { Art } from '../components/controls';
 import { PlaylistCover } from '../components/MixCover';
 import { TrackList } from '../components/TrackRow';
 import { useT } from '../i18n';
-import { IconChevronRight, IconHeart, IconPlus } from '../icons';
+import { IconChevronRight, IconDownload, IconHeart, IconLink, IconPlus } from '../icons';
+import { useOffline } from '../../player/offline';
 
 export function PlaylistTiles() {
   const t = useT();
@@ -20,6 +21,14 @@ export function PlaylistTiles() {
         </div>
         <div>
           <b>{t('newPlaylist')}</b>
+        </div>
+      </button>
+      <button className="lib-tile" onClick={() => open({ type: 'import' })}>
+        <div className="lib-cover glass" style={{ color: 'var(--accent)' }}>
+          <IconLink size={24} />
+        </div>
+        <div>
+          <b>{t('importPlaylist')}</b>
         </div>
       </button>
       {playlists.map((p) => (
@@ -61,6 +70,7 @@ export function PlaylistTiles() {
 export function Likes() {
   const t = useT();
   const likes = useLibrary((s) => s.likes);
+  const downloads = useOffline((s) => Object.keys(s.items).length);
   const push = useUi((s) => s.push);
   return (
     <div className="screen">
@@ -73,6 +83,18 @@ export function Likes() {
           <b>{t('likedSongs')}</b>
           <small>
             {likes.length} {t('tracks')}
+          </small>
+        </div>
+        <IconChevronRight size={16} style={{ opacity: 0.4 }} />
+      </button>
+      <button className="lib-tile" onClick={() => push({ name: 'downloads' })}>
+        <div className="lib-cover" style={{ background: 'linear-gradient(135deg, #30d158, #0a84ff)' }}>
+          <IconDownload size={26} filled />
+        </div>
+        <div style={{ flex: 1 }}>
+          <b>{t('downloads')}</b>
+          <small>
+            {downloads} {t('tracks')}
           </small>
         </div>
         <IconChevronRight size={16} style={{ opacity: 0.4 }} />

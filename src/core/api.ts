@@ -137,6 +137,7 @@ export function createCoreApi(
       source === 'youtube' ? yt.playlist(id) : source === 'deezer' ? dz.playlist(id) : source === 'yandex' ? ym.playlist(id) : sc.playlist(id),
 
     importLink: (url) => importLink(url),
+    forgetStream: (key) => void streamCache.delete(key),
 
     async search(q, source, opts = {}): Promise<SearchResult> {
       const useSc = (source === 'all' || source === 'soundcloud') && (opts.sources?.soundcloud ?? true);

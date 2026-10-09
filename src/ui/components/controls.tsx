@@ -1,3 +1,4 @@
+import { isDownloaded, offlineArtUrl } from '../../player/offline';
 import { AnimatePresence, motion, useDragControls, useMotionValue, useSpring, useTransform, type PanInfo } from 'motion/react';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
@@ -426,7 +427,13 @@ export function Marquee({ text, className }: { text: string; className?: string 
 /* ───────────── Artwork with graceful fallback ───────────── */
 export function Art({ src, alt = '', className, seed }: { src?: string; alt?: string; className?: string; seed?: string }) {
   const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [src]);
+  const [local, setLocal] = useState<string | null>(null);
+  useEffect(() => (setFailed(false), setLocal(null)), [src]);
+  // Offline: the cover saved with a downloaded track (seed is the track key).
+  useEffect(() => {
+    if ((failed || !src) && seed && isDownloaded(seed)) offlineArtUrl(seed).then(setLocal);
+  }, [failed, src, seed]);
+  if (local) return <img className={className} src={local} alt={alt} draggable={false} />;
   if (!src || failed) return <div className={`art-fallback ${className ?? ''}`} style={{ background: gradientFor(seed ?? alt) }} />;
   return <img className={className} src={src} alt={alt} loading="lazy" decoding="async" onError={() => setFailed(true)} draggable={false} />;
 }

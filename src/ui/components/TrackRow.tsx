@@ -1,10 +1,11 @@
+import { useOffline } from '../../player/offline';
 import { SourceIcon } from '../sources';
 import type { Track } from '../../core/types';
 import { useLibrary } from '../../store/library';
 import { usePlayer, type QueueContext } from '../../store/player';
 import { useUi } from '../../store/ui';
 import { compact, fmtTime } from '../i18n';
-import { IconMore } from '../icons';
+import { IconMore, IconDownload } from '../icons';
 import { Art } from './controls';
 
 export function EqBars({ paused }: { paused?: boolean }) {
@@ -15,6 +16,12 @@ export function EqBars({ paused }: { paused?: boolean }) {
       <i />
     </span>
   );
+}
+
+/** Small mark on rows of downloaded tracks. */
+function OfflineMark({ k }: { k: string }) {
+  const on = useOffline((s) => !!s.items[k]);
+  return on ? <IconDownload size={12} filled style={{ color: 'var(--accent)' }} /> : null;
 }
 
 export function SourceMark({ source }: { source: Track['source'] }) {
@@ -71,6 +78,7 @@ export function TrackRow({
         <div className="track-title">{track.title}</div>
         <div className="track-sub">
           <SourceMark source={track.source} />
+          <OfflineMark k={track.key} />
           <span>{track.artist}</span>
           {meta === 'duration' && track.duration > 0 && <span>· {fmtTime(track.duration)}</span>}
           {meta === 'plays' && track.plays && <span>· ▶ {compact(track.plays)}</span>}

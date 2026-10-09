@@ -8,6 +8,7 @@ export type Route =
   | { name: 'playlist'; source: Source; id: string; title: string; artwork?: string; preview?: Playlist }
   | { name: 'local'; id: string }
   | { name: 'liked' }
+  | { name: 'downloads' }
   | { name: 'recent' }
   | { name: 'settings' }
   | { name: 'wave' }
@@ -21,6 +22,7 @@ export type Modal =
   | { type: 'queue' }
   | { type: 'artists'; track: Track; names: string[]; anchor?: DOMRect }
   | { type: 'lyrics' }
+  | { type: 'import' }
   | { type: 'auth'; tab?: 'signIn' | 'signUp' }
   | { type: 'editProfile' }
   | { type: 'comments' }

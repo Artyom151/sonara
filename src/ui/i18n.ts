@@ -56,6 +56,12 @@ const en = {
   discordStatus: 'Show what I listen to', discordHint: 'Discord must be running. Create an app at discord.com/developers, paste its Application ID and upload the Sonara logo as an art asset named "sonara".',
   gfxAuto: 'Automatic', gfxHigh: 'Maximum', gfxBalanced: 'Balanced', gfxLow: 'Battery saver', comments: 'Comments', noComments: 'No comments yet — be the first', commentAt: 'Comment at', send: 'Send',
   signInToComment: 'Sign in to comment', commentsNotSetup: 'Comments need the database migration (supabase/migrations)',
+  download: 'Download', removeDownload: 'Remove download', downloaded: 'Downloaded', downloadAll: 'Download all', downloads: 'Downloads',
+  downloading: 'Downloading', downloadQueued: 'Added to downloads', downloadFailed: 'Could not download', downloadsEmpty: 'Downloaded tracks play without internet. Use Download in a track menu, playlist or Liked Songs.',
+  cancelDownloads: 'Stop downloading', allDownloaded: 'Everything is downloaded', offlineOnly: 'Downloaded',
+  sleepTimer: 'Sleep timer', sleepOff: 'Off', sleepEndOfTrack: 'End of track', minutesShort: 'min', sleepSet: 'Sleep timer set',
+  importPlaylist: 'Import by link', importHint: 'Link to a playlist or album: Yandex Music, YouTube, SoundCloud, Deezer', importAction: 'Import', importFailed: 'Could not import this link', imported: 'Imported',
+  yandexLibrary: 'Yandex Music',
 };
 
 const ru: typeof en = {
@@ -114,6 +120,12 @@ const ru: typeof en = {
   discordStatus: 'Показывать, что я слушаю', discordHint: 'Discord должен быть запущен. Создайте приложение на discord.com/developers, вставьте его Application ID и загрузите логотип Sonara как art asset с именем «sonara».',
   gfxAuto: 'Автоматически', gfxHigh: 'Максимум', gfxBalanced: 'Сбалансировано', gfxLow: 'Экономно', comments: 'Комментарии', noComments: 'Пока нет комментариев — будьте первым', commentAt: 'Комментарий на', send: 'Отправить',
   signInToComment: 'Войдите, чтобы комментировать', commentsNotSetup: 'Для комментариев нужна миграция базы (supabase/migrations)',
+  download: 'Скачать', removeDownload: 'Удалить загрузку', downloaded: 'Скачано', downloadAll: 'Скачать все', downloads: 'Загрузки',
+  downloading: 'Загрузка', downloadQueued: 'Добавлено в загрузки', downloadFailed: 'Не удалось скачать', downloadsEmpty: 'Скачанные треки играют без интернета. Нажмите «Скачать» в меню трека, в плейлисте или в любимых треках.',
+  cancelDownloads: 'Остановить загрузку', allDownloaded: 'Всё уже скачано', offlineOnly: 'Скачанные',
+  sleepTimer: 'Таймер сна', sleepOff: 'Выключен', sleepEndOfTrack: 'В конце трека', minutesShort: 'мин', sleepSet: 'Таймер сна включён',
+  importPlaylist: 'Импорт по ссылке', importHint: 'Ссылка на плейлист или альбом: Яндекс Музыка, YouTube, SoundCloud, Deezer', importAction: 'Импортировать', importFailed: 'Не удалось импортировать ссылку', imported: 'Импортировано',
+  yandexLibrary: 'Яндекс Музыка',
 };
 
 export type StrKey = keyof typeof en;

@@ -48,6 +48,7 @@ function lazyCoreApi(): SonaraApi {
     clientId: call('clientId'),
     artist: call('artist'),
     importLink: call('importLink'),
+    forgetStream: (key) => void load().then((a) => a.forgetStream?.(key)),
   };
 }
 

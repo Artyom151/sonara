@@ -6,6 +6,11 @@ import { useLibrary } from '../store/library';
 import { usePlayer } from '../store/player';
 import { useSettings } from '../store/settings';
 import { toast } from '../ui/components/Toast';
+import { audioMime, downloadRanged, mediaProxyBase, PROXIED, YT_UA } from './fetchAudio';
+import { initOffline, isDownloaded, offlineAudioUrl, removeDownload } from './offline';
+import { useSleep } from './sleep';
+
+void initOffline();
 
 /**
  * Single audio element driven by the player store. Subscribes to the store and
@@ -19,6 +24,8 @@ let hls: Hls | null = null;
 let loadedKey: string | null = null;
 let loadToken = 0;
 let blobUrl: string | null = null;
+/** Key of the track playing from its download (see brokenDownload). */
+let localKey: string | null = null;
 /** True while a new source is being attached (the element may emit a spurious pause). */
 let switching = false;
 
@@ -29,10 +36,6 @@ const resetSource = () => {
   blobUrl = null;
 };
 
-// MWEB client identity: the stream URLs are issued to it (core/youtube.ts).
-const YT_UA = 'Mozilla/5.0 (iPad; CPU OS 16_7_10 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1,gzip(gfe)';
-const CHUNK = 1 << 20; // googlevideo throttles long un-ranged reads; 1 MB ranges come at full speed
-
 /**
  * Native platforms: download YouTube audio through the native fetch in parallel 1 MB ranges and
  * play it from a blob. The webview's own media stack cannot be used for googlevideo URLs:
@@ -41,47 +44,14 @@ const CHUNK = 1 << 20; // googlevideo throttles long un-ranged reads; 1 MB range
  */
 async function viaNativeBlob(url: string, token: number) {
   if (!nativeFetch) throw new Error('unavailable');
-  const get = async (from: number, to: number) => {
-    for (let attempt = 0; ; attempt++) {
-      const r = await nativeFetch!(url, { headers: { 'User-Agent': YT_UA, Range: `bytes=${from}-${to}` } });
-      if (r.ok) return { buf: await r.arrayBuffer(), total: Number(r.headers.get('content-range')?.split('/')[1]) || 0, len: Number(r.headers.get('content-length')) || 0 };
-      if (attempt >= 2) throw new Error(`HTTP ${r.status}`);
-    }
-  };
-  const fromUrl = Number(new URL(url).searchParams.get('clen')) || 0;
-  const first = await get(0, CHUNK - 1);
-  const total = fromUrl || first.total || first.buf.byteLength;
-  const parts: ArrayBuffer[] = [first.buf];
-  if (first.buf.byteLength < total) {
-    const ranges: [number, number][] = [];
-    for (let from = first.buf.byteLength; from < total; from += CHUNK) ranges.push([from, Math.min(total, from + CHUNK) - 1]);
-    const out: ArrayBuffer[] = new Array(ranges.length);
-    let next = 0;
-    const worker = async () => {
-      while (next < ranges.length && token === loadToken) {
-        const i = next++;
-        out[i] = (await get(ranges[i][0], ranges[i][1])).buf;
-      }
-    };
-    await Promise.all([worker(), worker(), worker(), worker()]);
-    if (token !== loadToken) throw new Error('superseded');
-    parts.push(...out);
-  }
-  const mime = new URL(url).searchParams.get('mime') ?? (/\.yandex\.net\//.test(url) ? 'audio/mpeg' : 'audio/mp4');
+  const parts = await downloadRanged(url, nativeFetch, { headers: /\.googlevideo\.com\//.test(url) ? { 'User-Agent': YT_UA } : {}, alive: () => token === loadToken });
+  if (token !== loadToken) throw new Error('superseded');
   if (blobUrl) URL.revokeObjectURL(blobUrl);
-  blobUrl = URL.createObjectURL(new Blob(parts, { type: mime }));
+  blobUrl = URL.createObjectURL(new Blob(parts, { type: audioMime(url) }));
   return blobUrl;
 }
 
-let proxyBase: Promise<string | null> | null = null;
-const mediaProxyBase = () =>
-  (proxyBase ??= import('@tauri-apps/api/core')
-    .then(({ invoke }) => invoke<string | null>('media_proxy_base'))
-    .catch(() => null));
-
-/** Audio the webview cannot fetch itself: YouTube (client-bound URLs) and Yandex (CDN refuses our Origin). */
 const isYouTubeAudio = (t: Track) => t.source === 'youtube' || t.source === 'deezer' || t.source === 'yandex';
-const PROXIED = /\.googlevideo\.com\/|\.yandex\.net\//;
 
 async function attach(url: string, kind: 'progressive' | 'hls') {
   switching = true;
@@ -99,15 +69,24 @@ async function attach(url: string, kind: 'progressive' | 'hls') {
 
 async function load(track: Track, autoplay: boolean, startAt = 0) {
   const token = ++loadToken;
+  if (loadedKey !== track.key) retried.delete(track.key);
   loadedKey = track.key;
   usePlayer.getState().patch({ loading: true, error: null, buffered: 0, duration: track.duration || 0 });
   updateMediaSession(track);
   try {
-    const s = await api.stream(track);
+    // Downloaded: play the stored file, no network needed.
+    const local = await offlineAudioUrl(track.key);
+    if (token !== loadToken) return void (local && URL.revokeObjectURL(local));
+    const s = local ? { url: local, kind: 'progressive' as const } : await api.stream(track);
     if (token !== loadToken) return;
+    localKey = local ? track.key : null;
+    if (local) {
+      await attach(local, 'progressive');
+      blobUrl = local; // revoked by resetSource on the next track
+    }
     // Desktop (Tauri): always through the native fetch, see viaNativeBlob. Android plays the
     // URL directly and falls back to it in playSafe.
-    if (isYouTubeAudio(track) && isTauri && PROXIED.test(s.url)) {
+    else if (isYouTubeAudio(track) && isTauri && PROXIED.test(s.url)) {
       // Desktop: through the app's local media proxy (src-tauri/src/media_proxy.rs): streams,
       // seeks with Range, and keeps megabytes of audio out of the IPC bridge.
       const base = await mediaProxyBase();
@@ -126,8 +105,16 @@ async function load(track: Track, autoplay: boolean, startAt = 0) {
     useLibrary.getState().pushRecent(track);
   } catch (e) {
     if (token !== loadToken) return;
+    if (localKey === track.key) return brokenDownload(track, autoplay, startAt, e as Error);
     onUnavailable(track, e as Error);
   }
+}
+
+/** A download that does not play (damaged file): drop it and stream the track instead. */
+function brokenDownload(track: Track, autoplay: boolean, startAt: number, e: Error) {
+  console.warn('[player] download unplayable, streaming instead:', track.title, e);
+  localKey = null;
+  void removeDownload(track.key).then(() => load(track, autoplay, startAt));
 }
 
 async function playSafe(track: Track, url: string) {
@@ -158,7 +145,17 @@ async function playSafe(track: Track, url: string) {
   }
 }
 
+/** Tracks already retried with a fresh link (a cached one may have expired early). */
+const retried = new Set<string>();
+
 function onUnavailable(track: Track, e: Error) {
+  if (!retried.has(track.key)) {
+    retried.add(track.key);
+    console.warn('[player] retrying with a fresh link:', track.title, e.message);
+    api.forgetStream(track.key);
+    void load(track, true, audio.currentTime || 0);
+    return;
+  }
   console.warn('[player]', track.title, e);
   const st = usePlayer.getState();
   st.patch({ loading: false, error: e.message });
@@ -189,6 +186,7 @@ audio.addEventListener('pause', () => {
 audio.addEventListener('error', () => {
   const t = usePlayer.getState().current();
   if (!t || t.key !== loadedKey || !audio.src) return;
+  if (localKey === t.key) return brokenDownload(t, usePlayer.getState().playing, audio.currentTime, new Error(audio.error?.message || 'Playback error'));
   // Android: retry through the native fetch. Desktop never does (megabytes over IPC freeze the page).
   if (isYouTubeAudio(t) && nativeFetch && !isTauri && !blobUrl) {
     const src = audio.src;
@@ -203,6 +201,12 @@ audio.addEventListener('error', () => {
   onUnavailable(t, new Error(audio.error?.message || 'Playback error'));
 });
 audio.addEventListener('ended', async () => {
+  // Sleep timer "end of track": stop here instead of moving on.
+  if (useSleep.getState().endOfTrack) {
+    useSleep.getState().set(null);
+    usePlayer.getState().patch({ playing: false, position: 0 });
+    return;
+  }
   const st = usePlayer.getState();
   const atEnd = st.index + 1 >= st.queue.length && st.repeat === 'off';
   // The Wave refills its own queue (player/wave.ts); other contexts continue with related tracks.
@@ -296,3 +300,23 @@ if ('mediaSession' in navigator) {
 }
 
 export { audio };
+
+// Sleep timer: pause once the time is up.
+setInterval(() => {
+  const { until } = useSleep.getState();
+  if (until && Date.now() >= until) {
+    useSleep.getState().set(null);
+    usePlayer.getState().patch({ playing: false });
+  }
+}, 1000);
+
+// Resolve the next track's stream a few seconds into playback (core/api.ts caches it), so the
+// switch is instant: no search, no YouTube token on the boundary.
+let prefetched = '';
+audio.addEventListener('playing', () => {
+  const st = usePlayer.getState();
+  const next = st.queue[st.index + 1];
+  if (!next || prefetched === next.key || isDownloaded(next.key)) return;
+  prefetched = next.key;
+  setTimeout(() => void api.stream(next).catch(() => {}), 5000);
+});
