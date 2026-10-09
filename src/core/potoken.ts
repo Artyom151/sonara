@@ -18,6 +18,8 @@ import type { Fetcher } from './types';
 export type PoTokenProvider = (videoId: string) => Promise<string>;
 
 let provider: PoTokenProvider | null = null;
+// Decided at load: the jsdom minter defines a global `document` later, which must not read as a browser.
+const IN_BROWSER = typeof document !== 'undefined';
 /** The apps register how to mint on their platform (see platform/pot.ts). */
 export const setPoTokenProvider = (p: PoTokenProvider) => void (provider = p);
 
@@ -60,7 +62,7 @@ async function createNodeMinter(fetcher: Fetcher): Promise<WebPoMinter> {
 /** `pot` for a video id. Throws where no provider exists (plain browser tab). */
 export async function poToken(fetcher: Fetcher, videoId: string): Promise<string> {
   if (provider) return provider(videoId);
-  if (typeof document !== 'undefined') throw new Error('PO token provider not available');
+  if (IN_BROWSER) throw new Error('PO token provider not available');
   if (!minter || Date.now() > minter.until) {
     // The first attempt occasionally fails on a network hiccup; retry once.
     pending ??= createNodeMinter(fetcher)
