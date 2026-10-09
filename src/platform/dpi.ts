@@ -111,6 +111,11 @@ const PROBE_URLS: Record<BypassService, string[]> = {
 
 /** Presets plus the usual ByeDPI variants worth trying. */
 const PROBE_STRATEGIES = [
+  // Records that cross TCP segment boundaries: what got past DPI that reassembles the rest.
+  'tlsrec=sni+1,chunk=100',
+  'tlsfrag=240,chunk=400',
+  'tlsrec=sni+1,chunk=40',
+  'tlsrec=1,chunk=100',
   // Inflate the hello with one-byte TLS records: gets past DPI that reassembles a small split
   // hello (Android and desktop TLS stacks send ~300-520 bytes), where every other trick fails.
   'tlsfrag=240',
@@ -140,6 +145,7 @@ const PROBE_STRATEGIES = [
 const YT_PROBE_HOSTS = ['www.youtube.com', 'm.youtube.com', 'music.youtube.com', 'i.ytimg.com', 's.ytimg.com', 'i1.ytimg.com', 'i2.ytimg.com', 'i3.ytimg.com', 'i4.ytimg.com', 'tv.youtube.com', 'studio.youtube.com'];
 const YT_PROBE_STRATEGIES = [
   BYPASS_PRESETS.tlsrec,
+  'tlsrec=sni+1,chunk=100',
   'tlsfrag=240',
   'tlsrec=1',
   'tlsrec=sni+1,oob=sni+3',

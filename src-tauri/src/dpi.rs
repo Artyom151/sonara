@@ -16,6 +16,8 @@
 //!                  unchanged, the record headers inflate it past one TCP segment: DPI that reassembles
 //!                  a small split hello (most desktop and Android TLS stacks send ~300-520 bytes) gives
 //!                  up on one that is this long and fragmented.
+//!  - `chunk=N`     send the (already split) hello as back-to-back TCP segments of N bytes, so its
+//!                  records always cross segment boundaries, however small the client's hello is.
 //! Bypass hosts resolve over DNS-over-HTTPS: providers also hide them from DNS.
 //! POS is a byte offset (`3`) or relative to the SNI host name (`sni`, `sni+2`, `sni-1`).
 //! Content-changing tricks (SNI case, fake packets with a wrong checksum) are deliberately left out:
@@ -44,6 +46,7 @@ pub struct Strategy {
     pub disorder: bool,
     pub oob: bool,
     pub frag: usize,
+    pub chunk: usize,
     pub delay_ms: u64,
 }
 
@@ -68,6 +71,7 @@ impl Strategy {
                         out.split = parse_pos(v)?;
                     }
                 }
+                "chunk" => out.chunk = v.parse().ok().filter(|&n| n > 0).ok_or_else(|| format!("bad chunk: {v}"))?,
                 "tlsfrag" => out.frag = v.parse().map_err(|_| format!("bad tlsfrag: {v}"))?,
                 "delay" => out.delay_ms = v.parse().map_err(|_| format!("bad delay: {v}"))?,
                 _ => return Err(format!("unknown option: {k}")),
@@ -237,7 +241,7 @@ fn send_desync(up: &mut TcpStream, first: &[u8], st: &Strategy) -> std::io::Resu
     let (data, split) = plan(first, st);
     let _ = up.set_nodelay(true);
     let Some(at) = split else {
-        return up.write_all(&data);
+        return write_chunked(up, &data, st.chunk);
     };
     let ttl = up.ttl().unwrap_or(64);
     if st.disorder {
@@ -255,7 +259,21 @@ fn send_desync(up: &mut TcpStream, first: &[u8], st: &Strategy) -> std::io::Resu
     } else if st.delay_ms > 0 {
         thread::sleep(Duration::from_millis(st.delay_ms));
     }
-    up.write_all(&data[at..])
+    write_chunked(up, &data[at..], st.chunk)
+}
+
+/// One write per `chunk` bytes with Nagle off: each becomes its own TCP segment.
+fn write_chunked(up: &mut TcpStream, data: &[u8], chunk: usize) -> std::io::Result<()> {
+    if chunk == 0 {
+        return up.write_all(data);
+    }
+    for part in data.chunks(chunk) {
+        up.write_all(part)?;
+        up.flush()?;
+        // Let the segment leave on its own instead of coalescing with the next write.
+        thread::sleep(Duration::from_micros(300));
+    }
+    Ok(())
 }
 
 /// SOCKS5 greeting + CONNECT (no auth). Returns the target host and port.
@@ -643,6 +661,8 @@ mod tests {
         assert!(Strategy::parse("fake").is_err());
         assert!(Strategy::parse("oob").unwrap().oob);
         assert_eq!(Strategy::parse("tlsfrag=200").unwrap().frag, 200);
+        assert_eq!(Strategy::parse("tlsrec=sni+1,chunk=100").unwrap().chunk, 100);
+        assert!(Strategy::parse("chunk=0").is_err());
     }
 
     #[test]

@@ -70,6 +70,8 @@ public final class DpiProxy {
         boolean oob;
         /** First N bytes of the hello as one-byte TLS records: inflates it past one TCP segment. */
         int frag;
+        /** Send the hello as back-to-back TCP segments of this many bytes (0: as one write). */
+        int chunk;
         long delayMs;
 
         /** "tlsrec=sni+1,split=sni+3,disorder,delay=5" */
@@ -91,6 +93,14 @@ public final class DpiProxy {
                     case "oob":
                         out.oob = true;
                         if (!v.isEmpty()) out.split = parsePos(v);
+                        break;
+                    case "chunk":
+                        try {
+                            out.chunk = Integer.parseInt(v);
+                        } catch (NumberFormatException e) {
+                            out.chunk = 0;
+                        }
+                        if (out.chunk <= 0) throw new IllegalArgumentException("bad chunk: " + v);
                         break;
                     case "tlsfrag":
                         try {
@@ -664,7 +674,7 @@ public final class DpiProxy {
         Plan p = plan(first, st);
         up.noDelay();
         if (p.split < 0) {
-            up.out.write(p.data);
+            writeChunked(up, p.data, 0, p.data.length, st.chunk);
             return;
         }
         if (st.disorder) up.ttl(1);
@@ -678,7 +688,24 @@ public final class DpiProxy {
         } else if (st.delayMs > 0) {
             sleep(st.delayMs);
         }
-        up.out.write(p.data, p.split, p.data.length - p.split);
+        writeChunked(up, p.data, p.split, p.data.length - p.split, st.chunk);
+    }
+
+    /** One write per {@code chunk} bytes with Nagle off: each becomes its own TCP segment. */
+    private static void writeChunked(Upstream up, byte[] b, int off, int len, int chunk) throws IOException {
+        if (chunk <= 0) {
+            up.out.write(b, off, len);
+            return;
+        }
+        for (int i = 0; i < len; i += chunk) {
+            up.out.write(b, off + i, Math.min(chunk, len - i));
+            up.out.flush();
+            try {
+                Thread.sleep(0, 300_000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 
     private static void sleep(long ms) {
