@@ -168,7 +168,8 @@ function onUnavailable(track: Track, e: Error) {
 
 audio.addEventListener('timeupdate', () => usePlayer.getState().patch({ position: audio.currentTime }));
 audio.addEventListener('durationchange', () => {
-  if (Number.isFinite(audio.duration)) usePlayer.getState().patch({ duration: audio.duration });
+  // Streams without a known length report 0 or Infinity: keep the catalogue duration then.
+  if (Number.isFinite(audio.duration) && audio.duration > 0) usePlayer.getState().patch({ duration: audio.duration });
 });
 audio.addEventListener('progress', () => {
   if (audio.buffered.length) usePlayer.getState().patch({ buffered: audio.buffered.end(audio.buffered.length - 1) });
