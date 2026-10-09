@@ -167,7 +167,10 @@ fn handle(req: tiny_http::Request, token: &str) {
     }
     let body = Chunked { url: target, pos: start, end, buf: Vec::new(), off: 0 };
     let len = (end - start + 1) as usize;
-    let _ = req.respond(tiny_http::Response::new((if partial { 206 } else { 200 }).into(), headers, body, Some(len), None));
+    // tiny_http switches bodies over 32 KB to chunked encoding and drops Content-Length; without the
+    // length WebKit treats the stream as unseekable after the first seek.
+    let res = tiny_http::Response::new((if partial { 206 } else { 200 }).into(), headers, body, Some(len), None).with_chunked_threshold(usize::MAX);
+    let _ = req.respond(res);
 }
 
 /// Start the proxy once; returns (port, token).
@@ -200,4 +203,32 @@ pub fn start() -> (u16, String) {
 pub fn media_proxy_base() -> Option<String> {
     let (port, token) = start();
     (port != 0).then(|| format!("http://127.0.0.1:{port}/{token}?u="))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::Read;
+
+    /// Needs a fresh googlevideo URL: `SONARA_GV_URL=... cargo test media_proxy -- --ignored`
+    /// (tests/desktop-proxy.test.ts mints one and runs this).
+    #[test]
+    #[ignore]
+    fn serves_ranges_like_a_seeking_player() {
+        let url = std::env::var("SONARA_GV_URL").expect("SONARA_GV_URL");
+        let (port, token) = super::start();
+        let base = format!("http://127.0.0.1:{port}/{token}?u={}", url.replace('%', "%25").replace('&', "%26"));
+        let total: u64 = {
+            let r = ureq::get(&base).set("Range", "bytes=0-0").call().unwrap();
+            assert_eq!(r.status(), 206);
+            r.header("Content-Range").unwrap().rsplit('/').next().unwrap().parse().unwrap()
+        };
+        // What WebKit does on a seek: an open-ended range from the middle.
+        for start in [0, total / 2, total - 5000] {
+            let r = ureq::get(&base).set("Range", &format!("bytes={start}-")).call().unwrap();
+            assert_eq!(r.status(), 206, "start {start}");
+            let mut buf = vec![0u8; 4096];
+            assert!(r.header("Content-Length").is_some(), "no Content-Length: WebKit then seeks only once");
+            r.into_reader().read_exact(&mut buf).unwrap();
+        }
+    }
 }
