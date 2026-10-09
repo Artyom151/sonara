@@ -4,13 +4,11 @@ import { SoundCloud, type KeyValueStore } from './soundcloud';
 import type { ApiOptions, ArtistPage, ArtistRef, Fetcher, HomeData, Playlist, SearchResult, SonaraApi, Source, Track } from './types';
 import { YouTube } from './youtube';
 import { Deezer } from './deezer';
-import { VkMusic } from './vk';
 import { YandexMusic } from './yandex';
 
-/** Tokens of the keyed sources (VITE_YANDEX_MUSIC_TOKEN, VITE_VK_TOKEN in .env). */
+/** Optional tokens (VITE_YANDEX_MUSIC_TOKEN in .env). */
 export interface SourceTokens {
   yandex?: () => string | undefined;
-  vk?: () => string | undefined;
 }
 
 const settle = async <T>(p: Promise<T>, fallback: T): Promise<T> => {
@@ -41,7 +39,7 @@ export function createCoreApi(
   fetcher: Fetcher,
   store?: KeyValueStore,
   tokens: SourceTokens = {},
-): SonaraApi & { sc: SoundCloud; yt: YouTube; dz: Deezer; ym: YandexMusic; vk: VkMusic } {
+): SonaraApi & { sc: SoundCloud; yt: YouTube; dz: Deezer; ym: YandexMusic } {
   const sc = new SoundCloud(fetcher, store);
   const yt = new YouTube(fetcher);
   const dz = new Deezer(fetcher, yt);
@@ -50,8 +48,7 @@ export function createCoreApi(
     const v = get?.()?.trim();
     return v && !v.startsWith('your_') ? v : undefined;
   };
-  const ym = new YandexMusic(fetcher, real(tokens.yandex));
-  const vk = new VkMusic(fetcher, real(tokens.vk));
+  const ym = new YandexMusic(fetcher, real(tokens.yandex), (t) => dz.match(t), yt);
   const lyricsCache = new LruMap<string, Promise<any>>(40);
 
   return {
@@ -59,7 +56,6 @@ export function createCoreApi(
     yt,
     dz,
     ym,
-    vk,
     clientId: (refresh) => sc.clientId(refresh),
 
     async home(opts: ApiOptions = {}): Promise<HomeData> {
@@ -87,29 +83,26 @@ export function createCoreApi(
       const useSc = (source === 'all' || source === 'soundcloud') && (opts.sources?.soundcloud ?? true);
       const useYt = (source === 'all' || source === 'youtube') && (opts.sources?.youtube ?? true);
       const useDz = (source === 'all' || source === 'deezer') && (opts.sources?.deezer ?? true);
-      // Keyed sources join "All" only once their token is set.
-      const useYm = (source === 'yandex' || (source === 'all' && ym.enabled)) && (opts.sources?.yandex ?? true);
-      const useVk = (source === 'vk' || (source === 'all' && vk.enabled)) && (opts.sources?.vk ?? true);
-      const [st, sp, yv, yp, dt, dp, ymt, vkt] = await Promise.all([
+      const useYm = (source === 'all' || source === 'yandex') && (opts.sources?.yandex ?? true);
+      const [st, sp, yv, yp, dt, dp, ymt] = await Promise.all([
         useSc ? settle(sc.search(q), []) : [],
         useSc ? settle(sc.searchPlaylists(q), []) : [],
         useYt ? settle(yt.search(q, opts.youtubeApiKey), []) : [],
         useYt && source === 'youtube' ? settle(yt.searchPlaylists(q), []) : [],
         useDz ? settle(dz.search(q), []) : [],
         useDz ? settle(dz.searchPlaylists(q), []) : [],
-        useYm ? (source === 'yandex' ? ym.search(q) : settle(ym.search(q), [])) : [],
-        useVk ? (source === 'vk' ? vk.search(q) : settle(vk.search(q), [])) : [],
+        useYm ? settle(ym.search(q), []) : [],
       ]);
-      return { tracks: interleave(interleave(interleave(interleave(st, yv), dt), ymt), vkt), playlists: interleave(interleave(sp, yp), dp) };
+      return { tracks: interleave(interleave(interleave(st, yv), dt), ymt), playlists: interleave(interleave(sp, yp), dp) };
     },
 
     tagTracks: (tag) => settle(sc.tagTracks(tag), []),
 
     related: (t) =>
-      t.source === 'youtube' ? yt.related(t.id) : t.source === 'deezer' ? dz.related(t) : t.source === 'yandex' ? ym.related(t.id) : t.source === 'vk' ? vk.related(t.id) : sc.related(t.id),
+      t.source === 'youtube' ? yt.related(t.id) : t.source === 'deezer' ? dz.related(t) : t.source === 'yandex' ? ym.related(t.id) : sc.related(t.id),
 
     stream: (t) =>
-      t.source === 'youtube' ? yt.stream(t.id) : t.source === 'deezer' ? dz.stream(t) : t.source === 'yandex' ? ym.stream(t.id) : t.source === 'vk' ? vk.stream(t.id) : sc.stream(t),
+      t.source === 'youtube' ? yt.stream(t.id) : t.source === 'deezer' ? dz.stream(t) : t.source === 'yandex' ? ym.stream(t) : sc.stream(t),
 
     likers: async (t) => (t.source === 'soundcloud' ? settle(sc.likers(t.id), []) : []),
 

@@ -1,10 +1,13 @@
 import { md5 } from '../lib/md5';
 import type { Fetcher, StreamInfo, Track } from './types';
+import type { YouTube } from './youtube';
 
 /**
- * Yandex Music (unofficial mobile API, https://api.music.yandex.net). Needs an OAuth token of a
- * Yandex account: VITE_YANDEX_MUSIC_TOKEN in .env. Without a Plus subscription Yandex serves
- * 30-second previews only.
+ * Yandex Music (unofficial mobile API, https://api.music.yandex.net).
+ * Search and similar tracks work without an account. Full tracks need an OAuth token issued to the
+ * Yandex Music app (its music scopes) and a Plus subscription: VITE_YANDEX_MUSIC_TOKEN in .env.
+ * A token from another app is refused ("missing-required-scopes"); then, and without a token,
+ * tracks play through the matching YouTube recording, like Deezer.
  */
 const API = 'https://api.music.yandex.net';
 // Constant salt of the official clients for signing download links.
@@ -13,19 +16,30 @@ const SIGN_SALT = 'XGRlBW9FXlekgbPrRHuSiA';
 const cover = (uri: string | undefined, size: number) => (uri ? `https://${uri.replace('%%', `${size}x${size}`)}` : undefined);
 
 export class YandexMusic {
+  /** Set once Yandex refuses the token, so it is not sent again. */
+  private tokenRefused = false;
+
   constructor(
     private fetcher: Fetcher,
     private token: () => string | undefined,
+    private matchYouTube: (t: Track) => Promise<string>,
+    private yt: YouTube,
   ) {}
 
-  get enabled() {
-    return !!this.token();
+  /** A token is set and Yandex has not refused it. */
+  get hasToken() {
+    return !!this.token() && !this.tokenRefused;
   }
 
-  private async get(path: string): Promise<any> {
-    const token = this.token();
-    if (!token) throw new Error('Yandex Music token is not set (VITE_YANDEX_MUSIC_TOKEN)');
-    const r = await this.fetcher(`${API}${path}`, { headers: { Authorization: `OAuth ${token}`, 'X-Yandex-Music-Client': 'YandexMusicAndroid/24023621' } });
+  private async get(path: string, withToken = this.hasToken): Promise<any> {
+    const headers: Record<string, string> = { 'X-Yandex-Music-Client': 'YandexMusicAndroid/24023621' };
+    if (withToken) headers.Authorization = `OAuth ${this.token()}`;
+    const r = await this.fetcher(`${API}${path}`, { headers });
+    if (withToken && (r.status === 401 || r.status === 403)) {
+      console.warn('[yandex] token refused, continuing without it:', (await r.json().catch(() => null))?.error?.name ?? r.status);
+      this.tokenRefused = true;
+      return this.get(path, false);
+    }
     if (!r.ok) throw new Error(`Yandex Music ${r.status} ${path}`);
     return (await r.json()).result;
   }
@@ -58,13 +72,25 @@ export class YandexMusic {
     return ((r?.similarTracks ?? []) as any[]).map(this.mapTrack).filter(Boolean) as Track[];
   }
 
-  async stream(id: string): Promise<StreamInfo> {
+  /** The full file from Yandex (token + Plus), or null when only a preview is offered. */
+  private async direct(id: string): Promise<StreamInfo | null> {
     const infos = ((await this.get(`/tracks/${id}/download-info`)) ?? []) as any[];
-    const best = infos.filter((i) => i.codec === 'mp3').sort((a, b) => b.bitrateInKbps - a.bitrateInKbps)[0] ?? infos[0];
-    if (!best) throw new Error('Yandex Music: no download info');
-    const r = await this.fetcher(`${best.downloadInfoUrl}&format=json`);
-    const d = await r.json();
+    const best = infos.filter((i) => !i.preview && i.codec === 'mp3').sort((a, b) => b.bitrateInKbps - a.bitrateInKbps)[0];
+    if (!best) return null;
+    const d = await (await this.fetcher(`${best.downloadInfoUrl}&format=json`)).json();
     const sign = md5(SIGN_SALT + String(d.path).slice(1) + d.s);
     return { url: `https://${d.host}/get-mp3/${sign}/${d.ts}${d.path}`, kind: 'progressive', mime: 'audio/mpeg' };
+  }
+
+  async stream(t: Track): Promise<StreamInfo> {
+    if (this.hasToken) {
+      try {
+        const s = await this.direct(t.id);
+        if (s) return s;
+      } catch (e) {
+        console.warn('[yandex] direct stream failed:', (e as Error).message);
+      }
+    }
+    return this.yt.stream(await this.matchYouTube(t));
   }
 }

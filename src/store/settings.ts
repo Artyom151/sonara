@@ -15,7 +15,7 @@ export interface Settings {
   /** Graphics quality; 'auto' picks by device (see platform/perf). */
   graphics: 'auto' | 'high' | 'balanced' | 'low';
   showSplash: boolean;
-  sources: { soundcloud: boolean; youtube: boolean; deezer?: boolean; yandex?: boolean; vk?: boolean };
+  sources: { soundcloud: boolean; youtube: boolean; deezer?: boolean; yandex?: boolean };
   youtubeApiKey: string;
   region: string;
   autoplay: boolean;
@@ -44,7 +44,7 @@ export const useSettings = create<Settings>()(
       reduceMotion: false,
       graphics: 'auto',
       showSplash: true,
-      sources: { soundcloud: true, youtube: true, deezer: true, yandex: true, vk: true },
+      sources: { soundcloud: true, youtube: true, deezer: true, yandex: true },
       youtubeApiKey: '',
       region: 'US',
       autoplay: true,

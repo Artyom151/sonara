@@ -4,25 +4,23 @@ import { createCoreApi } from '../src/core/api';
 
 const offline = (() => Promise.reject(new Error('offline'))) as any;
 
-test('keyed sources stay off with no token or a placeholder token', () => {
-  for (const v of [undefined, '', 'your_vk_access_token']) {
-    const api = createCoreApi(offline, undefined, { yandex: () => v, vk: () => v });
-    assert.equal(api.ym.enabled, false);
-    assert.equal(api.vk.enabled, false);
-  }
-  const api = createCoreApi(offline, undefined, { yandex: () => 'y0_real', vk: () => 'vk1.a.real' });
-  assert.ok(api.ym.enabled && api.vk.enabled);
+test('yandex token: unset or placeholder counts as none', () => {
+  for (const v of [undefined, '', 'your_yandex_music_oauth_token']) assert.equal(createCoreApi(offline, undefined, { yandex: () => v }).ym.hasToken, false);
+  assert.equal(createCoreApi(offline, undefined, { yandex: () => 'y0_real' }).ym.hasToken, true);
 });
 
-test('picking a keyed source without a token reports the missing .env variable', async () => {
-  const api = createCoreApi(offline);
-  await assert.rejects(api.search('x', 'yandex'), /VITE_YANDEX_MUSIC_TOKEN/);
-  await assert.rejects(api.search('x', 'vk'), /VITE_VK_TOKEN/);
-});
-
-test('"All" skips keyed sources without tokens', async () => {
-  const calls: string[] = [];
-  const api = createCoreApi(((u: string) => (calls.push(u), Promise.reject(new Error('offline')))) as any);
-  await api.search('x', 'all', { sources: { soundcloud: false, youtube: false, deezer: false } });
-  assert.ok(!calls.some((u) => /yandex|vk\.com/.test(u)));
+test('a refused yandex token falls back to anonymous requests', async () => {
+  const auths: (string | null)[] = [];
+  const fetcher = (async (_u: string, i?: RequestInit) => {
+    const a = (i?.headers as Record<string, string>)?.Authorization ?? null;
+    auths.push(a);
+    if (a) return new Response(JSON.stringify({ error: { name: 'missing-required-scopes' } }), { status: 403 });
+    return new Response(JSON.stringify({ result: { tracks: { results: [{ id: 1, title: 'One More Time', artists: [{ name: 'Daft Punk' }], durationMs: 320000 }] } } }));
+  }) as any;
+  const api = createCoreApi(fetcher, undefined, { yandex: () => 'y0_wrong_scopes' });
+  const t = await api.ym.search('daft punk');
+  assert.equal(t[0].key, 'yandex:1');
+  assert.equal(api.ym.hasToken, false);
+  await api.ym.search('again');
+  assert.deepEqual(auths, ['OAuth y0_wrong_scopes', null, null]);
 });

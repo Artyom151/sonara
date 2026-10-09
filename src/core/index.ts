@@ -22,7 +22,6 @@ function lazyCoreApi(): SonaraApi {
     (core ??= import('./api').then(({ createCoreApi }) => {
       const c = createCoreApi(nativeFetch!, localStore, {
         yandex: () => import.meta.env.VITE_YANDEX_MUSIC_TOKEN || undefined,
-        vk: () => import.meta.env.VITE_VK_TOKEN || undefined,
       });
       return {
         ...c,

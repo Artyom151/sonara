@@ -1,6 +1,6 @@
 import type { ComponentType, SVGProps } from 'react';
 import type { Source } from '../core/types';
-import { IconDeezer, IconSoundCloud, IconVK, IconYandexMusic, IconYouTube } from './icons';
+import { IconDeezer, IconSoundCloud, IconYandexMusic, IconYouTube } from './icons';
 
 type Icon = ComponentType<SVGProps<SVGSVGElement> & { size?: number }>;
 
@@ -10,10 +10,9 @@ export const SOURCES: Record<Source, { name: string; Icon: Icon; color: string }
   youtube: { name: 'YouTube', Icon: IconYouTube, color: '#ff0033' },
   deezer: { name: 'Deezer', Icon: IconDeezer, color: '#a238ff' },
   yandex: { name: 'Яндекс Музыка', Icon: IconYandexMusic, color: '#ffbc0d' },
-  vk: { name: 'VK Музыка', Icon: IconVK, color: '#0077ff' },
 };
 
-export const SOURCE_ORDER: Source[] = ['soundcloud', 'youtube', 'deezer', 'yandex', 'vk'];
+export const SOURCE_ORDER: Source[] = ['soundcloud', 'youtube', 'deezer', 'yandex'];
 
 export const sourceName = (s: Source | 'local') => (s === 'local' ? '' : SOURCES[s].name);
 

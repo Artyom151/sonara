@@ -51,6 +51,12 @@
           "url": "https://api.deezer.com/*"
         },
         {
+          "url": "https://api.music.yandex.net/*"
+        },
+        {
+          "url": "https://*.mds.yandex.net/*"
+        },
+        {
           "url": "https://*.dzcdn.net/*"
         },
         {
