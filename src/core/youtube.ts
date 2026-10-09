@@ -119,7 +119,8 @@ export class YouTube {
   async playlist(id: string): Promise<Playlist> {
     const yt = await this.client();
     const p = await yt.getPlaylist(id);
-    const tracks = (p.videos ?? []).map(this.mapVideo).filter(Boolean) as Track[];
+    // Playlists now list LockupView items (older layouts: PlaylistVideo).
+    const tracks = (p.videos ?? []).map((x: any) => (x.type === 'LockupView' ? this.mapLockup(x) : this.mapVideo(x))).filter(Boolean) as Track[];
     return {
       key: `youtube:${id}`,
       id,

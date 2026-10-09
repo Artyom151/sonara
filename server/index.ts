@@ -126,6 +126,7 @@ app.get(
   '/api/search',
   handle((c) => api.search(c.req.query('q') ?? '', (c.req.query('source') as Source | 'all') ?? 'all', opts(c))),
 );
+app.get('/api/import', handle((c) => api.importLink(c.req.query('url') ?? '')));
 app.get('/api/related', handle((c) => api.related(track(c))));
 app.get('/api/tag', handle((c) => api.tagTracks(c.req.query('tag') ?? '')));
 app.get('/api/lyrics', handle((c) => api.lyrics(track(c))));

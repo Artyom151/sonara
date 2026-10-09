@@ -55,6 +55,35 @@ export function createCoreApi(
   /** Yandex plays only from Yandex: the full file with a music token + Plus, otherwise its preview. */
   const yandexStream = async (t: Track): Promise<StreamInfo> => (await settle(ym.full(t.id), null)) ?? ym.preview(t.id);
 
+  const importLink = async (raw: string): Promise<Playlist> => {
+    const url = raw.trim();
+    const ym1 = url.match(/music\.yandex\.[a-z]+\/users\/([^/?#]+)\/playlists\/(\d+)/);
+    if (ym1) return ym.playlist(`${decodeURIComponent(ym1[1])}:${ym1[2]}`);
+    const ym2 = url.match(/music\.yandex\.[a-z]+\/album\/(\d+)/);
+    if (ym2) return ym.playlist(`album:${ym2[1]}`);
+    const ytList = url.match(/(?:youtube\.com|youtu\.be).*[?&]list=([\w-]+)/);
+    if (ytList) return yt.playlist(ytList[1]);
+    if (/soundcloud\.com\//.test(url)) return sc.playlistByUrl(url.split('?')[0]);
+    const dzList = url.match(/deezer\.com\/(?:[a-z]{2}\/)?playlist\/(\d+)/);
+    if (dzList) return dz.playlist(dzList[1]);
+    throw new Error('Unsupported link');
+  };
+
+  /**
+   * Stream links are reused while valid (googlevideo links carry `expire`): replaying a track or
+   * the prefetched next track starts at once instead of re-resolving (and minting a token).
+   */
+  const streamCache = new LruMap<string, { s: StreamInfo; until: number }>(60);
+  const cachedStream = async (t: Track): Promise<StreamInfo> => {
+    const hit = streamCache.get(t.key);
+    if (hit && hit.until > Date.now()) return hit.s;
+    const s = await (t.source === 'youtube' ? yt.stream(t.id) : t.source === 'deezer' ? catalogueStream(t) : t.source === 'yandex' ? yandexStream(t) : sc.stream(t));
+    const expire = Number(s.url.match(/[?&]expire=(\d+)/)?.[1]) * 1000;
+    // Without an expiry: 10 minutes (SoundCloud / Yandex links are short-lived too).
+    streamCache.set(t.key, { s, until: expire ? expire - 10 * 60_000 : Date.now() + 10 * 60_000 });
+    return s;
+  };
+
   /** Deezer: the same recording on YouTube or SoundCloud, else Deezer's own preview. */
   const catalogueStream = async (t: Track): Promise<StreamInfo> => {
     // Best copy first; one can still refuse to stream (region-blocked SoundCloud), then the next.
@@ -87,22 +116,27 @@ export function createCoreApi(
       const useSc = opts.sources?.soundcloud ?? true;
       const useYt = opts.sources?.youtube ?? true;
       const useDz = opts.sources?.deezer ?? true;
-      const [scHome, youtube, deezer] = await Promise.all([
+      const useYm = (opts.sources?.yandex ?? true) && ym.hasToken;
+      const [scHome, youtube, deezer, yandex] = await Promise.all([
         useSc ? settle(sc.home(), { trending: [], mixes: [] }) : { trending: [], mixes: [] },
         useYt ? settle(yt.trending(opts.youtubeApiKey, opts.region), []) : [],
         useDz ? settle(dz.chart(), []) : [],
+        useYm ? settle(Promise.all([ym.likes(), settle(ym.myPlaylists(), [])]).then(([l, ps]) => [l, ...ps]), []) : [],
       ]);
       let picks: Track[] = [];
       if (useSc && scHome.trending[0]) {
         const top = await settle(sc.systemPlaylist(scHome.trending[0].urn), null as Playlist | null);
         picks = top?.tracks?.slice(0, 12) ?? [];
       }
-      return { ...scHome, picks, youtube, deezer };
+      return { ...scHome, picks, youtube, deezer, yandex };
     },
 
     genre: (urn) => sc.systemPlaylist(urn),
 
-    playlist: (source: Source, id: string) => (source === 'youtube' ? yt.playlist(id) : source === 'deezer' ? dz.playlist(id) : sc.playlist(id)),
+    playlist: (source: Source, id: string) =>
+      source === 'youtube' ? yt.playlist(id) : source === 'deezer' ? dz.playlist(id) : source === 'yandex' ? ym.playlist(id) : sc.playlist(id),
+
+    importLink: (url) => importLink(url),
 
     async search(q, source, opts = {}): Promise<SearchResult> {
       const useSc = (source === 'all' || source === 'soundcloud') && (opts.sources?.soundcloud ?? true);
@@ -126,8 +160,7 @@ export function createCoreApi(
     related: (t) =>
       t.source === 'youtube' ? yt.related(t.id) : t.source === 'deezer' ? dz.related(t) : t.source === 'yandex' ? ym.related(t.id) : sc.related(t.id),
 
-    stream: (t) =>
-      t.source === 'youtube' ? yt.stream(t.id) : t.source === 'deezer' ? catalogueStream(t) : t.source === 'yandex' ? yandexStream(t) : sc.stream(t),
+    stream: (t) => cachedStream(t),
 
     likers: async (t) => (t.source === 'soundcloud' ? settle(sc.likers(t.id), []) : []),
 

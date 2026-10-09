@@ -61,6 +61,8 @@ export interface HomeData {
   youtube: Track[];
   /** Deezer global chart. */
   deezer?: Track[];
+  /** Yandex Music library of the token's owner ("Мне нравится" + own playlists). */
+  yandex?: Playlist[];
 }
 
 export interface SearchResult {
@@ -130,4 +132,6 @@ export interface SonaraApi {
   tagTracks(tag: string): Promise<Track[]>;
   clientId(refresh?: boolean): Promise<string>;
   artist(ref: ArtistRef): Promise<ArtistPage>;
+  /** A playlist or album from a Yandex Music, YouTube or SoundCloud link, with its tracks. */
+  importLink(url: string): Promise<Playlist>;
 }

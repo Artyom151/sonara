@@ -47,6 +47,7 @@ function lazyCoreApi(): SonaraApi {
     tagTracks: call('tagTracks'),
     clientId: call('clientId'),
     artist: call('artist'),
+    importLink: call('importLink'),
   };
 }
 

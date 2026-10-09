@@ -190,6 +190,14 @@ export class SoundCloud {
     return { ...this.mapPlaylist(p), trackCount: tracks.length, tracks };
   }
 
+  /** A playlist (set) from its soundcloud.com link. */
+  async playlistByUrl(url: string): Promise<Playlist> {
+    const p = await this.get('/resolve', { url });
+    if (p?.kind !== 'playlist') throw new Error('Not a SoundCloud playlist link');
+    const tracks = await this.hydrate(p.tracks ?? []);
+    return { ...this.mapPlaylist(p), trackCount: tracks.length, tracks };
+  }
+
   async playlist(id: string): Promise<Playlist> {
     if (id.startsWith('soundcloud:system-playlists')) return this.systemPlaylist(id);
     const numeric = id.replace(/^soundcloud:playlists:/, '');
