@@ -17,6 +17,8 @@ export interface Settings {
   showSplash: boolean;
   sources: { soundcloud: boolean; youtube: boolean; deezer?: boolean; yandex?: boolean };
   youtubeApiKey: string;
+  /** Yandex Music OAuth token, entered in Settings (kept on this device only). */
+  yandexToken: string;
   region: string;
   autoplay: boolean;
   skipUnavailable: boolean;
@@ -46,6 +48,7 @@ export const useSettings = create<Settings>()(
       showSplash: true,
       sources: { soundcloud: true, youtube: true, deezer: true, yandex: true },
       youtubeApiKey: '',
+      yandexToken: '',
       region: 'US',
       autoplay: true,
       skipUnavailable: true,

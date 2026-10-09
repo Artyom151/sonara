@@ -61,7 +61,7 @@ const en = {
   cancelDownloads: 'Stop downloading', clearDownloads: 'Delete all downloads', allDownloaded: 'Everything is downloaded', offlineOnly: 'Downloaded',
   sleepTimer: 'Sleep timer', sleepOff: 'Off', sleepEndOfTrack: 'End of track', minutesShort: 'min', sleepSet: 'Sleep timer set',
   importPlaylist: 'Import by link', importHint: 'Link to a playlist or album: Yandex Music, YouTube, SoundCloud, Deezer', importAction: 'Import', importFailed: 'Could not import this link', imported: 'Imported',
-  yandexLibrary: 'Yandex Music',
+  yandexLibrary: 'Yandex Music', yandexToken: 'Yandex Music token',
 };
 
 const ru: typeof en = {
@@ -125,7 +125,7 @@ const ru: typeof en = {
   cancelDownloads: 'Остановить загрузку', clearDownloads: 'Удалить все загрузки', allDownloaded: 'Всё уже скачано', offlineOnly: 'Скачанные',
   sleepTimer: 'Таймер сна', sleepOff: 'Выключен', sleepEndOfTrack: 'В конце трека', minutesShort: 'мин', sleepSet: 'Таймер сна включён',
   importPlaylist: 'Импорт по ссылке', importHint: 'Ссылка на плейлист или альбом: Яндекс Музыка, YouTube, SoundCloud, Deezer', importAction: 'Импортировать', importFailed: 'Не удалось импортировать ссылку', imported: 'Импортировано',
-  yandexLibrary: 'Яндекс Музыка',
+  yandexLibrary: 'Яндекс Музыка', yandexToken: 'Токен Яндекс Музыки',
 };
 
 export type StrKey = keyof typeof en;

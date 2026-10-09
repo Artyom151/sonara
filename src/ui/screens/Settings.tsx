@@ -123,6 +123,9 @@ export function Settings() {
             </Cell>
           );
         })}
+        <Cell noicon label={t('yandexToken')}>
+          <input className="cell-input mono" type="password" placeholder="y0_…" value={s.yandexToken} onChange={(e) => s.set({ yandexToken: e.target.value.trim() })} />
+        </Cell>
         <Cell noicon label={t('soundcloudClientId')}>
           <span className="cell-value mono">{clientId.length > 12 ? `${clientId.slice(0, 6)}…${clientId.slice(-4)}` : clientId}</span>
           <button

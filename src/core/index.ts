@@ -21,7 +21,8 @@ function lazyCoreApi(): SonaraApi {
   const load = () =>
     (core ??= import('./api').then(({ createCoreApi }) => {
       const c = createCoreApi(nativeFetch!, localStore, {
-        yandex: () => import.meta.env.VITE_YANDEX_MUSIC_TOKEN || undefined,
+        // Settings first; the .env token only in dev, so it is never baked into a build.
+        yandex: () => useSettings.getState().yandexToken || (import.meta.env.DEV ? import.meta.env.VITE_YANDEX_MUSIC_TOKEN : undefined) || undefined,
       });
       return {
         ...c,
