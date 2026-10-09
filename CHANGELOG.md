@@ -5,8 +5,14 @@ Russian version: [CHANGELOG_ru.md](CHANGELOG_ru.md).
 
 ## [Unreleased]
 
+## [1.1.21] - 2026-10-09
+
 ### Added
 - **Update notice** on every platform: a short, dismissible card (or the island, when the island player is on) when a new version is out, with a Download button. Settings → About → Check for updates.
+- The island player is sized to its content, with a wider minimum for track titles; the update card in it fits its text.
+
+### Fixed
+- The update notice's close button stays in its row instead of wrapping below it.
 
 ## [1.1.2] - 2026-10-09
 
