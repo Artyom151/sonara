@@ -576,17 +576,14 @@ button.link:hover {
   transform: scale(0.95);
 }
 .update-close {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 22px;
-  height: 22px;
-  border-radius: 11px;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
   color: var(--text-2);
-  background: rgb(60 60 67 / 0.9);
-  backdrop-filter: blur(12px);
+  background: rgb(120 120 128 / 0.28);
 }
 .island-update-dot {
   width: 26px;

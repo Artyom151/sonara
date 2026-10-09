@@ -25,16 +25,13 @@ function UpdateCard({ info }: { info: UpdateInfo }) {
       exit={{ opacity: 0, y: -16, scale: 0.96 }}
       transition={{ type: 'spring', stiffness: 380, damping: 30 }}
     >
-      <UpdateRow info={info} />
-      <button className="update-close" aria-label={t('cancel')} onClick={() => useUpdates.getState().dismiss()}>
-        <IconClose size={12} />
-      </button>
+      <UpdateRow info={info} onClose={() => useUpdates.getState().dismiss()} />
     </motion.div>
   );
 }
 
 /** Icon, "Sonara 1.2.0 · New version", Download. Tapping the text opens the release notes. */
-export function UpdateRow({ info, onAction }: { info: UpdateInfo; onAction?: () => void }) {
+export function UpdateRow({ info, onAction, onClose }: { info: UpdateInfo; onAction?: () => void; onClose?: () => void }) {
   const t = useT();
   return (
     <div className="update-row">
@@ -55,6 +52,11 @@ export function UpdateRow({ info, onAction }: { info: UpdateInfo; onAction?: () 
       >
         {t('updateDownload')}
       </button>
+      {onClose && (
+        <button className="update-close" aria-label={t('cancel')} onClick={onClose}>
+          <IconClose size={12} />
+        </button>
+      )}
     </div>
   );
 }
