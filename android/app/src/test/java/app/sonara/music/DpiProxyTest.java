@@ -86,6 +86,23 @@ public class DpiProxyTest {
     }
 
     @Test
+    public void fragmentsIntoOneByteRecords() {
+        byte[] h = hello("www.youtube.com");
+        DpiProxy.Plan p = DpiProxy.plan(h, DpiProxy.Strategy.parse("tlsfrag=40"));
+        assertEquals(h.length + 5 * 40, p.data.length);
+        ByteArrayOutputStream joined = new ByteArrayOutputStream();
+        int i = 0;
+        while (i < p.data.length) {
+            int l = ((p.data[i + 3] & 0xff) << 8) | (p.data[i + 4] & 0xff);
+            joined.write(p.data, i + 5, l);
+            i += 5 + l;
+        }
+        byte[] orig = new byte[h.length - 5];
+        System.arraycopy(h, 5, orig, 0, orig.length);
+        assertArrayEquals(orig, joined.toByteArray());
+    }
+
+    @Test
     public void noSplitWithoutStrategy() {
         byte[] h = hello("soundcloud.com");
         DpiProxy.Plan p = DpiProxy.plan(h, DpiProxy.Strategy.parse(""));

@@ -68,6 +68,8 @@ public final class DpiProxy {
         boolean disorder;
         /** Send one extra byte with TCP URG after the first segment: the server drops it, DPI does not. */
         boolean oob;
+        /** First N bytes of the hello as one-byte TLS records: inflates it past one TCP segment. */
+        int frag;
         long delayMs;
 
         /** "tlsrec=sni+1,split=sni+3,disorder,delay=5" */
@@ -89,6 +91,13 @@ public final class DpiProxy {
                     case "oob":
                         out.oob = true;
                         if (!v.isEmpty()) out.split = parsePos(v);
+                        break;
+                    case "tlsfrag":
+                        try {
+                            out.frag = Integer.parseInt(v);
+                        } catch (NumberFormatException e) {
+                            throw new IllegalArgumentException("bad tlsfrag: " + v);
+                        }
                         break;
                     case "disorder":
                         out.disorder = true;
@@ -185,6 +194,31 @@ public final class DpiProxy {
     static Plan plan(byte[] first, Strategy st) {
         int len = first.length;
         int[] sni = sniOffset(first, len);
+        if (st.frag > 0 && len > 5 && first[0] == 0x16 && 5 + u16(first, 3) <= len) {
+            // DPI that reassembles a small split hello gives up on one this long and fragmented;
+            // the handshake bytes stay the same.
+            int recLen = u16(first, 3);
+            int n = Math.min(st.frag, recLen - 1);
+            ByteArrayOutputStream out = new ByteArrayOutputStream(len + 5 * n + 5);
+            for (int i = 0; i < n; i++) {
+                out.write(0x16);
+                out.write(first[1]);
+                out.write(first[2]);
+                out.write(0);
+                out.write(1);
+                out.write(first[5 + i]);
+            }
+            out.write(0x16);
+            out.write(first[1]);
+            out.write(first[2]);
+            out.write((recLen - n) >> 8);
+            out.write(recLen - n);
+            out.write(first, 5 + n, len - 5 - n);
+            byte[] d = out.toByteArray();
+            int at = resolve(st.split, sni, len);
+            if (at > 5) at = at - 5 <= n ? 5 + (at - 5) * 6 : at + 5 * n + 5;
+            return new Plan(d, at > 0 && at < d.length ? at : -1);
+        }
         byte[] data = first;
         int shiftAfter = Integer.MAX_VALUE; // positions >= this moved by 5 (the second record header)
         int at = resolve(st.tlsrec, sni, len);
