@@ -139,10 +139,13 @@ button:disabled {
 }
 .island:not(.open) {
   height: 40px;
-  width: min(74vw, 290px);
+  /* Fits its content (track name, update text) up to a cap; animated by the layout spring. */
+  width: max-content;
+  max-width: min(74vw, 290px);
 }
 .island.open {
-  width: min(92vw, 380px);
+  width: max-content;
+  max-width: min(92vw, 380px);
   cursor: default;
 }
 .island-scrim {
@@ -251,10 +254,12 @@ button:disabled {
 }
 .island.desk:not(.open) {
   height: 30px;
-  width: 300px;
+  width: max-content;
+  max-width: 300px;
 }
 .island.desk.open {
-  width: 420px;
+  width: max-content;
+  max-width: 420px;
 }
 .island.desk .island-compact {
   height: 30px;
@@ -509,7 +514,8 @@ button.link:hover {
   top: calc(var(--sat) + 10px);
   left: 50%;
   translate: -50% 0;
-  width: min(420px, calc(100vw - 24px));
+  width: max-content;
+  max-width: min(420px, calc(100vw - 24px));
   padding: 10px 12px;
   --g-radius: 26px;
   --lg-tint: rgb(24 24 27 / 0.78);
