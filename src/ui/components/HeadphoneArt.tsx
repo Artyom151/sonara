@@ -43,6 +43,16 @@ const stemBud = (stem: number, tip: boolean) => (
   </g>
 );
 
+/** Earbud with a long stem and no tip (tip = true adds the silicone ear tip). */
+const stemOnly = (tip: 0 | 1) => (
+  <g>
+    <rect x="31" y="16" width="7" height="34" rx="3.5" fill="url(#hp-shell)" stroke="#b9b9c3" strokeWidth="0.6" />
+    <ellipse cx="34.5" cy="14" rx="9" ry="10" fill="url(#hp-shell)" stroke="#b9b9c3" strokeWidth="0.6" />
+    <ellipse cx="34.5" cy="12" rx="4" ry="3" fill="url(#hp-dark)" opacity="0.8" />
+    {tip === 1 && <ellipse cx="34.5" cy="50" rx="4.5" ry="5" fill="url(#hp-shade)" stroke="#9d9da8" strokeWidth="0.5" />}
+  </g>
+);
+
 const pair = (bud: React.ReactNode) => (
   <>
     <g transform="translate(-6 4) rotate(-10 32 32)">{bud}</g>
@@ -69,19 +79,73 @@ const ART: Record<HeadphoneModel, React.ReactNode> = {
       <rect x="45" y="35" width="5" height="18" rx="2.5" fill="url(#hp-shade)" />
     </g>
   ),
-  buds: (
+  'buds-round': (
     <>
-      {[
-        { t: 'translate(3 14) rotate(-18 16 18)' },
-        { t: 'translate(61 16) scale(-1 1) rotate(-18 16 18)' },
-      ].map((b, i) => (
-        <g key={i} transform={b.t}>
-          {/* bean body */}
-          <path d="M6 18c0-8 6-14 13-14 6 0 10 4 10 10 0 9-7 16-15 16-5 0-8-5-8-12z" fill="url(#hp-shell)" stroke="#b6b6c0" strokeWidth="0.6" />
-          {/* touch surface */}
-          <ellipse cx="19" cy="14" rx="6" ry="5.5" fill="url(#hp-shade)" opacity="0.7" />
-          {/* ear tip */}
-          <ellipse cx="9" cy="24" rx="4.2" ry="3.6" fill="url(#hp-dark)" opacity="0.75" />
+      {[0, 1].map((i) => (
+        <g key={i} transform={i ? 'translate(70 6) scale(-1 1) rotate(-10 32 32)' : 'translate(-6 4) rotate(-10 32 32)'}>
+          {/* puck body with a short stem */}
+          <rect x="30" y="34" width="6" height="12" rx="3" fill="url(#hp-shell)" stroke="#b5b5bf" strokeWidth="0.5" />
+          <circle cx="24" cy="22" r="14" fill="url(#hp-shell)" stroke="#b5b5bf" strokeWidth="0.6" />
+          <circle cx="24" cy="22" r="6.5" fill="url(#hp-shade)" opacity="0.8" />
+          <circle cx="24" cy="22" r="2.4" fill="url(#hp-dark)" />
+        </g>
+      ))}
+    </>
+  ),
+  'buds-bean': (
+    <>
+      {[0, 1].map((i) => (
+        <g key={i} transform={i ? 'translate(68 6) scale(-1 1)' : 'translate(-4 6)'}>
+          {/* kidney-shaped bud with a grille on the stem side */}
+          <path d="M14 14c-1-7 4-12 10-12s9 4 8 10c-1 4-3 6-4 10s-3 8-7 9c-5 1-7-6-7-17z" fill="url(#hp-shell)" stroke="#b5b5bf" strokeWidth="0.6" />
+          <ellipse cx="19" cy="14" rx="4.5" ry="4" fill="url(#hp-shade)" opacity="0.7" />
+          <ellipse cx="22" cy="30" rx="3.2" ry="4.5" fill="url(#hp-dark)" opacity="0.6" />
+        </g>
+      ))}
+    </>
+  ),
+  'buds-stem': (
+    <>{[0, 1].map((i) => <g key={i} transform={i ? 'translate(78 4) scale(-1 1)' : 'translate(-14 4)'}>{stemOnly(0)}</g>)}</>
+  ),
+  'buds-stem-tip': (
+    <>{[0, 1].map((i) => <g key={i} transform={i ? 'translate(78 4) scale(-1 1)' : 'translate(-14 4)'}>{stemOnly(1)}</g>)}</>
+  ),
+  'buds-pod': (
+    <>
+      {[0, 1].map((i) => (
+        <g key={i} transform={i ? 'translate(68 4) scale(-1 1) rotate(-14 16 18)' : 'translate(-4 4) rotate(-14 16 18)'}>
+          {/* rounded pod with a tip stub on the ear side */}
+          <path d="M6 20c0-9 6-15 13-15 7 0 11 5 11 12 0 7-5 16-12 17C10 35 6 29 6 20z" fill="url(#hp-shell)" stroke="#b5b5bf" strokeWidth="0.6" />
+          <ellipse cx="18" cy="16" rx="6" ry="5" fill="url(#hp-shade)" opacity="0.7" />
+          <path d="M6 24c-3 1-4 4-3 6 1 2 4 3 7 2" fill="url(#hp-dark)" opacity="0.8" />
+        </g>
+      ))}
+    </>
+  ),
+  clip: (
+    <g>
+      {/* open-ear: a hook over the ear with the speaker pod in front */}
+      <path d="M14 42c-4-10 0-26 12-30 10-3 18 3 18 12" fill="none" stroke="url(#hp-dark)" strokeWidth="4" strokeLinecap="round" />
+      <ellipse cx="44" cy="32" rx="9" ry="12" fill="url(#hp-shell)" stroke="#b5b5bf" strokeWidth="0.6" />
+      <ellipse cx="20" cy="46" rx="8" ry="10" fill="url(#hp-shell)" stroke="#b5b5bf" strokeWidth="0.6" />
+      <ellipse cx="44" cy="32" rx="3" ry="5" fill="url(#hp-dark)" opacity="0.8" />
+    </g>
+  ),
+  neck: (
+    <g>
+      {/* neckband with the pods at the ends */}
+      <path d="M8 22c0 26 10 32 24 32s24-6 24-32" fill="none" stroke="url(#hp-dark)" strokeWidth="4" strokeLinecap="round" />
+      <ellipse cx="8" cy="24" rx="5" ry="8" fill="url(#hp-shell)" stroke="#b5b5bf" strokeWidth="0.6" />
+      <ellipse cx="56" cy="24" rx="5" ry="8" fill="url(#hp-shell)" stroke="#b5b5bf" strokeWidth="0.6" />
+    </g>
+  ),
+  'sport-hook': (
+    <>
+      {[0, 1].map((i) => (
+        <g key={i} transform={i ? 'translate(64 0) scale(-1 1)' : ''}>
+          {/* earhook over the top of the ear, speaker in the ear */}
+          <path d="M14 46c-6-16 0-34 14-36 6-1 10 2 9 7" fill="none" stroke="url(#hp-dark)" strokeWidth="3.6" strokeLinecap="round" />
+          <ellipse cx="26" cy="36" rx="7" ry="10" fill="url(#hp-shell)" stroke="#b5b5bf" strokeWidth="0.6" />
         </g>
       ))}
     </>
