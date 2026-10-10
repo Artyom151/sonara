@@ -1,4 +1,6 @@
 /**
+ * GENERATED from glass.vsh / glass.fsh by scripts/gen-shaders.mjs: edit those, then `pnpm shaders`.
+ *
  * Liquid glass shader — a GLSL ES 3.00 port of the desktop blur/glass shader
  * (glass.vsh / glass.fsh). The math is unchanged; WebGL2 only adds `#version 300 es`,
  * precision qualifiers and an output selector (`uMode`), because the browser does not
