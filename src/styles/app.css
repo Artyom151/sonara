@@ -84,7 +84,28 @@ img {
 :root[data-reduce-motion='1'] *::before,
 :root[data-reduce-motion='1'] *::after {
   animation-duration: 0.01ms !important;
+  /* A 0.01 ms endless loop is a strobe (the marquee text "flew by"): play once, then rest. */
+  animation-iteration-count: 1 !important;
   transition-duration: 0.01ms !important;
+}
+/* Long titles stay put and are cut with an ellipsis instead of scrolling. */
+:root[data-reduce-motion='1'] .marquee.run {
+  text-overflow: ellipsis;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+:root[data-reduce-motion='1'] .marquee.run > .marquee-track {
+  max-width: 100%;
+  animation: none !important;
+  will-change: auto;
+}
+:root[data-reduce-motion='1'] .marquee.run > .marquee-track > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 0 1 auto;
+}
+:root[data-reduce-motion='1'] .marquee.run > .marquee-track > span:nth-child(2) {
+  display: none;
 }
 
 /* ─────────── Shell ─────────── */

@@ -1,3 +1,4 @@
+import { glassStatus } from '../glass/liquid';
 import { updatesSupported, useUpdates } from '../../platform/updates';
 import { autoPickBypass, bypassAutoSupported, BYPASS_HOSTS, bypassSupported, type BypassPreset, type BypassService, type BypassServiceConfig } from '../../platform/dpi';
 import { SOURCE_ORDER, SOURCES } from '../sources';
@@ -345,6 +346,14 @@ export function Settings() {
             <b>Sonara</b>
             <small>
               {t('version')} {__APP_VERSION__} · {platformName}
+            </small>
+          </span>
+        </div>
+        <div className="cell noicon">
+          <span className="cell-label">
+            {t('glassEngine')}
+            <small>
+              {glassStatus.mode === 'off' ? `${t('glassOff')}: ${glassStatus.reason || '—'}` : glassStatus.mode === 'svg' ? t('glassShader') : t('glassOverlay')}
             </small>
           </span>
         </div>

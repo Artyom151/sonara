@@ -113,6 +113,10 @@ button:disabled {
   backdrop-filter: blur(6px);
   background: rgb(var(--glass-tint-rgb) / 0.55);
 }
+/* …and Clear stays lighter than Tinted in battery saver too. */
+:root[data-perf='low'][data-glass='clear'] .glass:not(.tabbar):not(.mini):not(.pbar) {
+  background: rgb(var(--glass-tint-rgb) / 0.3);
+}
 :root[data-perf='low'] .sheet.glass,
 :root[data-perf='low'] .alert.glass,
 :root[data-perf='low'] .menu.glass {
@@ -615,4 +619,24 @@ button.link:hover {
   padding: 4px 12px;
   font-size: 13px;
   color: rgb(255 255 255 / 0.6);
+}
+
+/* Volume in the full-screen player (phones and desktop) */
+.np-volume {
+  margin-top: 6px;
+  padding: 0 4px;
+}
+.np-volume .ctl {
+  width: 28px;
+  height: 28px;
+}
+.np-volume .slider-rail {
+  height: 4px;
+  margin-top: -2px;
+}
+.np-volume .slider-knob {
+  width: 20px;
+  height: 12px;
+  margin: -6px 0 0 -10px;
+  border-radius: 6px;
 }

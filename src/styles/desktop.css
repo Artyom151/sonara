@@ -172,8 +172,9 @@
   height: 88px;
   margin: 0 24px 22px 12px;
   --g-radius: 24px;
-  --lg-tint: color-mix(in srgb, var(--accent-container) 14%, rgb(20 20 24 / 0.16));
-  --lg-blur: 5px;
+  /* Frosted enough that the page text under the bar never competes with its own labels. */
+  --lg-tint: color-mix(in srgb, var(--accent-container) 20%, rgb(18 18 22 / 0.58));
+  --lg-blur: 14px;
   --lg-strength: 14;
   --lg-depth: 1.6;
   --lg-edge: 2;

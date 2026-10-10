@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { goToArtist } from '../artists';
 import { api } from '../../core';
 import type { Lyrics, Track } from '../../core/types';
-import { seek, togglePlay } from '../../player/engine';
+import { seek, setVolume, togglePlay } from '../../player/engine';
 import { useLibrary } from '../../store/library';
 import { usePlayer } from '../../store/player';
 import { useSettings } from '../../store/settings';
@@ -27,8 +27,10 @@ import {
   IconRepeat,
   IconShare,
   IconShuffle,
+  IconSpeaker,
+  IconSpeakerLow,
 } from '../icons';
-import { Art, Marquee } from './controls';
+import { Art, Marquee, Slider } from './controls';
 import { shareTrack } from './actions';
 import { useDesktop } from '../useMedia';
 import { CommentsPanel, useComments } from '../account/Comments';
@@ -273,6 +275,7 @@ export function Player() {
   const playing = usePlayer((s) => s.playing);
   const loading = usePlayer((s) => s.loading);
   const shuffle = usePlayer((s) => s.shuffle);
+  const volume = usePlayer((s) => s.volume);
   const repeat = usePlayer((s) => s.repeat);
   const liked = useLibrary((s) => (track ? s.likes.some((x) => x.key === track.key) : false));
   const disliked = useLibrary((s) => (track ? s.dislikes.includes(track.key) : false));
@@ -421,6 +424,22 @@ export function Player() {
                     >
                       <IconHeart size={22} filled={liked} />
                     </button>
+                  </div>
+                  <div className="np-volume">
+                    <Slider
+                      value={volume}
+                      onChange={setVolume}
+                      left={
+                        <button className="ctl dim" aria-label={t('volume')} onClick={() => setVolume(0)}>
+                          <IconSpeakerLow size={16} />
+                        </button>
+                      }
+                      right={
+                        <button className="ctl dim" aria-label={t('volume')} onClick={() => setVolume(1)}>
+                          <IconSpeaker size={16} />
+                        </button>
+                      }
+                    />
                   </div>
                 </div>
               </div>
