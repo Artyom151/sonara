@@ -13,6 +13,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(MediaControlsPlugin.class);
         registerPlugin(PoTokenPlugin.class);
         registerPlugin(BypassPlugin.class);
+        registerPlugin(AudioDevicesPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

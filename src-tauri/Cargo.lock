@@ -3648,6 +3648,7 @@ dependencies = [
  "ureq",
  "webview2-com",
  "windows",
+ "zbus",
 ]
 
 [[package]]

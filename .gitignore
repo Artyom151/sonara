@@ -27,3 +27,6 @@ project/
 
 # Local test: pretend a newer release is out (scripts/fake-update.mjs)
 scripts/fake-update.mjs
+
+# Local test: pretend headphones connected (scripts/fake-headphones.mjs)
+scripts/fake-headphones.mjs

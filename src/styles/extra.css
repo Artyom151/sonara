@@ -515,8 +515,8 @@ button.link:hover {
 }
 
 /* The update card in the island is only as wide as its text: no track-length minimum. */
-.island.update:not(.open),
-.island.update.open {
+.island.is-update:not(.open),
+.island.is-update.open {
   min-width: 0;
 }
 
@@ -639,4 +639,72 @@ button.link:hover {
   height: 12px;
   margin: -6px 0 0 -10px;
   border-radius: 6px;
+}
+
+/* Island: headphones connected (IslandPlayer → IslandDevice), like the iOS live activity */
+.island.is-device {
+  z-index: 75; /* over the full-screen player too */
+  cursor: pointer;
+}
+.island.is-device:not(.open) {
+  height: 64px;
+  width: max-content;
+  min-width: min(86vw, 330px);
+  max-width: min(94vw, 390px);
+}
+.island.is-device.desk:not(.open) {
+  height: 50px;
+  min-width: 300px;
+  max-width: 420px;
+}
+.island-device {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 100%;
+  padding: 0 12px 0 14px;
+}
+.island.desk .island-device {
+  gap: 10px;
+  padding: 0 10px 0 12px;
+}
+.island-device-art {
+  flex: none;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.45));
+}
+.island-device-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.island-device-text small {
+  font-size: 12.5px;
+  color: rgb(255 255 255 / 0.55);
+}
+.island-device-text b {
+  font-size: 15.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.island.desk .island-device-text small {
+  font-size: 11px;
+}
+.island.desk .island-device-text b {
+  font-size: 13.5px;
+}
+.island-device-battery {
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+.battery-ring-num {
+  font-size: 12.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }

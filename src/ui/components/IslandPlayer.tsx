@@ -23,6 +23,8 @@ import { Art, Marquee, Slider } from './controls';
 import { Scrubber } from './Player';
 import { IslandUpdate } from './UpdateNotice';
 import { usePendingUpdate } from '../../platform/updates';
+import { useAudioDevice, type AudioDevice } from '../../platform/audioDevices';
+import { BatteryRing, HeadphoneArt } from './HeadphoneArt';
 import { EqBars } from './TrackRow';
 
 const spring = { type: 'spring', stiffness: 420, damping: 32, mass: 0.9 } as const;
@@ -34,6 +36,7 @@ const spring = { type: 'spring', stiffness: 420, damping: 32, mass: 0.9 } as con
  * Tap: expands into a live-activity card with controls; tap the art/title: full player.
  * Collapses by itself after a few idle seconds (desktop: while the pointer is outside).
  * A new release takes the island for a few seconds (tap: Download / Later), then the track returns.
+ * Headphones connecting take it for 4.5 s: picture, name and battery ring (platform/audioDevices.ts).
  */
 export function IslandPlayer({ desktop = false }: { desktop?: boolean }) {
   const t = useT();
@@ -64,86 +67,122 @@ export function IslandPlayer({ desktop = false }: { desktop?: boolean }) {
     return () => clearTimeout(t);
   }, [update, open]);
 
-  // Hidden while the full-screen player is open (it shows everything the island would).
-  if (expanded || (!track && !showUpdate)) return null;
+  // Headphones connected: the island grows into an iOS-style card for a few seconds, over
+  // everything (even the full-screen player), then shrinks back to the track.
+  const device = useAudioDevice((s) => s.current);
+  useEffect(() => {
+    if (!device) return;
+    setOpen(false);
+    const t = setTimeout(() => useAudioDevice.getState().dismiss(), 4500);
+    return () => clearTimeout(t);
+  }, [device?.at]);
 
-  if (showUpdate) {
-    const close = () => (setOpen(false), setSeen(update.version));
-    return (
-      <>
-        <AnimatePresence>
-          {open && <motion.div className="island-scrim" initial={{ backgroundColor: 'rgba(0,0,0,0)' }} animate={{ backgroundColor: 'rgba(0,0,0,0.25)' }} exit={{ backgroundColor: 'rgba(0,0,0,0)' }} onClick={close} />}
-        </AnimatePresence>
-        <motion.div
-          className={`island update ${open ? 'open' : ''} ${desktop ? 'desk' : ''}`}
-          layout
-          transition={spring}
-          style={{ borderRadius: open ? (desktop ? 28 : 34) : desktop ? 17 : 22 }}
-          onClick={() => !open && setOpen(true)}
-        >
-          <IslandUpdate info={update} open={open} />
-        </motion.div>
-      </>
-    );
-  }
-  if (!track) return null;
+  const mode = device ? 'device' : expanded ? null : showUpdate ? 'update' : track ? 'player' : null;
+  // One element for every state, so the island morphs between them (layout spring) like iOS.
+  if (!mode) return null;
 
   const openPlayer = () => (setOpen(false), usePlayer.getState().setExpanded(true));
+  const radius = mode === 'device' ? (desktop ? 26 : 32) : open ? (desktop ? 28 : 34) : desktop ? 17 : 22;
+  const closeUpdate = () => (setOpen(false), update && setSeen(update.version));
 
   return (
     <>
       <AnimatePresence>
-        {open && <motion.div className="island-scrim" initial={{ backgroundColor: 'rgba(0,0,0,0)' }} animate={{ backgroundColor: 'rgba(0,0,0,0.25)' }} exit={{ backgroundColor: 'rgba(0,0,0,0)' }} onClick={() => setOpen(false)} />}
+        {open && mode !== 'device' && (
+          <motion.div
+            className="island-scrim"
+            initial={{ backgroundColor: 'rgba(0,0,0,0)' }}
+            animate={{ backgroundColor: 'rgba(0,0,0,0.25)' }}
+            exit={{ backgroundColor: 'rgba(0,0,0,0)' }}
+            onClick={mode === 'update' ? closeUpdate : () => setOpen(false)}
+          />
+        )}
       </AnimatePresence>
       <motion.div
-        className={`island ${open ? 'open' : ''} ${desktop ? 'desk' : ''}`}
+        className={`island is-${mode} ${open && mode !== 'device' ? 'open' : ''} ${desktop ? 'desk' : ''}`}
         layout
         transition={spring}
-        style={{ borderRadius: open ? (desktop ? 28 : 34) : desktop ? 17 : 22 }}
-        onClick={() => !open && setOpen(true)}
-        onPointerDown={touch}
-        onPointerEnter={() => ((hover.current = true), idle.current && clearTimeout(idle.current))}
-        onPointerLeave={() => ((hover.current = false), open && touch())}
+        style={{ borderRadius: radius }}
+        onClick={() => (mode === 'device' ? useAudioDevice.getState().dismiss() : !open && setOpen(true))}
+        onPointerDown={mode === 'player' ? touch : undefined}
+        onPointerEnter={() => mode === 'player' && ((hover.current = true), idle.current && clearTimeout(idle.current))}
+        onPointerLeave={() => mode === 'player' && ((hover.current = false), open && touch())}
       >
-        {!open ? (
-          <motion.div key="compact" className="island-compact" layout="position" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <motion.div layoutId="island-art" className="island-art small">
-              <Art src={track.artwork} seed={track.key} />
-            </motion.div>
-            <Marquee className="island-line" text={`${track.title} · ${track.artist}`} />
-            <EqBars paused={!playing} />
-          </motion.div>
-        ) : (
-          <motion.div key="expanded" className="island-expanded" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { delay: 0.08 } }}>
-            <div className="island-head">
-              <motion.div layoutId="island-art" className="island-art" onClick={openPlayer}>
+        {mode === 'device' && device ? (
+          <IslandDevice key={`device-${device.at}`} device={device} desktop={desktop} />
+        ) : mode === 'update' && update ? (
+          <IslandUpdate info={update} open={open} />
+        ) : track ? (
+          <>
+          {!open ? (
+            <motion.div key="compact" className="island-compact" layout="position" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <motion.div layoutId="island-art" className="island-art small">
                 <Art src={track.artwork} seed={track.key} />
               </motion.div>
-              <div className="island-meta" onClick={openPlayer}>
-                <Marquee className="island-title" text={track.title} />
-                <div className="island-artist">{track.artist}</div>
+              <Marquee className="island-line" text={`${track.title} · ${track.artist}`} />
+              <EqBars paused={!playing} />
+            </motion.div>
+          ) : (
+            <motion.div key="expanded" className="island-expanded" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { delay: 0.08 } }}>
+              <div className="island-head">
+                <motion.div layoutId="island-art" className="island-art" onClick={openPlayer}>
+                  <Art src={track.artwork} seed={track.key} />
+                </motion.div>
+                <div className="island-meta" onClick={openPlayer}>
+                  <Marquee className="island-title" text={track.title} />
+                  <div className="island-artist">{track.artist}</div>
+                </div>
+                {desktop ? <IslandExtras /> : <EqBars paused={!playing} />}
               </div>
-              {desktop ? <IslandExtras /> : <EqBars paused={!playing} />}
-            </div>
-            <Scrubber />
-            <div className="island-controls">
-              {desktop && <ShuffleButton />}
-              <button aria-label={t('previous')} onClick={() => (touch(), usePlayer.getState().prev())}>
-                <IconBackward size={26} />
-              </button>
-              <button className="island-play" aria-label={playing ? t('pause') : t('play')} onClick={() => (touch(), togglePlay())}>
-                {loading && playing ? <span className="spinner" /> : playing ? <IconPause size={26} /> : <IconPlay size={26} />}
-              </button>
-              <button aria-label={t('nextTrack')} onClick={() => (touch(), usePlayer.getState().next())}>
-                <IconForward size={26} />
-              </button>
-              {desktop && <RepeatButton />}
-            </div>
-            {desktop && <IslandVolume />}
-          </motion.div>
-        )}
+              <Scrubber />
+              <div className="island-controls">
+                {desktop && <ShuffleButton />}
+                <button aria-label={t('previous')} onClick={() => (touch(), usePlayer.getState().prev())}>
+                  <IconBackward size={26} />
+                </button>
+                <button className="island-play" aria-label={playing ? t('pause') : t('play')} onClick={() => (touch(), togglePlay())}>
+                  {loading && playing ? <span className="spinner" /> : playing ? <IconPause size={26} /> : <IconPlay size={26} />}
+                </button>
+                <button aria-label={t('nextTrack')} onClick={() => (touch(), usePlayer.getState().next())}>
+                  <IconForward size={26} />
+                </button>
+                {desktop && <RepeatButton />}
+              </div>
+              {desktop && <IslandVolume />}
+            </motion.div>
+          )}
+          </>
+        ) : null}
       </motion.div>
     </>
+  );
+}
+
+/** "Connected" card: the headphones' picture springs in, name, battery ring on the right. */
+function IslandDevice({ device, desktop }: { device: AudioDevice; desktop: boolean }) {
+  const t = useT();
+  return (
+    <motion.div className="island-device" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { delay: 0.1, duration: 0.2 } }}>
+      <motion.div
+        className="island-device-art"
+        initial={{ scale: 0.4, rotate: -16, opacity: 0 }}
+        animate={{ scale: 1, rotate: 0, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 15, delay: 0.14 }}
+      >
+        <HeadphoneArt model={device.model} size={desktop ? 34 : 42} />
+      </motion.div>
+      <div className="island-device-text">
+        <small>{t('headphonesConnected')}</small>
+        <b>{device.name}</b>
+      </div>
+      <AnimatePresence>
+        {device.battery != null && (
+          <motion.div className="island-device-battery" initial={{ opacity: 0, scale: 0.6 }} animate={{ opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.18 }}>
+            <BatteryRing level={device.battery} size={desktop ? 30 : 36} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 

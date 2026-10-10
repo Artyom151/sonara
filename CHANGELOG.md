@@ -5,6 +5,9 @@ Russian version: [CHANGELOG_ru.md](CHANGELOG_ru.md).
 
 ## [Unreleased]
 
+### Added
+- **Headphones in the island player**: when headphones connect, the island grows into a card with a picture of the model (AirPods, AirPods Pro, AirPods Max, earbuds, over-ear), their name and a battery ring, like iOS, then shrinks back to the track. Android and Linux show the battery; Windows shows the name.
+
 ## [1.1.23] - 2026-10-10
 
 ### Fixed

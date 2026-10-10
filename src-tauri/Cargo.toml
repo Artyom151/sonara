@@ -42,4 +42,8 @@ strip = true
 # Windows: WebView2 memory target level (trim while minimised). Same versions Tauri/wry use.
 [target.'cfg(windows)'.dependencies]
 webview2-com = "0.39"
-windows = "0.62"
+windows = { version = "0.62", features = ["Foundation", "Media_Devices", "Devices_Enumeration"] }
+
+# Island player: headphones connecting (src/audio_devices.rs, BlueZ over D-Bus).
+[target.'cfg(target_os = "linux")'.dependencies]
+zbus = "5"

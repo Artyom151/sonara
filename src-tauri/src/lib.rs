@@ -1,3 +1,4 @@
+mod audio_devices;
 mod discord;
 mod dpi;
 mod media_proxy;
@@ -30,7 +31,7 @@ pub fn run() {
     .plugin(tauri_plugin_http::init())
     .plugin(tauri_plugin_opener::init())
     .manage(discord::Discord::start())
-    .invoke_handler(tauri::generate_handler![discord::discord_set, discord::discord_clear, dpi::dpi_configure, dpi::dpi_probe, media_proxy::media_proxy_base, pot::pot_mint])
+    .invoke_handler(tauri::generate_handler![audio_devices::audio_devices_watch, discord::discord_set, discord::discord_clear, dpi::dpi_configure, dpi::dpi_probe, media_proxy::media_proxy_base, pot::pot_mint])
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
