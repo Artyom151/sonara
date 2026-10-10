@@ -19,11 +19,16 @@ import { isAndroid, isCapacitor } from './platform';
 import { resolveTier } from './platform/perf';
 import { useSettings } from './store/settings';
 import { App } from './ui/App';
-import { startLiquidGlass } from './ui/glass/liquid';
+import { startLiquidGlass, warmGlass } from './ui/glass/liquid';
 
 document.documentElement.dataset.platform = isAndroid ? 'android' : 'other';
 // Graphics tier before the first paint (ThemeController keeps it in sync with Settings).
 document.documentElement.dataset.perf = resolveTier(useSettings.getState().graphics);
+
+// Compile and link the glass shader now, not on the first glass element, and start watching the
+// DOM before React paints so the very first frame already has its glass layers.
+warmGlass();
+startLiquidGlass();
 
 if (isCapacitor) {
   import('@capacitor/status-bar').then(({ StatusBar, Style }) => {
@@ -51,5 +56,3 @@ document.addEventListener(
   true,
 );
 
-// Shader-driven liquid glass for every `.glass` element (see src/ui/glass).
-requestAnimationFrame(() => startLiquidGlass());

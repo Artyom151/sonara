@@ -96,6 +96,15 @@
   --lg-blur: 4px;
 }
 
+/* No WebGL2 (the shader could not run): a plain frosted fill instead of a nearly invisible 4% tint,
+   so text under bars, menus and cards stays readable. */
+:root[data-lg='0'] .glass,
+:root[data-lg='0'] .glass:not([data-lg]) {
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  background: rgb(var(--glass-tint-rgb) / 0.5);
+}
+
 /* Content paints above the backdrop layer. */
 .glass > :not(.lg-layer) {
   position: relative;

@@ -5,7 +5,7 @@ import { useSettings } from '../store/settings';
 import { accentVars, argbFromHex, imageColors, SONARA_SEED } from './color';
 import { getSystemPalette } from './dynamic';
 import { resolveTier } from '../platform/perf';
-import { refreshGlass } from '../ui/glass/liquid';
+import { refreshGlass, retintGlass } from '../ui/glass/liquid';
 
 /** Applies the accent palette (Material You / artwork / custom) to :root as CSS variables. */
 export function ThemeController() {
@@ -55,6 +55,8 @@ export function ThemeController() {
       root.dataset.perf = tier;
       refreshGlass();
     }
+    // The palette and the Clear / Tinted style change --lg-tint: update the filters' tint in place.
+    retintGlass();
     root.dataset.accentToggles = mode === 'system' && isAndroid ? '1' : '0';
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', getComputedStyle(root).getPropertyValue('--bg').trim());
   }, [seed, tint, glass, reduce, mode, graphics]);
