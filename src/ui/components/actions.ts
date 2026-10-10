@@ -4,8 +4,20 @@ import { toast } from './Toast';
 
 export async function openExternal(url: string) {
   if (isTauri) {
-    const { openUrl } = await import('@tauri-apps/plugin-opener');
-    return openUrl(url);
+    try {
+      const { openUrl } = await import('@tauri-apps/plugin-opener');
+      return await openUrl(url);
+    } catch (e) {
+      // Never fail silently: show what went wrong and put the link on the clipboard.
+      console.warn('[open]', url, e);
+      try {
+        await navigator.clipboard.writeText(url);
+      } catch {
+        /* no clipboard */
+      }
+      toast(String((e as Error)?.message ?? e));
+      return;
+    }
   }
   window.open(url, '_blank', 'noopener');
 }
