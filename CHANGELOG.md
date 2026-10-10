@@ -5,6 +5,18 @@ Russian version: [CHANGELOG_ru.md](CHANGELOG_ru.md).
 
 ## [Unreleased]
 
+## [1.1.23] - 2026-10-10
+
+### Fixed
+- **Glass on desktop**: the glass shader is compiled at startup instead of on the first glass element, its maps are encoded in parallel (faster), and switching Clear / Tinted or the accent palette now updates the glass at once. Without WebGL2 the glass falls back to a readable frosted fill; Settings → About shows which mode is in use.
+- **Bottom player bar** on desktop is frosted enough that page text under it no longer blends with its labels; Clear glass is lighter than Tinted in battery saver too.
+- **Links on desktop** (Open in SoundCloud, update downloads) did nothing: the opener permission had no URL scope.
+- **Reduce motion**: with the island player, long titles no longer strobe; they stay still and end with an ellipsis.
+- Accounts: a build without cloud keys says plainly that its account stays on this device; every build prints which `.env` keys it carries.
+
+### Added
+- **Volume slider** in the full-screen player (phones and desktop).
+
 ## [1.1.22] - 2026-10-10
 
 ### Fixed

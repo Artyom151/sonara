@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "concurrently -k -n server,web -c magenta,cyan \"pnpm dev:server\" \"vite\"",
     "dev:server": "tsx watch server/index.ts",
-    "build": "node scripts/build-pot.mjs && vite build",
+    "build": "node scripts/check-env.mjs && node scripts/build-pot.mjs && vite build",
     "build:pot": "node scripts/build-pot.mjs",
     "start": "tsx server/index.ts",
     "typecheck": "tsc -p .",
