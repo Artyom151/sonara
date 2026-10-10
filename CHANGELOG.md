@@ -5,8 +5,10 @@ Russian version: [CHANGELOG_ru.md](CHANGELOG_ru.md).
 
 ## [Unreleased]
 
-### Added
-- Yandex Music works out of the box in release builds: the build carries a Yandex Music token; one entered in Settings → Sources still takes priority.
+## [1.1.22] - 2026-10-10
+
+### Fixed
+- Yandex Music did not work in release builds: the token was never built in. Release builds now carry one; a token entered in Settings → Sources still takes priority.
 
 ## [1.1.21] - 2026-10-09
 
