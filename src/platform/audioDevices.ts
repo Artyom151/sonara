@@ -2,6 +2,7 @@ import { registerPlugin } from '@capacitor/core';
 import { create } from 'zustand';
 import { useSettings } from '../store/settings';
 import { isAndroid, isTauri } from '.';
+import { headphoneImage } from './headphoneImages';
 import { cleanName, headphoneModel, NOT_HEADPHONES, type DeviceKind, type HeadphoneModel } from './headphones';
 
 export type { HeadphoneModel };
@@ -22,6 +23,8 @@ export interface AudioDevice {
   id: string;
   name: string;
   model: HeadphoneModel;
+  /** Official product photo (headphoneImages.ts), null: use the drawing. */
+  image: string | null;
   /** 0–100, null when the device does not report it. */
   battery: number | null;
   /** Bumps on every connect, so the same headphones reconnecting show again. */
@@ -56,7 +59,7 @@ export const useAudioDevice = create<DeviceState>((set, get) => ({
       if (valid(e.battery) !== null) set({ current: { ...prev, battery: valid(e.battery) } });
       return;
     }
-    set({ current: { id: e.id, name, model: headphoneModel(name, e.kind), battery: valid(e.battery), at: Date.now() } });
+    set({ current: { id: e.id, name, model: headphoneModel(name, e.kind), image: headphoneImage(name), battery: valid(e.battery), at: Date.now() } });
   },
   battery(id, level) {
     const cur = get().current;

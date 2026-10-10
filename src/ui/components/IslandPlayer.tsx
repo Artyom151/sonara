@@ -158,6 +158,13 @@ export function IslandPlayer({ desktop = false }: { desktop?: boolean }) {
   );
 }
 
+/** The official photo of the model, or our drawing when there is none or it does not load. */
+function DevicePicture({ device, size }: { device: AudioDevice; size: number }) {
+  const [failed, setFailed] = useState(false);
+  if (!device.image || failed) return <HeadphoneArt model={device.model} size={size} />;
+  return <img className="island-device-photo" src={device.image} alt="" width={size} height={size} draggable={false} onError={() => setFailed(true)} />;
+}
+
 /** "Connected" card: the headphones' picture springs in, name, battery ring on the right. */
 function IslandDevice({ device, desktop }: { device: AudioDevice; desktop: boolean }) {
   const t = useT();
@@ -169,7 +176,7 @@ function IslandDevice({ device, desktop }: { device: AudioDevice; desktop: boole
         animate={{ scale: 1, rotate: 0, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 260, damping: 15, delay: 0.14 }}
       >
-        <HeadphoneArt model={device.model} size={desktop ? 34 : 42} />
+        <DevicePicture device={device} size={desktop ? 36 : 46} />
       </motion.div>
       <div className="island-device-text">
         <small>{t('headphonesConnected')}</small>
