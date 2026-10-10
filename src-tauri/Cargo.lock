@@ -3631,7 +3631,7 @@ dependencies = [
 
 [[package]]
 name = "sonara"
-version = "1.1.22"
+version = "1.1.23"
 dependencies = [
  "discord-rich-presence",
  "log",
