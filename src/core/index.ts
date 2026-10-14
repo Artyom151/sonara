@@ -24,6 +24,7 @@ function lazyCoreApi(): SonaraApi {
         // The token entered in Settings first, then the one built in from VITE_YANDEX_MUSIC_TOKEN
         // (the repository variable of the same name in CI, .env locally).
         yandex: () => useSettings.getState().yandexToken || import.meta.env.VITE_YANDEX_MUSIC_TOKEN || undefined,
+        yandexOwn: () => useSettings.getState().yandexToken || undefined,
       });
       return {
         ...c,

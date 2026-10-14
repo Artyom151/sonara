@@ -9,7 +9,10 @@ import { YandexMusic } from './yandex';
 
 /** Optional tokens (VITE_YANDEX_MUSIC_TOKEN in .env). */
 export interface SourceTokens {
+  /** Full tracks and search: the token from Settings, else the one built into the app. */
   yandex?: () => string | undefined;
+  /** The listener's own token only (their personal library). */
+  yandexOwn?: () => string | undefined;
 }
 
 const settle = async <T>(p: Promise<T>, fallback: T): Promise<T> => {
@@ -50,6 +53,9 @@ export function createCoreApi(
     return v && !v.startsWith('your_') ? v : undefined;
   };
   const ym = new YandexMusic(fetcher, real(tokens.yandex));
+  // The personal Yandex library (likes, own playlists on Home) uses only the listener's own token,
+  // never the one built into the app: a built-in token would show its owner's library to everyone.
+  const ymOwn = new YandexMusic(fetcher, real(tokens.yandexOwn));
   const matcher = new RecordingMatcher(yt, sc);
 
   /** Yandex plays only from Yandex: the full file with a music token + Plus, otherwise its preview. */
@@ -116,12 +122,12 @@ export function createCoreApi(
       const useSc = opts.sources?.soundcloud ?? true;
       const useYt = opts.sources?.youtube ?? true;
       const useDz = opts.sources?.deezer ?? true;
-      const useYm = (opts.sources?.yandex ?? true) && ym.hasToken;
+      const useYm = (opts.sources?.yandex ?? true) && ymOwn.hasToken;
       const [scHome, youtube, deezer, yandex] = await Promise.all([
         useSc ? settle(sc.home(), { trending: [], mixes: [] }) : { trending: [], mixes: [] },
         useYt ? settle(yt.trending(opts.youtubeApiKey, opts.region), []) : [],
         useDz ? settle(dz.chart(), []) : [],
-        useYm ? settle(Promise.all([ym.likes(), settle(ym.myPlaylists(), [])]).then(([l, ps]) => [l, ...ps]), []) : [],
+        useYm ? settle(Promise.all([ymOwn.likes(), settle(ymOwn.myPlaylists(), [])]).then(([l, ps]) => [l, ...ps]), []) : [],
       ]);
       let picks: Track[] = [];
       if (useSc && scHome.trending[0]) {
