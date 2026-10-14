@@ -352,28 +352,21 @@ pub fn doh(host: &str) -> Option<Vec<std::net::IpAddr>> {
     None
 }
 
-/// Providers also block by DNS: bypass hosts resolve over DoH first, the rest fall back to it.
+/// The system resolver first (its answers match the network the user is on; DoH answers are
+/// geo-located for the DoH server and can point to unreachable CDN nodes). DoH only when the system
+/// cannot resolve the name at all, which is how providers that hide a site from DNS show up.
 fn resolve_host(host: &str, port: u16) -> std::io::Result<Vec<std::net::SocketAddr>> {
     if let Ok(ip) = host.parse::<std::net::IpAddr>() {
         return Ok(vec![(ip, port).into()]);
     }
-    let bypass = strategy_for(host).is_some();
-    if bypass {
-        if let Some(ips) = doh(host) {
-            return Ok(ips.into_iter().map(|ip| (ip, port).into()).collect());
-        }
+    let system = (host, port).to_socket_addrs().map(|a| a.filter(|a| !a.ip().is_unspecified() && !a.ip().is_loopback()).collect::<Vec<_>>());
+    match system {
+        Ok(a) if !a.is_empty() => Ok(a),
+        _ => match doh(host) {
+            Some(ips) => Ok(ips.into_iter().map(|ip| (ip, port).into()).collect()),
+            None => Err(std::io::Error::other(format!("cannot resolve {host}"))),
+        },
     }
-    match (host, port).to_socket_addrs() {
-        Ok(a) => {
-            let a: Vec<_> = a.filter(|a| !a.ip().is_unspecified() && !a.ip().is_loopback() || host == "localhost").collect();
-            if !a.is_empty() {
-                return Ok(a);
-            }
-        }
-        Err(e) if bypass => return Err(e),
-        Err(_) => {}
-    }
-    doh(host).map(|ips| ips.into_iter().map(|ip| (ip, port).into()).collect()).ok_or_else(|| std::io::Error::other(format!("cannot resolve {host}")))
 }
 
 /// First reachable address, IPv4 first (a dead IPv6 route would stall every tunnel).

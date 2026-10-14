@@ -462,18 +462,17 @@ public final class DpiProxy {
      */
     static InetAddress[] resolve(String host) throws IOException {
         if (isIpLiteral(host)) return InetAddress.getAllByName(host);
-        boolean bypass = strategyFor(host) != null;
-        if (bypass) {
-            InetAddress[] a = doh(host);
-            if (a != null) return a;
-        }
+        // The system resolver first: on a network it was tuned for (a private DNS, a provider that
+        // unblocks names) its answers are the ones that work. DoH is only the fallback for names the
+        // system cannot resolve at all (www.youtube.com on such networks). Public DoH answers are
+        // geo-located for the DoH server, so they can point to CDN nodes this network cannot reach.
         try {
             InetAddress[] a = InetAddress.getAllByName(host);
             if (a.length > 0 && !a[0].isAnyLocalAddress() && !a[0].isLoopbackAddress()) return a;
         } catch (IOException e) {
-            if (bypass) throw e;
+            if (strategyFor(host) == null) throw e;
         }
-        InetAddress[] a = bypass ? null : doh(host);
+        InetAddress[] a = doh(host);
         if (a == null) throw new java.net.UnknownHostException(host);
         return a;
     }
