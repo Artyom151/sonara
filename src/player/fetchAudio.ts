@@ -41,6 +41,8 @@ export async function downloadRanged(
   const fromUrl = Number(new URL(url, location.href).searchParams.get('clen')) || 0;
   const first = await get(0, CHUNK - 1);
   const total = fromUrl || first.total || first.buf.byteLength;
+  // Without the size, a long file would be saved as its first piece: say so instead of truncating silently.
+  if (!fromUrl && !first.total && first.buf.byteLength >= CHUNK) throw new Error(`file size unknown: no Content-Range in the reply to ${url.slice(0, 160)}`);
   const parts: ArrayBuffer[] = [first.buf];
   if (first.buf.byteLength < total) {
     const ranges: [number, number][] = [];

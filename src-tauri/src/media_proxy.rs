@@ -193,13 +193,17 @@ fn handle(req: tiny_http::Request, token: &str) {
     };
     if start >= total || start > end {
         let h = tiny_http::Header::from_bytes("Content-Range", format!("bytes */{total}")).unwrap();
-        let _ = req.respond(tiny_http::Response::empty(416).with_header(h));
+        let x = tiny_http::Header::from_bytes("Access-Control-Expose-Headers", "Content-Range").unwrap();
+        let _ = req.respond(tiny_http::Response::empty(416).with_header(h).with_header(x));
         return;
     }
     let mut headers = vec![
         tiny_http::Header::from_bytes("Accept-Ranges", "bytes").unwrap(),
         tiny_http::Header::from_bytes("Content-Type", mime_of(&target)).unwrap(),
         tiny_http::Header::from_bytes("Access-Control-Allow-Origin", "*").unwrap(),
+        // The webview reads these from a cross-origin fetch: Content-Range is not readable without this,
+        // so a download could not tell the file's size and stopped after the first piece (1 MB).
+        tiny_http::Header::from_bytes("Access-Control-Expose-Headers", "Content-Range, Content-Length, Accept-Ranges").unwrap(),
     ];
     if partial {
         headers.push(tiny_http::Header::from_bytes("Content-Range", format!("bytes {start}-{end}/{total}")).unwrap());
