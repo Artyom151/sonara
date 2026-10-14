@@ -5,8 +5,30 @@ Russian version: [CHANGELOG_ru.md](CHANGELOG_ru.md).
 
 ## [Unreleased]
 
+## [1.2.3] - 2026-10-15
+
 ### Added
 - **Headphones in the island player**: when headphones connect, the island grows into a card with a picture of the model (AirPods, AirPods Pro, AirPods Max, earbuds, over-ear), their name and a battery ring, like iOS, then shrinks back to the track. Android and Linux show the battery; Windows shows the name.
+- **Equalizer**: ten bands with presets (Bass boost, Vocal, Night and more), a custom curve, and a separate profile for each pair of headphones.
+- **Chromecast** from the desktop and Android: the cast button in the player sends the track to a device on the same Wi-Fi.
+- **Android widget** and **Android Auto** support.
+- **Desktop tray**: the app can close to the tray while music keeps playing.
+- **Island notices and chips**: short banners for lost connection and similar tracks added, a sleep timer, and download progress in the island.
+- **Own proxy (SOCKS5)** in Settings for desktop traffic, for example an SSH tunnel (`ssh -D`) or a VPN client port.
+- **Copy logs** in Settings → About; the terminal of the desktop dev build shows the app's log too.
+
+### Changed
+- **Wave and recommendations** use a taste model: tracks that several related lists agree on come first, sped-up, karaoke, cover and junk uploads are skipped, and the queue continues on its own before it ends.
+- **Downloads** of SoundCloud tracks are kept piece by piece and play through hls.js; they used to stop after the first piece.
+- **Yandex Music** home and library use only the token entered in your own Settings.
+- **Built-in bypass** resolves hosts with the system DNS first and uses DoH only when that fails.
+
+### Fixed
+- **Downloads on desktop** stopped after the first megabyte: the media proxy now passes the file size to the app.
+- **Playback on desktop** could drop to a dead local port when the PO-token window used a proxy; that window now has its own network session.
+- **Media proxy** restarts when it stops answering, and answers CORS preflight, so downloads work from the browser side.
+- **Dev server**: Vite listens on 127.0.0.1, and the app points its window at the same address.
+- **SoundCloud copies** that cannot be streamed are skipped, and the next source is tried.
 
 ## [1.1.23] - 2026-10-10
 
