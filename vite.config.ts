@@ -79,7 +79,9 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    host: host || false,
+    // One explicit IPv4 loopback, the same address as devUrl in tauri.conf.json: with the default
+    // (localhost → ::1 only) the webview requests 127.0.0.1 for some resources and gets "connection refused".
+    host: host || '127.0.0.1',
     hmr: host ? { protocol: 'ws', host, port: 5174 } : undefined,
     // Web dev: the local Sonara server handles /api.
     proxy: { '/api': 'http://127.0.0.1:8787' },

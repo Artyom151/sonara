@@ -5,7 +5,7 @@
   "identifier": "app.sonara.music",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:5173",
+    "devUrl": "http://127.0.0.1:5173",
     "beforeDevCommand": "pnpm exec vite",
     "beforeBuildCommand": "pnpm build"
   },
