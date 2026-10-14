@@ -103,6 +103,8 @@ async function downloadOne(track: Track) {
   // A 30-second preview is not worth keeping as "offline".
   if (audio.size < 64 * 1024) throw new Error(`file too small: ${audio.size} bytes (${audio.type || 'no type'})`);
   if (!(await looksLikeAudio(audio))) throw new Error(`not an audio file: ${audio.size} bytes, ${audio.type || 'no type'}`);
+  // The engine plays the saved file later; WebKit may lack the codec for its container (NotSupportedError).
+  console.info(`[offline] saved ${track.title}: ${audio.size} bytes, ${audio.type || 'no type'}, canPlayType=${JSON.stringify(new Audio().canPlayType(audio.type || 'audio/mpeg'))}`);
   const art = await fetchArt(track.artworkLarge ?? track.artwork);
   const entry: OfflineEntry = { track: { ...track, sc: undefined }, size: audio.size + (art?.size ?? 0), at: Date.now() };
   await tx(FILES, 'readwrite', (s) => s.put({ audio, art }, track.key));

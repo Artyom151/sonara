@@ -117,9 +117,9 @@ if (updatesSupported) {
   setInterval(() => void useUpdates.getState().check(), CHECK_EVERY);
 }
 
-// Dev only: scripts/fake-update.mjs serves a pretend release here; every start of the script
-// (a new nonce) shows the notice again in the running app, no restart needed.
-if (import.meta.env?.DEV && updatesSupported) {
+// Dev only, opt-in (VITE_FAKE_FEEDS=1): scripts/fake-update.mjs serves a pretend release here; every start
+// of the script (a new nonce) shows the notice again in the running app, no restart needed.
+if (import.meta.env?.DEV && updatesSupported && import.meta.env.VITE_FAKE_FEEDS) {
   let lastNonce: unknown;
   setInterval(async () => {
     try {

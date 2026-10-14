@@ -125,9 +125,9 @@ if (isAndroid || isTauri) {
   });
 }
 
-// Dev only: scripts/fake-headphones.mjs serves one pretend "headphones connected" event here;
-// each run of the script (a new nonce) shows it in the running app, no restart needed.
-if (import.meta.env?.DEV) {
+// Dev only, opt-in (VITE_FAKE_FEEDS=1): scripts/fake-headphones.mjs serves one pretend "headphones connected"
+// event here; each run of the script (a new nonce) shows it in the running app, no restart needed.
+if (import.meta.env?.DEV && import.meta.env.VITE_FAKE_FEEDS) {
   let lastNonce: unknown;
   setInterval(async () => {
     if (!useSettings.getState().islandPlayer) return;
