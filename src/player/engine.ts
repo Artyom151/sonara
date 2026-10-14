@@ -242,6 +242,7 @@ audio.addEventListener('error', () => {
   onUnavailable(t, new Error(audio.error?.message || 'Playback error'));
 });
 audio.addEventListener('ended', async () => {
+  console.info(`[player] ended at ${audio.currentTime.toFixed(1)} s of ${audio.duration} s, readyState ${audio.readyState}, src ${audio.src.slice(0, 40)}`);
   // Sleep timer "end of track": stop here instead of moving on.
   if (useSleep.getState().endOfTrack) {
     useSleep.getState().set(null);
