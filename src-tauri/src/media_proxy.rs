@@ -148,6 +148,18 @@ fn mime_of(url: &str) -> String {
 }
 
 fn handle(req: tiny_http::Request, token: &str) {
+    // CORS preflight: a fetch() with a Range or custom header (downloads) asks first. Answer it
+    // for the webview's origin only; the real request still needs the token in the path.
+    if req.method() == &tiny_http::Method::Options {
+        let h = |k: &str, v: &str| tiny_http::Header::from_bytes(k, v).unwrap();
+        let res = tiny_http::Response::empty(204)
+            .with_header(h("Access-Control-Allow-Origin", "*"))
+            .with_header(h("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS"))
+            .with_header(h("Access-Control-Allow-Headers", "Range, x-sonara-binary"))
+            .with_header(h("Access-Control-Max-Age", "600"));
+        let _ = req.respond(res);
+        return;
+    }
     let path = req.url().to_string();
     let target = path
         .strip_prefix(&format!("/{token}?u="))
