@@ -9,12 +9,15 @@ export const CHUNK = 1 << 20;
 /** Hosts the webview cannot fetch itself: client-bound YouTube links, Yandex's CDN (refuses our Origin). */
 export const PROXIED = /\.googlevideo\.com\/|\.yandex\.net\//;
 
-let proxyBase: Promise<string | null> | null = null;
-/** Desktop: base URL of the local media proxy (src-tauri/src/media_proxy.rs). */
+/**
+ * Desktop: base URL of the local media proxy (src-tauri/src/media_proxy.rs). Asked for every time
+ * (cheap): the proxy restarts on a new port when its listener died, and a cached address would
+ * keep pointing at the closed one.
+ */
 export const mediaProxyBase = () =>
-  (proxyBase ??= import('@tauri-apps/api/core')
+  import('@tauri-apps/api/core')
     .then(({ invoke }) => invoke<string | null>('media_proxy_base'))
-    .catch(() => null));
+    .catch(() => null);
 
 export const audioMime = (url: string) => new URL(url, location.href).searchParams.get('mime') ?? (/\.yandex\.net\//.test(url) ? 'audio/mpeg' : 'audio/mp4');
 

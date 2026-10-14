@@ -8,13 +8,13 @@
 //! visualiser). Only googlevideo and yandex.net hosts are proxied, behind a random per-launch token.
 
 use std::io::Read;
-use std::sync::OnceLock;
+
 use std::thread;
 
 // MWEB client identity (the stream URLs are issued to it, see core/youtube.ts).
 const UA: &str = "Mozilla/5.0 (iPad; CPU OS 16_7_10 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1,gzip(gfe)";
 
-static INFO: OnceLock<(u16, String)> = OnceLock::new();
+static INFO: std::sync::Mutex<Option<(u16, String)>> = std::sync::Mutex::new(None);
 
 fn random_token() -> String {
     let mut buf = [0u8; 16];
@@ -208,29 +208,39 @@ fn handle(req: tiny_http::Request, token: &str) {
     let _ = req.respond(res);
 }
 
-/// Start the proxy once; returns (port, token).
+/// Start the proxy, or restart it when its listener no longer answers (the webview then gets
+/// "connection refused" for every range request and playback starts over). Returns (port, token).
 pub fn start() -> (u16, String) {
-    INFO.get_or_init(|| {
-        let server = match tiny_http::Server::http("127.0.0.1:0") {
-            Ok(s) => s,
-            Err(e) => {
-                log::warn!("media proxy: {e}");
-                return (0, String::new());
-            }
-        };
-        let port = server.server_addr().to_ip().map(|a| a.port()).unwrap_or(0);
-        let token = random_token();
-        let t = token.clone();
-        thread::spawn(move || {
-            for req in server.incoming_requests() {
-                let t = t.clone();
-                // One thread per request: the webview keeps several range requests open.
-                thread::spawn(move || handle(req, &t));
-            }
-        });
-        (port, token)
-    })
-    .clone()
+    let mut guard = match INFO.lock() {
+        Ok(g) => g,
+        Err(p) => p.into_inner(),
+    };
+    if let Some((port, token)) = guard.as_ref() {
+        let alive = std::net::TcpStream::connect_timeout(&std::net::SocketAddr::from(([127, 0, 0, 1], *port)), std::time::Duration::from_millis(300)).is_ok();
+        if alive {
+            return (*port, token.clone());
+        }
+        log::warn!("media proxy: not answering on {port}, restarting");
+    }
+    let server = match tiny_http::Server::http("127.0.0.1:0") {
+        Ok(s) => s,
+        Err(e) => {
+            log::warn!("media proxy: {e}");
+            return (0, String::new());
+        }
+    };
+    let port = server.server_addr().to_ip().map(|a| a.port()).unwrap_or(0);
+    let token = random_token();
+    let t = token.clone();
+    thread::spawn(move || {
+        for req in server.incoming_requests() {
+            let t = t.clone();
+            // One thread per request: the webview keeps several range requests open.
+            thread::spawn(move || handle(req, &t));
+        }
+    });
+    *guard = Some((port, token.clone()));
+    (port, token)
 }
 
 /// Base URL for the webview: `http://127.0.0.1:<port>/<token>?u=`.
