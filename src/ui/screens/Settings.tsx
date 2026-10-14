@@ -4,7 +4,8 @@ import { glassStatus } from '../glass/liquid';
 import { updatesSupported, useUpdates } from '../../platform/updates';
 import { Bypass, autoPickBypass, bypassAutoSupported, BYPASS_HOSTS, bypassSupported, type BypassPreset, type BypassService, type BypassServiceConfig } from '../../platform/dpi';
 import { SOURCE_ORDER, SOURCES } from '../sources';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useParty } from '../components/Party';
 import { api } from '../../core';
 import { isAndroid, isTauri, platformName } from '../../platform';
 import { useLibrary } from '../../store/library';
@@ -132,9 +133,22 @@ function UpdateCells() {
   const u = useUpdates();
   const status =
     u.status === 'checking' ? t('checkingUpdates') : u.status === 'available' ? `${t('updateAvailable')} · ${u.info?.version}` : u.status === 'latest' ? t('upToDate') : u.status === 'error' ? t('updateError') : '';
+  // Easter egg: five taps within 2 s open the party card (see ui/components/Party.tsx).
+  const taps = useRef({ n: 0, last: 0 });
+  const onCheck = () => {
+    const now = Date.now();
+    taps.current = { n: now - taps.current.last < 2000 ? taps.current.n + 1 : 1, last: now };
+    if (taps.current.n === 5) {
+      taps.current = { n: 0, last: 0 };
+      useParty.setState({ open: true });
+      setTimeout(() => useParty.setState({ open: false }), 9000);
+      return;
+    }
+    if (u.status !== 'checking') void u.check(true);
+  };
   return (
     <>
-      <button className="cell noicon" onClick={() => void u.check(true)} disabled={u.status === 'checking'}>
+      <button className="cell noicon" onClick={onCheck}>
         <span className="cell-label">
           {t('checkUpdates')}
           {status && <small>{status}</small>}
