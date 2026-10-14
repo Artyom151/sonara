@@ -5,6 +5,7 @@ import { isTauri, nativeFetch } from '../platform';
 import { useLibrary } from '../store/library';
 import { usePlayer } from '../store/player';
 import { useSettings } from '../store/settings';
+import { pushNotice, tr } from '../store/islandNotice';
 import { toast } from '../ui/components/Toast';
 import { audioMime, downloadRanged, mediaProxyBase, PROXIED, YT_UA } from './fetchAudio';
 import { continueQueue, wantsContinuation } from './autoplay';
@@ -161,6 +162,7 @@ function onUnavailable(track: Track, e: Error) {
   const st = usePlayer.getState();
   st.patch({ loading: false, error: e.message });
   toast(`«${track.title}» — ${navigator.language.startsWith('ru') ? 'недоступен' : 'unavailable'}`);
+  pushNotice({ kind: 'warn', text: tr('Track unavailable', 'Трек недоступен'), detail: track.title });
   if (useSettings.getState().skipUnavailable && st.index + 1 < st.queue.length) setTimeout(() => usePlayer.getState().next(true), 400);
 }
 

@@ -2,6 +2,7 @@ import type { Track } from '../core/types';
 import { useLibrary } from '../store/library';
 import { usePlayer } from '../store/player';
 import { useSettings } from '../store/settings';
+import { pushNotice, tr } from '../store/islandNotice';
 import { collect } from './similar';
 import { features, makeCtx, mix, pick, type Profile } from './taste';
 
@@ -48,7 +49,10 @@ export function continueQueue(): Promise<number> {
     const pool = candidates.filter((c) => !queueKeys.has(c.track.key) && !dislikes.has(c.track.key) && !recent.has(c.track.key));
     const ctx = makeCtx(played, profile, played.slice(0, 5).map((t) => t.artist.toLowerCase().trim()));
     const chosen = pick(pool, ctx, BATCH).map((c) => c.track);
-    if (chosen.length) usePlayer.getState().addToQueue(chosen);
+    if (chosen.length) {
+      usePlayer.getState().addToQueue(chosen);
+      pushNotice({ kind: 'queue', text: tr(`${chosen.length} similar tracks added`, `Добавлено похожих: ${chosen.length}`), detail: cur.title });
+    }
     return chosen.length;
   })()
     .catch(() => 0)

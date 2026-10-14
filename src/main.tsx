@@ -12,6 +12,7 @@ import './platform/dpi';
 import './player/likePulse';
 import './platform/mediaControls';
 import './platform/audioDevices';
+import './platform/network';
 import './platform/discord';
 import './platform/pot';
 import './platform/memory';

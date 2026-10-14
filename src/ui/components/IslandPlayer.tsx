@@ -25,6 +25,8 @@ import { IslandUpdate } from './UpdateNotice';
 import { usePendingUpdate } from '../../platform/updates';
 import { useAudioDevice, type AudioDevice } from '../../platform/audioDevices';
 import { BatteryRing, HeadphoneArt } from './HeadphoneArt';
+import { IslandChips, IslandNoticeView } from './IslandNotice';
+import { useIslandNotice } from '../../store/islandNotice';
 import { EqBars } from './TrackRow';
 
 const spring = { type: 'spring', stiffness: 420, damping: 32, mass: 0.9 } as const;
@@ -77,18 +79,20 @@ export function IslandPlayer({ desktop = false }: { desktop?: boolean }) {
     return () => clearTimeout(t);
   }, [device?.at]);
 
-  const mode = device ? 'device' : expanded ? null : showUpdate ? 'update' : track ? 'player' : null;
+  // Short banners (no connection, similar tracks added…) take the island for a moment.
+  const notice = useIslandNotice((s) => s.current);
+  const mode = device ? 'device' : expanded ? null : notice ? 'notice' : showUpdate ? 'update' : track ? 'player' : null;
   // One element for every state, so the island morphs between them (layout spring) like iOS.
   if (!mode) return null;
 
   const openPlayer = () => (setOpen(false), usePlayer.getState().setExpanded(true));
-  const radius = mode === 'device' ? (desktop ? 26 : 32) : open ? (desktop ? 28 : 34) : desktop ? 17 : 22;
+  const radius = mode === 'device' ? (desktop ? 26 : 32) : open && mode !== 'notice' ? (desktop ? 28 : 34) : desktop ? 17 : 22;
   const closeUpdate = () => (setOpen(false), update && setSeen(update.version));
 
   return (
     <>
       <AnimatePresence>
-        {open && mode !== 'device' && (
+        {open && mode !== 'device' && mode !== 'notice' && (
           <motion.div
             className="island-scrim"
             initial={{ backgroundColor: 'rgba(0,0,0,0)' }}
@@ -99,17 +103,19 @@ export function IslandPlayer({ desktop = false }: { desktop?: boolean }) {
         )}
       </AnimatePresence>
       <motion.div
-        className={`island is-${mode} ${open && mode !== 'device' ? 'open' : ''} ${desktop ? 'desk' : ''}`}
+        className={`island is-${mode} ${open && mode !== 'device' && mode !== 'notice' ? 'open' : ''} ${desktop ? 'desk' : ''}`}
         layout
         transition={spring}
         style={{ borderRadius: radius }}
-        onClick={() => (mode === 'device' ? useAudioDevice.getState().dismiss() : !open && setOpen(true))}
+        onClick={() => (mode === 'device' ? useAudioDevice.getState().dismiss() : mode === 'notice' ? useIslandNotice.getState().clear() : !open && setOpen(true))}
         onPointerDown={mode === 'player' ? touch : undefined}
         onPointerEnter={() => mode === 'player' && ((hover.current = true), idle.current && clearTimeout(idle.current))}
         onPointerLeave={() => mode === 'player' && ((hover.current = false), open && touch())}
       >
         {mode === 'device' && device ? (
           <IslandDevice key={`device-${device.at}`} device={device} desktop={desktop} />
+        ) : mode === 'notice' && notice ? (
+          <IslandNoticeView notice={notice} />
         ) : mode === 'update' && update ? (
           <IslandUpdate info={update} open={open} />
         ) : track ? (
@@ -120,6 +126,7 @@ export function IslandPlayer({ desktop = false }: { desktop?: boolean }) {
                 <Art src={track.artwork} seed={track.key} />
               </motion.div>
               <Marquee className="island-line" text={`${track.title} · ${track.artist}`} />
+              <IslandChips />
               <EqBars paused={!playing} />
             </motion.div>
           ) : (

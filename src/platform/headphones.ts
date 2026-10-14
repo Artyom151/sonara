@@ -20,12 +20,21 @@ export type HeadphoneModel =
   | 'neck' // neckband
   | 'sport-hook' // earhook sport buds
   | 'over-ear'
-  | 'wired';
+  | 'wired'
+  | 'speaker' // portable / smart speaker
+  | 'car'; // car head unit (Bluetooth, Android Auto)
 export type DeviceKind = 'bluetooth' | 'wired' | 'usb' | 'default-output';
+
+const CAR =
+  /\bcar\b|car[- ]?kit|handsfree car|\bbmw\b|\baudi\b|mercedes|toyota|lexus|skoda|mazda|nissan|hyundai|\bkia\b|\bvw\b|volkswagen|\bford\b|renault|honda|volvo|tesla|\bjeep\b|\blada\b|\bhaval\b|\bchery\b|\bgeely\b|android auto|carplay|uconnect|\bmy ?link\b|\bsync\b/;
+const SPEAKER =
+  /speaker|колонк|soundbar|homepod|\bsonos\b|\becho\b|\bnest\b|boombox|partybox|megaboom|wonderboom|\bboom\b|emberton|stanmore|acton|kilburn|willen|\bsrs-|jbl (charge|flip|go|clip|xtreme|pulse|extreme)|bose (soundlink|s1|home)|soundcore (motion|boom|mini|select)|marshall (emberton|stanmore|acton|kilburn|willen|middleton|tufton)|яндекс станц|алиса|\bmi (portable|smart) speaker|\bsound ?bar\b/;
 
 /** Drawing family from the name the headphones advertise ("Arvind's AirPods Pro", "Galaxy Buds3 Pro"). */
 export function headphoneModel(name: string, kind?: DeviceKind): HeadphoneModel {
   const n = name.toLowerCase().replace(/\s+/g, ' ');
+  if (CAR.test(n)) return 'car';
+  if (SPEAKER.test(n)) return 'speaker';
   if (/airpods\s*max/.test(n)) return 'airpods-max';
   if (/airpods\s*pro/.test(n)) return 'airpods-pro';
   if (/airpods\s*\(?(3|4)(rd|th)?\b|airpods\s*(3|4)/.test(n)) return 'airpods3';

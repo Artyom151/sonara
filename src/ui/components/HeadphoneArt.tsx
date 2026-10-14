@@ -160,6 +160,27 @@ const ART: Record<HeadphoneModel, React.ReactNode> = {
       <ellipse cx="47" cy="42" rx="3.5" ry="9" fill="url(#hp-dark)" opacity="0.8" />
     </g>
   ),
+  speaker: (
+    <g>
+      {/* portable speaker: rounded body with a grille and two buttons */}
+      <rect x="12" y="14" width="40" height="38" rx="14" fill="url(#hp-shade)" stroke="#9d9da8" strokeWidth="0.6" />
+      <rect x="15" y="17" width="34" height="32" rx="11" fill="url(#hp-dark)" />
+      {[0, 1, 2, 3].map((r) => [0, 1, 2, 3, 4].map((c) => <circle key={`${r}-${c}`} cx={20 + c * 6} cy={24 + r * 6} r="1.2" fill="#8a8a94" />))}
+      <circle cx="26" cy="12" r="2" fill="#d9d9e0" />
+      <circle cx="38" cy="12" r="2" fill="#d9d9e0" />
+    </g>
+  ),
+  car: (
+    <g>
+      {/* car, side view */}
+      <path d="M8 40v-6c0-3 2-5 5-6l8-9c1-1 3-2 5-2h14c3 0 5 1 7 3l7 8c3 1 4 3 4 6v6c0 1-1 2-2 2h-2a7 7 0 0 0-14 0H27a7 7 0 0 0-14 0h-3c-1 0-2-1-2-2z" fill="url(#hp-shell)" stroke="#b5b5bf" strokeWidth="0.7" />
+      <path d="M24 27l5-7h10c2 0 3 1 4 2l5 5z" fill="url(#hp-dark)" opacity="0.85" />
+      <circle cx="20" cy="42" r="6" fill="#2c2c31" stroke="#8a8a94" strokeWidth="1" />
+      <circle cx="46" cy="42" r="6" fill="#2c2c31" stroke="#8a8a94" strokeWidth="1" />
+      <circle cx="20" cy="42" r="2.2" fill="#b4b4be" />
+      <circle cx="46" cy="42" r="2.2" fill="#b4b4be" />
+    </g>
+  ),
   wired: (
     <g>
       <path d="M18 24c2 14 6 20 14 24s12 6 12 12M46 24c-2 14-6 20-14 24" fill="none" stroke="#d6d6dd" strokeWidth="1.6" strokeLinecap="round" />

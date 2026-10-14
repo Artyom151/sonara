@@ -29,6 +29,13 @@ test('headphone model from the advertised name', () => {
   ];
   for (const [name, model] of cases) assert.equal(headphoneModel(name), model, name);
   assert.equal(headphoneModel('Headphones', 'wired'), 'wired');
+  for (const [name, want] of [
+    ['JBL Charge 5', 'speaker'], ['JBL Flip 6', 'speaker'], ['Marshall Emberton II', 'speaker'], ['Яндекс Станция', 'speaker'],
+    ['BMW 12345', 'car'], ['Toyota Camry', 'car'], ['Android Auto', 'car'], ['KIA Sportage', 'car'],
+  ] as const) assert.equal(headphoneModel(name), want, name);
+  // Words inside other names must not become a car or a speaker.
+  assert.notEqual(headphoneModel('Carbon Buds Pro'), 'car');
+  assert.equal(headphoneModel('Galaxy Buds3 Pro'), 'buds-stem-tip');
   assert.equal(headphoneModel('USB-C to 3.5mm', 'usb'), 'wired');
 });
 

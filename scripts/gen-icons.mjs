@@ -55,6 +55,9 @@ const map = {
   IconDiscord: ['gamecontroller_fill'],
   IconDownload: ['arrow_down_circle', 'arrow_down_circle_fill'],
   IconTimer: ['timer'],
+  IconWifi: ['antenna_radiowaves_left_right'],
+  IconCar: ['car_fill'],
+  IconSpeakerBox: ['hifispeaker', 'hifispeaker_fill'],
   IconLink: ['link'],
   IconShield: ['shield_lefthalf_fill'],
 };

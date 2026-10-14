@@ -743,3 +743,68 @@ button.link:hover {
   color: var(--text-2);
   font-variant-numeric: tabular-nums;
 }
+
+/* Island: short notices and background activities (IslandNotice.tsx) */
+.island.is-notice {
+  cursor: pointer;
+}
+.island.is-notice:not(.open) {
+  height: 44px;
+  min-width: min(64vw, 240px);
+  max-width: min(90vw, 360px);
+}
+.island.is-notice.desk:not(.open) {
+  height: 38px;
+  min-width: 220px;
+}
+.island-notice {
+  gap: 10px;
+  padding: 0 16px 0 8px;
+  height: 100%;
+}
+.island-notice-dot {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+.island-notice-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.15;
+}
+.island-notice-text b {
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.island-notice-text small {
+  font-size: 11px;
+  color: rgb(255 255 255 / 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+.island-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+.island-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgb(255 255 255 / 0.85);
+  font-variant-numeric: tabular-nums;
+}
+.island-chip i {
+  font-style: normal;
+}
