@@ -35,8 +35,12 @@ let switching = false;
 const resetSource = () => {
   hls?.destroy();
   hls = null;
-  if (blobUrl) console.info(`[player] revoke ${blobUrl.slice(-8)} (source reset, token ${loadToken})`);
-  if (blobUrl) URL.revokeObjectURL(blobUrl);
+  // Revoking a blob the element still plays cuts its data (static, errors): wait until the element
+  // has moved on to its next source.
+  if (blobUrl) {
+    const old = blobUrl;
+    audio.addEventListener('loadstart', () => URL.revokeObjectURL(old), { once: true });
+  }
   blobUrl = null;
 };
 
