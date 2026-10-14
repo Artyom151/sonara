@@ -15,6 +15,7 @@ import { Logo } from '../components/Brand';
 import { Select, Toggle } from '../components/controls';
 import { toast } from '../components/Toast';
 import { openExternal } from '../components/actions';
+import { copyLogs } from '../../platform/logs';
 import { useT } from '../i18n';
 import { IconChevronLeft, IconChevronRight,  IconDiscord, IconMusic, IconQuote, IconShield } from '../icons';
 import { useAccount } from '../../account/store';
@@ -377,6 +378,14 @@ export function Settings() {
           </span>
         </div>
         {updatesSupported && <UpdateCells />}
+      </div>
+      <div className="group">
+        <button className="cell noicon" onClick={() => void copyLogs()}>
+          <span className="cell-label">
+            {t('copyLogs')}
+            <small>{t('copyLogsHint')}</small>
+          </span>
+        </button>
       </div>
       <div className="group-foot">Lyrics: LRCLIB · Icons: Framework7 Icons (MIT)</div>
     </div>
