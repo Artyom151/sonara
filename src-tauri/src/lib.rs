@@ -51,6 +51,13 @@ pub fn run() {
             .level(log::LevelFilter::Debug)
             // Everything from our crate and the libraries it uses at debug level, in the terminal.
             .level_for("sonara_lib", log::LevelFilter::Debug)
+            // Network libraries log every TLS handshake and request at debug: keep them at warnings.
+            .level_for("rustls", log::LevelFilter::Warn)
+            .level_for("ureq", log::LevelFilter::Warn)
+            .level_for("reqwest", log::LevelFilter::Warn)
+            .level_for("cookie_store", log::LevelFilter::Warn)
+            .level_for("tiny_http", log::LevelFilter::Warn)
+            .level_for("discord_rich_presence", log::LevelFilter::Warn)
             .build(),
         )?;
       }
