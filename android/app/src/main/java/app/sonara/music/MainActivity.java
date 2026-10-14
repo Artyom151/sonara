@@ -14,6 +14,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(PoTokenPlugin.class);
         registerPlugin(BypassPlugin.class);
         registerPlugin(AudioDevicesPlugin.class);
+        registerPlugin(CastPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

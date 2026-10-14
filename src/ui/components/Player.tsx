@@ -32,6 +32,7 @@ import {
 } from '../icons';
 import { Art, Marquee, Slider } from './controls';
 import { shareTrack } from './actions';
+import { CastButton } from './CastButton';
 import { useDesktop } from '../useMedia';
 import { CommentsPanel, useComments } from '../account/Comments';
 import { useAccount } from '../../account/store';
@@ -474,6 +475,7 @@ export function Player() {
                   <IconComment size={20} />
                   {comments.length > 0 && <i className="badge">{comments.length > 99 ? '99+' : comments.length}</i>}
                 </button>
+                <CastButton />
                 <button className="ctl dim" aria-label={t('share')} onClick={() => shareTrack(track, t('copied'))}>
                   <IconShare size={20} />
                 </button>

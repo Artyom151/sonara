@@ -1,3 +1,4 @@
+import { CastButton } from '../components/CastButton';
 import { togglePlay, setVolume } from '../../player/engine';
 import { useLibrary } from '../../store/library';
 import { usePlayer } from '../../store/player';
@@ -109,6 +110,7 @@ export function PlayerBar() {
           <button className="pbar-icon" aria-label={t('queue')} onClick={() => open({ type: 'queue' })}>
             <IconQueue size={18} />
           </button>
+          <CastButton className="pbar-icon" size={18} />
           <div className="pbar-volume">
             <Slider
               value={volume}

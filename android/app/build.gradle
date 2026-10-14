@@ -56,6 +56,9 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation "androidx.media:media:1.7.1"
+    // Chromecast sender (CastPlugin): the device picker and the remote media client.
+    implementation "com.google.android.gms:play-services-cast-framework:22.0.0"
+    implementation "androidx.mediarouter:mediarouter:1.7.0"
     implementation "androidx.webkit:webkit:$androidxWebkitVersion"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"

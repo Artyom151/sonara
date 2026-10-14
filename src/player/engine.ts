@@ -9,6 +9,7 @@ import { pushNotice, tr } from '../store/islandNotice';
 import { toast } from '../ui/components/Toast';
 import { audioMime, downloadRanged, mediaProxyBase, PROXIED, YT_UA } from './fetchAudio';
 import { continueQueue, wantsContinuation } from './autoplay';
+import { castSeek, castSetPlaying, castSetVolume, castTrack, isCasting } from './cast';
 import { initOffline, isDownloaded, offlineAudioUrl, removeDownload } from './offline';
 import { useSleep } from './sleep';
 
@@ -69,7 +70,37 @@ async function attach(url: string, kind: 'progressive' | 'hls') {
   audio.src = url;
 }
 
+/** Pause the local element without the store hearing about it (its pause event would stop the cast). */
+function quiet() {
+  switching = true;
+  audio.pause();
+  setTimeout(() => (switching = false), 150);
+}
+
+// player/cast.ts: a device was connected / left.
+window.addEventListener('sonara-cast', () => {
+  quiet();
+  const cur = usePlayer.getState().current();
+  if (cur) loadedKey = cur.key;
+});
+window.addEventListener('sonara-cast-end', () => {
+  const st = usePlayer.getState();
+  const cur = st.current();
+  if (!cur) return;
+  loadedKey = null; // force a reload of the source on this device
+  if (st.playing) void load(cur, true, st.position);
+});
+
 async function load(track: Track, autoplay: boolean, startAt = 0) {
+  // A Chromecast is connected: the device plays, this element stays quiet (player/cast.ts).
+  if (isCasting()) {
+    quiet();
+    loadedKey = track.key;
+    usePlayer.getState().patch({ loading: true, error: null, duration: track.duration || 0 });
+    updateMediaSession(track);
+    if (await castTrack(track, startAt, autoplay)) return;
+    // Not castable (a download, a local link): fall through and play it here.
+  }
   const token = ++loadToken;
   if (loadedKey !== track.key) retried.delete(track.key);
   loadedKey = track.key;
@@ -223,6 +254,10 @@ audio.addEventListener('ended', async () => {
 });
 
 export const seek = (t: number) => {
+  if (isCasting()) {
+    castSeek(t);
+    return usePlayer.getState().patch({ position: t });
+  }
   audio.currentTime = t;
   usePlayer.getState().patch({ position: t });
 };
@@ -236,6 +271,7 @@ export const togglePlay = () => {
 
 export const setVolume = (v: number) => {
   audio.volume = v;
+  castSetVolume(v);
   usePlayer.getState().patch({ volume: v });
 };
 
@@ -255,6 +291,12 @@ usePlayer.subscribe((s, prev) => {
     return;
   }
   if (!cur || s.playing === prev.playing) return;
+  if (isCasting()) {
+    // A track changed while paused: the device does not have it yet.
+    if (s.playing && loadedKey !== cur.key) void load(cur, true, s.position);
+    else castSetPlaying(s.playing);
+    return;
+  }
   if (s.playing) {
     if (loadedKey !== cur.key) return void load(cur, true, s.position);
     audio.play().catch((e) => {

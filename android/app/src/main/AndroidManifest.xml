@@ -45,6 +45,11 @@
             </intent-filter>
         </service>
 
+        <!-- Chromecast: use the default media receiver. -->
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="app.sonara.music.CastOptionsProvider" />
+
         <!-- Android Auto: this is a media app. -->
         <meta-data
             android:name="com.google.android.gms.car.application"

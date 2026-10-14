@@ -21,6 +21,10 @@ log = "0.4"
 tauri = { version = "2.12.1", features = ["tray-icon"] }
 tokio = { version = "1", features = ["sync", "time"] }
 tauri-plugin-log = "2"
+# Chromecast: mDNS discovery + the Cast v2 protocol over TLS (src/cast.rs). rustls with ring only:
+# a Cast library would pull aws-lc, which needs NASM on Windows.
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+mdns-sd = "0.13"
 # Native, CORS-free fetch for the in-app backend. `unsafe-headers` lets youtubei.js
 # set User-Agent / Origin like the official clients do.
 tauri-plugin-http = { version = "2", features = ["unsafe-headers"] }
