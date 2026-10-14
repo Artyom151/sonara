@@ -13,6 +13,7 @@ import './player/likePulse';
 import './platform/mediaControls';
 import './platform/audioDevices';
 import './platform/network';
+import './platform/tray';
 import './platform/discord';
 import './platform/pot';
 import './platform/memory';

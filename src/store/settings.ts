@@ -31,6 +31,8 @@ export interface Settings {
   displayName: string;
   /** Desktop: Discord Rich Presence. */
   discordEnabled: boolean;
+  /** Desktop: closing the window keeps playing in the tray. */
+  closeToTray: boolean;
   discordAppId: string;
   /** Now playing as a Dynamic Island-style pill (phone: top of the screen, desktop: title bar). */
   islandPlayer: boolean;
@@ -68,6 +70,7 @@ export const useSettings = create<Settings>()(
       crossfade: 0,
       displayName: 'Listener',
       discordEnabled: true,
+      closeToTray: false,
       discordAppId: (import.meta.env.VITE_DISCORD_APP_ID as string | undefined) ?? '',
       islandPlayer: false,
       set: (patch) => set(patch),

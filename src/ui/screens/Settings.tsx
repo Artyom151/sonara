@@ -1,3 +1,4 @@
+import { trayAvailable } from '../../platform/tray';
 import { EqPanel } from '../components/EqPanel';
 import { glassStatus } from '../glass/liquid';
 import { updatesSupported, useUpdates } from '../../platform/updates';
@@ -96,6 +97,20 @@ function BypassSettings() {
       </div>
       <div className="group-foot">{t('bypassHint')}</div>
     </>
+  );
+}
+
+/** "Close to tray": only offered when the system has a tray (Linux needs an appindicator library). */
+function TrayCell() {
+  const t = useT();
+  const s = useSettings();
+  const [ok, setOk] = useState(false);
+  useEffect(() => void trayAvailable().then(setOk), []);
+  if (!ok) return null;
+  return (
+    <Cell noicon label={t('closeToTray')} hint={t('closeToTrayHint')}>
+      <Toggle checked={s.closeToTray} onChange={(v) => s.set({ closeToTray: v })} />
+    </Cell>
   );
 }
 
@@ -258,6 +273,7 @@ export function Settings() {
         <>
           <div className="group-label">Discord</div>
           <div className="group">
+            <TrayCell />
             <Cell icon={<IconDiscord size={18} />} color="#5865F2" label={t('discordStatus')}>
               <Toggle checked={s.discordEnabled} onChange={(v) => s.set({ discordEnabled: v })} />
             </Cell>

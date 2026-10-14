@@ -4,7 +4,6 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
@@ -13,7 +12,16 @@ import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.Bundle;
 import android.os.Looper;
+import android.net.Uri;
+import android.support.v4.media.MediaBrowserCompat;
+import android.support.v4.media.MediaDescriptionCompat;
+import androidx.media.MediaBrowserServiceCompat;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
@@ -30,12 +38,38 @@ import java.util.concurrent.Executors;
  * Foreground media service: keeps the app alive while music plays in the background,
  * shows the playback notification (lock screen, shade) and routes media buttons
  * (notification, Bluetooth headsets, lock screen) back to the web player.
+ *
+ * It is also the media browser service Android Auto (and other controllers) connect to: the web
+ * player publishes its queue, favourites and recent tracks (setLibrary), they are shown as a
+ * browsable tree, and "play this" / voice search come back to the web player as actions.
  */
-public class MediaPlaybackService extends Service {
+public class MediaPlaybackService extends MediaBrowserServiceCompat {
 
     public interface ActionListener {
-        void onAction(String action, long positionMs);
+        void onAction(String action, long positionMs, String arg);
     }
+
+    /** One playable entry of the browse tree. */
+    static final class Item {
+        final String id;
+        final String title;
+        final String artist;
+        final String art;
+
+        Item(String id, String title, String artist, String art) {
+            this.id = id;
+            this.title = title;
+            this.artist = artist;
+            this.art = art;
+        }
+    }
+
+    static final String ROOT = "root";
+    static final String LIST_QUEUE = "queue";
+    static final String LIST_LIKED = "liked";
+    static final String LIST_RECENT = "recent";
+    private static final Map<String, List<Item>> library = new HashMap<>();
+    private static final Map<String, String> listTitles = new HashMap<>();
 
     static final String CHANNEL_ID = "sonara_playback";
     static final int NOTIFICATION_ID = 7001;
@@ -55,6 +89,20 @@ public class MediaPlaybackService extends Service {
     private boolean playing = false;
     private long positionMs = 0;
     private long durationMs = 0;
+
+    /**
+     * The service is exported (Android Auto binds to it), so the transport intents carry a
+     * per-install secret: another app cannot start it with a forged "next".
+     */
+    static String token(Context c) {
+        android.content.SharedPreferences p = c.getSharedPreferences("sonara_media", Context.MODE_PRIVATE);
+        String t = p.getString("token", null);
+        if (t == null) {
+            t = java.util.UUID.randomUUID().toString();
+            p.edit().putString("token", t).apply();
+        }
+        return t;
+    }
 
     static void setListener(ActionListener l) {
         listener = l;
@@ -77,7 +125,16 @@ public class MediaPlaybackService extends Service {
             @Override public void onSkipToPrevious() { emit("prev", -1); }
             @Override public void onSeekTo(long pos) { emit("seek", pos); }
             @Override public void onStop() { emit("pause", -1); }
+            // Android Auto: a tapped entry of the browse tree ("liked/<key>") ...
+            @Override public void onPlayFromMediaId(String mediaId, Bundle extras) { emit("playId", -1, mediaId); }
+            // ... and "Hey Google, play <something> on Sonara".
+            @Override public void onPlayFromSearch(String query, Bundle extras) { emit("search", -1, query == null ? "" : query); }
+            @Override public void onSkipToQueueItem(long id) {
+                List<Item> q = library.get(LIST_QUEUE);
+                if (q != null && id >= 0 && id < q.size()) emit("playId", -1, LIST_QUEUE + "/" + q.get(0 + (int) id).id);
+            }
         });
+        setSessionToken(session.getSessionToken());
         Intent open = getPackageManager().getLaunchIntentForPackage(getPackageName());
         if (open != null) {
             session.setSessionActivity(PendingIntent.getActivity(this, 0, open, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT));
@@ -87,7 +144,7 @@ public class MediaPlaybackService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent != null && ACTION.equals(intent.getAction())) {
+        if (intent != null && ACTION.equals(intent.getAction()) && token(this).equals(intent.getStringExtra("t"))) {
             emit(intent.getStringExtra("action"), -1);
         }
         startInForeground();
@@ -95,7 +152,78 @@ public class MediaPlaybackService extends Service {
     }
 
     private void emit(String action, long pos) {
-        if (listener != null && action != null) listener.onAction(action, pos);
+        emit(action, pos, null);
+    }
+
+    private void emit(String action, long pos, String arg) {
+        if (listener != null && action != null) {
+            listener.onAction(action, pos, arg);
+        } else if (action != null) {
+            // The web player is not running (the widget or a car woke the service): open the app.
+            Intent open = getPackageManager().getLaunchIntentForPackage(getPackageName());
+            if (open != null) {
+                open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                open.putExtra("action", action);
+                try {
+                    startActivity(open);
+                } catch (Exception ignored) {
+                    // Background activity starts can be blocked: the notification still opens the app.
+                }
+            }
+        }
+    }
+
+    // ───────── Browse tree (Android Auto) ─────────
+
+    /** Replace one list of the tree and tell connected browsers. */
+    void setList(String list, String title, List<Item> items) {
+        library.put(list, items);
+        listTitles.put(list, title);
+        notifyChildrenChanged(ROOT);
+        notifyChildrenChanged(list);
+        if (LIST_QUEUE.equals(list)) {
+            List<MediaSessionCompat.QueueItem> q = new ArrayList<>();
+            for (int i = 0; i < items.size() && i < 100; i++) {
+                Item it = items.get(i);
+                q.add(new MediaSessionCompat.QueueItem(describe(LIST_QUEUE, it), i));
+            }
+            session.setQueue(q);
+            session.setQueueTitle(title);
+        }
+    }
+
+    private MediaDescriptionCompat describe(String list, Item it) {
+        MediaDescriptionCompat.Builder d = new MediaDescriptionCompat.Builder()
+            .setMediaId(list + "/" + it.id)
+            .setTitle(it.title)
+            .setSubtitle(it.artist);
+        if (it.art != null && !it.art.isEmpty()) d.setIconUri(Uri.parse(it.art));
+        return d.build();
+    }
+
+    @Override
+    public BrowserRoot onGetRoot(String clientPackageName, int clientUid, Bundle rootHints) {
+        return new BrowserRoot(ROOT, null);
+    }
+
+    @Override
+    public void onLoadChildren(String parentId, Result<List<MediaBrowserCompat.MediaItem>> result) {
+        List<MediaBrowserCompat.MediaItem> out = new ArrayList<>();
+        if (ROOT.equals(parentId)) {
+            for (String list : new String[] { LIST_QUEUE, LIST_LIKED, LIST_RECENT }) {
+                List<Item> items = library.get(list);
+                if (items == null || items.isEmpty()) continue;
+                String title = listTitles.get(list);
+                MediaDescriptionCompat d = new MediaDescriptionCompat.Builder().setMediaId(list).setTitle(title != null ? title : list).build();
+                out.add(new MediaBrowserCompat.MediaItem(d, MediaBrowserCompat.MediaItem.FLAG_BROWSABLE));
+            }
+        } else {
+            List<Item> items = library.get(parentId);
+            if (items != null) {
+                for (Item it : items) out.add(new MediaBrowserCompat.MediaItem(describe(parentId, it), MediaBrowserCompat.MediaItem.FLAG_PLAYABLE));
+            }
+        }
+        result.sendResult(out);
     }
 
     /** Called by the plugin with the current track and playback state. */
@@ -146,9 +274,13 @@ public class MediaPlaybackService extends Service {
 
         session.setPlaybackState(new PlaybackStateCompat.Builder()
             .setActions(PlaybackStateCompat.ACTION_PLAY | PlaybackStateCompat.ACTION_PAUSE | PlaybackStateCompat.ACTION_PLAY_PAUSE
-                | PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS | PlaybackStateCompat.ACTION_SEEK_TO)
+                | PlaybackStateCompat.ACTION_SKIP_TO_NEXT | PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS | PlaybackStateCompat.ACTION_SEEK_TO
+                | PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID | PlaybackStateCompat.ACTION_PLAY_FROM_SEARCH
+                | PlaybackStateCompat.ACTION_SKIP_TO_QUEUE_ITEM | PlaybackStateCompat.ACTION_STOP)
             .setState(playing ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED, positionMs, playing ? 1f : 0f)
             .build());
+
+        PlayerWidgetProvider.push(this, title, artist, artwork, playing);
 
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         nm.notify(NOTIFICATION_ID, buildNotification());
@@ -164,7 +296,7 @@ public class MediaPlaybackService extends Service {
     }
 
     private PendingIntent actionIntent(String action, int requestCode) {
-        Intent i = new Intent(this, MediaPlaybackService.class).setAction(ACTION).putExtra("action", action);
+        Intent i = new Intent(this, MediaPlaybackService.class).setAction(ACTION).putExtra("action", action).putExtra("t", token(this));
         return PendingIntent.getService(this, requestCode, i, PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
@@ -202,6 +334,7 @@ public class MediaPlaybackService extends Service {
     @Override
     public void onDestroy() {
         instance = null;
+        PlayerWidgetProvider.push(this, title, artist, artwork, false);
         session.setActive(false);
         session.release();
         io.shutdownNow();
@@ -210,6 +343,7 @@ public class MediaPlaybackService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
-        return null;
+        // The media browser interface for Android Auto; anything else binds to nothing.
+        return super.onBind(intent);
     }
 }

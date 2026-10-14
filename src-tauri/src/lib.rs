@@ -3,8 +3,8 @@ mod discord;
 mod dpi;
 mod media_proxy;
 mod pot;
+mod tray;
 
-#[cfg(windows)]
 use tauri::Manager;
 
 /// Windows: ask WebView2 to trim memory while the window is minimised / hidden
@@ -31,7 +31,7 @@ pub fn run() {
     .plugin(tauri_plugin_http::init())
     .plugin(tauri_plugin_opener::init())
     .manage(discord::Discord::start())
-    .invoke_handler(tauri::generate_handler![audio_devices::audio_devices_watch, discord::discord_set, discord::discord_clear, dpi::dpi_configure, dpi::dpi_probe, media_proxy::media_proxy_base, pot::pot_mint])
+    .invoke_handler(tauri::generate_handler![tray::tray_update, tray::tray_close_to_tray, tray::tray_available, audio_devices::audio_devices_watch, discord::discord_set, discord::discord_clear, dpi::dpi_configure, dpi::dpi_probe, media_proxy::media_proxy_base, pot::pot_mint])
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
@@ -47,6 +47,19 @@ pub fn run() {
           if matches!(event, tauri::WindowEvent::Resized(_) | tauri::WindowEvent::Focused(_)) {
             let hidden = w.is_minimized().unwrap_or(false) || !w.is_visible().unwrap_or(true);
             set_low_memory(&w, hidden);
+          }
+        });
+      }
+      // System tray (skipped where the platform library is missing) and "close to tray".
+      tray::init(app.handle());
+      if let Some(window) = app.get_webview_window("main") {
+        let w = window.clone();
+        window.on_window_event(move |event| {
+          if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+            if tray::close_to_tray() {
+              api.prevent_close();
+              let _ = w.hide();
+            }
           }
         });
       }
