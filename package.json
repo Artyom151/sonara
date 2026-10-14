@@ -11,7 +11,7 @@
     "start": "tsx server/index.ts",
     "typecheck": "tsc -p .",
     "test": "node --import tsx --test tests/*.test.ts",
-    "test:unit": "node --import tsx --test tests/artists.test.ts tests/lyrics.test.ts tests/potoken.test.ts tests/release.test.ts tests/updates.test.ts tests/shaders.test.ts tests/headphones.test.ts tests/equalizer.test.ts",
+    "test:unit": "node --import tsx --test tests/artists.test.ts tests/lyrics.test.ts tests/potoken.test.ts tests/release.test.ts tests/updates.test.ts tests/shaders.test.ts tests/headphones.test.ts tests/equalizer.test.ts tests/taste.test.ts",
     "icons": "node scripts/gen-icons.mjs && node scripts/gen-brand.mjs",
     "tauri": "tauri",
     "desktop:dev": "tauri dev",

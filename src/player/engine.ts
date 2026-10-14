@@ -7,6 +7,7 @@ import { usePlayer } from '../store/player';
 import { useSettings } from '../store/settings';
 import { toast } from '../ui/components/Toast';
 import { audioMime, downloadRanged, mediaProxyBase, PROXIED, YT_UA } from './fetchAudio';
+import { continueQueue, wantsContinuation } from './autoplay';
 import { initOffline, isDownloaded, offlineAudioUrl, removeDownload } from './offline';
 import { useSleep } from './sleep';
 
@@ -209,19 +210,9 @@ audio.addEventListener('ended', async () => {
   }
   const st = usePlayer.getState();
   const atEnd = st.index + 1 >= st.queue.length && st.repeat === 'off';
-  // The Wave refills its own queue (player/wave.ts); other contexts continue with related tracks.
-  if (atEnd && useSettings.getState().autoplay && st.queue.length && st.context.id !== 'wave') {
-    // Keep the music going with related tracks.
-    try {
-      const cur = st.current()!;
-      const dislikes = new Set(useLibrary.getState().dislikes);
-      const keys = new Set(st.queue.map((t) => t.key));
-      const more = (await api.related(cur)).filter((t) => !keys.has(t.key) && !dislikes.has(t.key));
-      if (more.length) usePlayer.getState().addToQueue(more.slice(0, 15));
-    } catch {
-      /* nothing to add */
-    }
-  }
+  // The Wave refills its own queue (player/wave.ts); other contexts get similar tracks appended
+  // when their last track starts (player/autoplay.ts). If that did not finish in time, wait here.
+  if (atEnd && wantsContinuation()) await continueQueue();
   usePlayer.getState().next(true);
   if (usePlayer.getState().repeat === 'one') {
     audio.currentTime = 0;

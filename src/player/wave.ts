@@ -1,11 +1,12 @@
 import { create } from 'zustand';
-import { LruMap } from '../lib/lru';
 import { api } from '../core';
 import type { Track } from '../core/types';
 import { useLibrary } from '../store/library';
 import { usePlayer } from '../store/player';
 import { useSettings } from '../store/settings';
 import { toast } from '../ui/components/Toast';
+import { collect } from './similar';
+import { cosine, features, makeCtx, mix, pick, topTokens, words, type Candidate, type Profile } from './taste';
 
 /* ───────────────────────────── Sonara Wave ─────────────────────────────
    A live, endless playlist. A style profile (weighted tokens: genres, tags,
@@ -20,8 +21,6 @@ export type WaveSeed =
   | { kind: 'genre'; urn: string; title: string }
   | { kind: 'track'; track: Track }
   | { kind: 'tracks'; tracks: Track[]; title: string };
-
-export type Profile = Record<string, number>;
 
 interface WaveState {
   active: boolean;
@@ -51,126 +50,20 @@ export const useWave = create<WaveState>(() => ({
 const WAVE_ID = 'wave';
 const isWaveContext = () => usePlayer.getState().context.id === WAVE_ID;
 
-/* ───────── Tokens ───────── */
+/* ───────── Taste model (taste.ts) ───────── */
 
-const STOP = new Set(
-  (
-    'the a an and or of in on at to for with by from is are be it this that my your our me you we i ' +
-    'official video audio lyric lyrics lyrical visualizer visualiser hd hq 4k mv clip full version original ' +
-    'feat ft featuring prod produced free download out now new premiere exclusive explicit clean ' +
-    'remastered remaster live session track song music records record label topic vevo channel ' +
-    'и в на с по для из от к о у за не что это мой моя мне ты мы клип официальный текст песня трек музыка премьера'
-  ).split(' '),
-);
-
-export const words = (s: string) =>
-  s
-    .toLowerCase()
-    .replace(/[([{].*?[)\]}]/g, (m) => ` ${m.slice(1, -1)} `)
-    .split(/[^\p{L}\p{N}]+/u)
-    .filter((w) => w.length > 1 && !STOP.has(w) && !/^\d+$/.test(w));
-
-/** Weighted feature vector of a track. Tags/genre dominate; artist identity is a separate token. */
-export function features(t: Track): Profile {
-  const f: Profile = {};
-  const add = (k: string, w: number) => (f[k] = (f[k] ?? 0) + w);
-  if (t.genre) for (const w of words(t.genre)) add(`g:${w}`, 3);
-  // Uploaders often stuff dozens of SEO tags; the more tags, the less each one counts.
-  const tags = (t.tags ?? []).filter((x) => x !== t.genre?.toLowerCase());
-  const tagWeight = 2 / Math.sqrt(Math.max(1, tags.length / 4));
-  for (const tag of tags.slice(0, 12)) {
-    const ws = words(tag);
-    if (ws.length) add(`g:${ws.join(' ')}`, tagWeight);
-    for (const w of ws) add(`w:${w}`, tagWeight * 0.4);
-  }
-  for (const w of words(t.title)) add(`w:${w}`, 0.6);
-  const artist = t.artist.toLowerCase().trim();
-  if (artist) add(`a:${artist}`, 1.6);
-  return f;
-}
-
-const norm = (v: Profile) => Math.sqrt(Object.values(v).reduce((s, x) => s + x * x, 0)) || 1;
-
-export function cosine(a: Profile, b: Profile) {
-  let dot = 0;
-  for (const k in b) if (a[k]) dot += a[k] * b[k];
-  return dot / (norm(a) * norm(b));
-}
-
-export function mix(into: Profile, v: Profile, weight: number) {
-  const n = norm(v);
-  for (const k in v) into[k] = (into[k] ?? 0) + (v[k] / n) * weight;
-}
-
-export const topTokens = (p: Profile, prefix: string, n: number) =>
-  Object.entries(p)
-    .filter(([k, w]) => k.startsWith(prefix) && w > 0)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, n)
-    .map(([k]) => k.slice(prefix.length));
+export { cosine, features, mix, topTokens, words, type Profile } from './taste';
+export { relatedCache, tagCache } from './similar';
 
 /* ───────── Candidates ───────── */
 
-interface Candidate {
-  track: Track;
-  /** 0..1, stronger when it came from a related graph of a positive track. */
-  related: number;
-  via?: string;
-}
-
-export const relatedCache = new LruMap<string, Promise<Track[]>>(60);
-const relatedOf = (t: Track) => {
-  if (!relatedCache.has(t.key)) relatedCache.set(t.key, api.related(t).catch(() => []));
-  return relatedCache.get(t.key)!;
-};
-export const tagCache = new LruMap<string, Promise<Track[]>>(30);
-const byTag = (tag: string) => {
-  if (!tagCache.has(tag)) tagCache.set(tag, api.tagTracks(tag).catch(() => []));
-  return tagCache.get(tag)!;
-};
-
 /** Anchors: the tracks the wave currently "likes" most (seeds, liked, fully played). */
 let anchors: Track[] = [];
-let seedDuration = 210;
+let waveSeeds: Track[] = [];
 
-async function gather(): Promise<Candidate[]> {
-  const st = useWave.getState();
-  const out: Candidate[] = [];
-  const recentAnchors = anchors.slice(-4);
-  const rel = await Promise.all(recentAnchors.map((a) => relatedOf(a).then((list) => ({ a, list }))));
-  for (const { a, list } of rel) list.forEach((track, i) => out.push({ track, related: 1 - i / Math.max(20, list.length), via: a.title }));
-
-  const genres = topTokens(st.profile, 'g:', 3);
-  const tagLists = await Promise.all(genres.map((g) => byTag(g)));
-  tagLists.forEach((list) => list.forEach((track) => out.push({ track, related: 0 })));
-
-  // A text search over the strongest descriptors also pulls in YouTube.
-  const terms = [...topTokens(st.profile, 'a:', 1), ...genres.slice(0, 2)].join(' ').trim();
-  if (terms) {
-    const r = await api.search(terms, 'all').catch(() => ({ tracks: [] as Track[], playlists: [] }));
-    r.tracks.forEach((track) => out.push({ track, related: 0 }));
-  }
-  return out;
-}
-
-function score(c: Candidate, profile: Profile, recentArtists: string[]) {
-  const t = c.track;
-  const f = features(t);
-  let s = cosine(profile, f) * 1.0 + c.related * 0.45;
-  const artist = t.artist.toLowerCase().trim();
-  const repeats = recentArtists.filter((a) => a === artist).length;
-  s -= repeats * 0.35;
-  if (t.duration) {
-    const ratio = Math.abs(Math.log(t.duration / seedDuration));
-    if (ratio > 0.8) s -= (ratio - 0.8) * 0.5;
-    if (t.duration < 60) s -= 0.4;
-  }
-  if (t.plays) s += Math.min(0.08, Math.log10(t.plays + 1) / 80);
-  return s;
-}
-
-/** Explain the pick with the strongest shared descriptor. */
+/** Explain the pick: the anchor that listed it, else the strongest shared descriptor. */
 function reasonFor(c: Candidate, profile: Profile, ru: boolean) {
+  if (c.related > 0.5 && c.via[0]) return ru ? `Похож на «${c.via[0]}»` : `Like “${c.via[0]}”`;
   const f = features(c.track);
   let best = '';
   let bestW = 0;
@@ -179,10 +72,9 @@ function reasonFor(c: Candidate, profile: Profile, ru: boolean) {
     const w = (profile[k] ?? 0) * f[k];
     if (w > bestW) (bestW = w), (best = k);
   }
-  if (c.related > 0.5 && c.via) return ru ? `Похож на «${c.via}»` : `Like “${c.via}”`;
   if (best.startsWith('g:')) return `#${best.slice(2)}`;
   if (best.startsWith('a:')) return ru ? `Артист в вашей волне` : 'Artist in your wave';
-  return c.via ? (ru ? `Похож на «${c.via}»` : `Like “${c.via}”`) : ru ? 'В вашем стиле' : 'In your style';
+  return c.via[0] ? (ru ? `Похож на «${c.via[0]}»` : `Like “${c.via[0]}”`) : ru ? 'В вашем стиле' : 'In your style';
 }
 
 let refilling: Promise<void> | null = null;
@@ -192,39 +84,21 @@ async function refill(count = 12) {
   if (refilling) return refilling;
   refilling = (async () => {
     const ru = navigator.language.toLowerCase().startsWith('ru');
-    const candidates = await gather();
     const st = useWave.getState();
-    if (!st.active) return;
-    const seen = new Set(st.seen);
+    const candidates = await collect(anchors.slice(-4), st.profile);
+    if (!useWave.getState().active) return;
+    const seen = new Set(useWave.getState().seen);
     const dislikes = new Set(useLibrary.getState().dislikes);
-    const pool = new Map<string, Candidate>();
-    for (const c of candidates) {
-      const k = c.track.key;
-      if (seen.has(k) || dislikes.has(k)) continue;
-      const prev = pool.get(k);
-      if (!prev || c.related > prev.related) pool.set(k, prev ? { ...c, related: Math.min(1, c.related + prev.related * 0.5) } : c);
-    }
+    const pool = candidates.filter((c) => !seen.has(c.track.key) && !dislikes.has(c.track.key));
     const queue = usePlayer.getState().queue;
-    const recentArtists = queue.slice(-6).map((t) => t.artist.toLowerCase().trim());
-    const picked: Track[] = [];
+    const ctx = makeCtx([...waveSeeds, ...anchors], useWave.getState().profile, queue.slice(-6).map((t) => t.artist.toLowerCase().trim()));
+    const chosen = pick(pool, ctx, count);
+    if (!chosen.length) return;
+    const picked = chosen.map((c) => c.track);
     const reasons: Record<string, string> = {};
-    const items = [...pool.values()];
-    while (picked.length < count && items.length) {
-      let bi = 0;
-      let bs = -Infinity;
-      for (let i = 0; i < items.length; i++) {
-        const s = score(items[i], st.profile, recentArtists);
-        if (s > bs) (bs = s), (bi = i);
-      }
-      const [c] = items.splice(bi, 1);
-      picked.push(c.track);
-      reasons[c.track.key] = reasonFor(c, st.profile, ru);
-      recentArtists.push(c.track.artist.toLowerCase().trim());
-    }
-    if (!picked.length) return;
+    for (const c of chosen) reasons[c.track.key] = reasonFor(c.cand, useWave.getState().profile, ru);
     useWave.setState((s) => ({ seen: [...s.seen, ...picked.map((t) => t.key)], reasons: { ...s.reasons, ...reasons } }));
     if (isWaveContext()) usePlayer.getState().addToQueue(picked);
-    else return picked;
   })()
     .then(() => undefined)
     .finally(() => (refilling = null));
@@ -281,8 +155,7 @@ export async function startWave(seed?: WaveSeed, label?: string) {
     if (!seeds.length) throw new Error('empty');
     for (const t of seeds) mix(profile, features(t), 1);
     anchors = seeds.slice(0, 4);
-    const durations = seeds.map((t) => t.duration).filter(Boolean).sort((a, b) => a - b);
-    seedDuration = durations[Math.floor(durations.length / 2)] || 210;
+    waveSeeds = seeds;
     setProfile(profile);
     useWave.setState({ label: title, seedArt: seeds.slice(0, 3).map((t) => t.artwork ?? '').filter(Boolean) });
 

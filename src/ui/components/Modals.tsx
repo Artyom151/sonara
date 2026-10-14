@@ -23,7 +23,9 @@ import {
   IconTrash,
   IconTimer,
   IconDownload,
+  IconWaveform,
 } from '../icons';
+import { startWave } from '../../player/wave';
 import { Alert, Art, Field, Menu, Sheet, type MenuItem } from './controls';
 import { MixCover, PlaylistCover } from './MixCover';
 import { LyricsView, useLyrics } from './Player';
@@ -89,7 +91,9 @@ function TrackMenu({ m }: { m: Extract<Modal, { type: 'track' }> }) {
     ...playback,
     ...sleepItem,
     { ...toArtist, separatorBefore: isCurrent },
-    { label: t('playNext'), separatorBefore: true, icon: <IconQueue size={18} />, onSelect: () => (usePlayer.getState().playNext(track), toast(t('added'))) },
+    // A live, endless wave built around this track (player/wave.ts).
+    { label: t('waveFromThisTrack'), icon: <IconWaveform size={18} />, onSelect: () => void startWave({ kind: 'track', track }), separatorBefore: true },
+    { label: t('playNext'), icon: <IconQueue size={18} />, onSelect: () => (usePlayer.getState().playNext(track), toast(t('added'))) },
     { label: t('addToQueue'), icon: <IconMusicList size={18} />, onSelect: () => (usePlayer.getState().addToQueue([track]), toast(t('added'))) },
     { label: t('addToPlaylist'), icon: <IconPlus size={18} />, onSelect: () => setTimeout(() => open({ type: 'addToPlaylist', tracks: [track] })) },
     downloaded
