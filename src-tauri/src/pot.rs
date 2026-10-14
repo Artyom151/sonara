@@ -20,15 +20,16 @@ fn window(app: &AppHandle) -> Result<WebviewWindow, String> {
         return Ok(w);
     }
     let mut b = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External("https://www.youtube.com/robots.txt".parse().map_err(|e| format!("{e}"))?));
-    // Through the DPI bypass when it is on (src/dpi.rs); fixed for the window's lifetime.
-    if let Some(port) = crate::dpi::active_port() {
-        if let Ok(u) = format!("http://127.0.0.1:{port}").parse() {
-            b = b.proxy_url(u);
-        }
-    } else if let Some((host, port)) = crate::dpi::upstream() {
-        if let Ok(u) = format!("socks5://{host}:{port}").parse() {
-            b = b.proxy_url(u);
-        }
+    // Through the DPI bypass or the user's SOCKS5 server when one is set (src/dpi.rs). WebKitGTK
+    // applies a webview proxy to the whole network session, so this window gets a session of its
+    // own: the app's webview keeps talking to 127.0.0.1 (media proxy, dev server) directly.
+    let proxy = match crate::dpi::active_port() {
+        Some(port) => format!("http://127.0.0.1:{port}").parse().ok(),
+        None => crate::dpi::upstream().and_then(|(host, port)| format!("socks5://{host}:{port}").parse().ok()),
+    };
+    if let Some(u) = proxy {
+        let dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?.join("pot-session");
+        b = b.data_directory(dir).proxy_url(u);
     }
     b.title("Sonara")
         .visible(false)
