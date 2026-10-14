@@ -10,7 +10,7 @@ import { toast } from '../ui/components/Toast';
 import { audioMime, downloadRanged, mediaProxyBase, PROXIED, YT_UA } from './fetchAudio';
 import { continueQueue, wantsContinuation } from './autoplay';
 import { castSeek, castSetPlaying, castSetVolume, castTrack, isCasting } from './cast';
-import { initOffline, isDownloaded, offlineAudioUrl, removeDownload } from './offline';
+import { initOffline, isDownloaded, offlinePlayback, removeDownload } from './offline';
 import { useSleep } from './sleep';
 
 void initOffline();
@@ -114,15 +114,13 @@ async function load(track: Track, autoplay: boolean, startAt = 0) {
   updateMediaSession(track);
   try {
     // Downloaded: play the stored file, no network needed.
-    const local = await offlineAudioUrl(track.key);
-    if (token !== loadToken) return void (local && URL.revokeObjectURL(local));
-    const s = local ? { url: local, kind: 'progressive' as const } : await api.stream(track);
+    const local = await offlinePlayback(track.key);
+    if (token !== loadToken) return;
+    const s = local ? { url: local.url, kind: local.kind } : await api.stream(track);
     if (token !== loadToken) return;
     localKey = local ? track.key : null;
-    if (local) {
-      await attach(local, 'progressive');
-      blobUrl = local; // revoked by resetSource on the next track
-    }
+    // offline.ts keeps the object URLs alive while the track plays and revokes them afterwards.
+    if (local) await attach(local.url, local.kind);
     // Desktop (Tauri): always through the native fetch, see viaNativeBlob. Android plays the
     // URL directly and falls back to it in playSafe.
     else if (isYouTubeAudio(track) && isTauri && PROXIED.test(s.url)) {

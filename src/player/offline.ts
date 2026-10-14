@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { api } from '../core';
 import type { Track } from '../core/types';
-import { fetchAudioFile, looksLikeAudio } from './fetchAudio';
+import { fetchStreamParts, looksLikeAudio } from './fetchAudio';
 
 /**
  * Offline downloads: the audio file, the cover and the track's metadata (title, artists…) are kept
@@ -9,7 +9,14 @@ import { fetchAudioFile, looksLikeAudio } from './fetchAudio';
  * Works the same in the desktop and Android webviews and in the browser.
  */
 const DB = 'sonara-offline';
-const FILES = 'files'; // key -> { audio: Blob, art?: Blob }
+const FILES = 'files'; // key -> { audio: Blob, art?: Blob } or { hls: StoredHls, art?: Blob }
+
+/** An HLS stream kept piece by piece: SoundCloud's fMP4 pieces cannot be joined into one file. */
+interface StoredHls {
+  init?: Blob;
+  segs: Blob[];
+  durations: number[];
+}
 const META = 'meta'; // key -> OfflineEntry
 
 export interface OfflineEntry {
@@ -68,11 +75,43 @@ export async function initOffline() {
 
 export const isDownloaded = (key: string) => !!useOffline.getState().items[key];
 
-/** Object URL of the downloaded audio, or null. The caller revokes it. */
-export async function offlineAudioUrl(key: string): Promise<string | null> {
+export interface OfflinePlayback {
+  url: string;
+  kind: 'progressive' | 'hls';
+}
+
+/** Object URLs of the previous offline playback, revoked once the element has moved on. */
+let playingUrls: string[] = [];
+
+/**
+ * How to play a downloaded track: a file URL, or a local HLS playlist whose pieces are blob URLs
+ * (hls.js reads them). Null when the track is not downloaded.
+ */
+export async function offlinePlayback(key: string): Promise<OfflinePlayback | null> {
   if (!isDownloaded(key)) return null;
-  const f = await tx<{ audio: Blob } | undefined>(FILES, 'readonly', (s) => s.get(key)).catch(() => undefined);
-  return f?.audio ? URL.createObjectURL(f.audio) : null;
+  const f = await tx<{ audio?: Blob; hls?: StoredHls } | undefined>(FILES, 'readonly', (s) => s.get(key)).catch(() => undefined);
+  const made: string[] = [];
+  const url = (b: Blob) => {
+    const u = URL.createObjectURL(b);
+    made.push(u);
+    return u;
+  };
+  let result: OfflinePlayback | null = null;
+  if (f?.audio) result = { url: url(f.audio), kind: 'progressive' };
+  else if (f?.hls) {
+    const h = f.hls;
+    const target = Math.max(1, Math.ceil(Math.max(0, ...h.durations)));
+    const lines = ['#EXTM3U', '#EXT-X-VERSION:7', `#EXT-X-TARGETDURATION:${target}`, '#EXT-X-PLAYLIST-TYPE:VOD'];
+    if (h.init) lines.push(`#EXT-X-MAP:URI="${url(h.init)}"`);
+    h.segs.forEach((seg, i) => lines.push(`#EXTINF:${h.durations[i] ?? 10},`, url(seg)));
+    lines.push('#EXT-X-ENDLIST');
+    result = { url: url(new Blob([lines.join('\n')], { type: 'application/vnd.apple.mpegurl' })), kind: 'hls' };
+  }
+  // The previous track's URLs stay valid for a while: its element may still be finishing a load.
+  const old = playingUrls;
+  playingUrls = made;
+  setTimeout(() => old.forEach((u) => URL.revokeObjectURL(u)), 30_000);
+  return result;
 }
 
 const artUrls = new Map<string, string>();
@@ -101,15 +140,29 @@ async function downloadOne(track: Track) {
   const setProgress = (p: number) => useOffline.setState((s) => ({ queue: s.queue.map((j) => (j.track.key === track.key ? { ...j, progress: p } : j)) }));
   const info = await api.stream(track);
   console.info(`[offline] ${track.source} ${info.kind} mime ${info.mime ?? 'none'} for ${track.title}`);
-  const audio = await fetchAudioFile(info, setProgress);
+  const parts = await fetchStreamParts(info, setProgress);
+  let stored: { audio: Blob } | { hls: StoredHls };
+  let size: number;
   // A 30-second preview is not worth keeping as "offline".
-  if (audio.size < 64 * 1024) throw new Error(`file too small: ${audio.size} bytes (${audio.type || 'no type'})`);
-  if (!(await looksLikeAudio(audio))) throw new Error(`not an audio file: ${audio.size} bytes, ${audio.type || 'no type'}`);
-  // The engine plays the saved file later; WebKit may lack the codec for its container (NotSupportedError).
-  console.info(`[offline] saved ${track.title}: ${audio.size} bytes, ${audio.type || 'no type'}, canPlayType=${JSON.stringify(new Audio().canPlayType(audio.type || 'audio/mpeg'))}`);
+  if (parts.kind === 'file') {
+    const audio = parts.blob;
+    if (audio.size < 64 * 1024) throw new Error(`file too small: ${audio.size} bytes (${audio.type || 'no type'})`);
+    if (!(await looksLikeAudio(audio))) throw new Error(`not an audio file: ${audio.size} bytes, ${audio.type || 'no type'}`);
+    stored = { audio };
+    size = audio.size;
+  } else {
+    const type = parts.mime;
+    const init = parts.init ? new Blob([parts.init], { type }) : undefined;
+    const segs = parts.segs.map((b) => new Blob([b], { type }));
+    size = (init?.size ?? 0) + segs.reduce((n, b) => n + b.size, 0);
+    if (size < 64 * 1024) throw new Error(`stream too small: ${size} bytes (${type})`);
+    if (!segs.length || !(await looksLikeAudio(segs[0]))) throw new Error(`not an audio segment: ${type}`);
+    stored = { hls: { init, segs, durations: parts.durations } };
+  }
+  console.info(`[offline] saved ${track.title}: ${size} bytes, ${parts.kind === 'hls' ? `hls ${parts.segs.length} pieces` : parts.blob.type || 'no type'}`);
   const art = await fetchArt(track.artworkLarge ?? track.artwork);
-  const entry: OfflineEntry = { track: { ...track, sc: undefined }, size: audio.size + (art?.size ?? 0), at: Date.now() };
-  await tx(FILES, 'readwrite', (s) => s.put({ audio, art }, track.key));
+  const entry: OfflineEntry = { track: { ...track, sc: undefined }, size: size + (art?.size ?? 0), at: Date.now() };
+  await tx(FILES, 'readwrite', (s) => s.put({ ...stored, art }, track.key));
   await tx(META, 'readwrite', (s) => s.put(entry, track.key));
   useOffline.setState((s) => ({ items: { ...s.items, [track.key]: entry } }));
 }

@@ -87,25 +87,6 @@ async function hlsPiece(fetcher: Fetcher, url: string, init?: RequestInit): Prom
   }
 }
 
-async function downloadHls(url: string, fetcher: Fetcher, onProgress?: (p: number) => void): Promise<ArrayBuffer[]> {
-  const playlist = await fetcher(url);
-  if (!playlist.ok) throw new Error(`HTTP ${playlist.status}`);
-  const text = await playlist.text();
-  if (/#EXT-X-KEY:METHOD=(?!NONE)/.test(text)) throw new Error('Protected stream');
-  const abs = (u: string) => new URL(u, url).toString();
-  const init = text.match(/#EXT-X-MAP:URI="([^"]+)"/)?.[1];
-  const segs = text.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
-  if (!segs.length) throw new Error('empty playlist');
-  const parts: ArrayBuffer[] = [];
-  console.info(`[hls] ${segs.length} segments, init ${init ? 'yes' : 'no'}, first ${segs[0].slice(-60)}`);
-  if (init) parts.push(await hlsPiece(fetcher, abs(init)));
-  for (let i = 0; i < segs.length; i++) {
-    parts.push(await hlsPiece(fetcher, abs(segs[i])));
-    onProgress?.((i + 1) / segs.length);
-  }
-  return parts;
-}
-
 /** Recognisable audio container at the start of the file (a text/HTML error page is not). */
 export async function looksLikeAudio(b: Blob): Promise<boolean> {
   const h = new Uint8Array(await b.slice(0, 12).arrayBuffer());
@@ -121,8 +102,35 @@ export async function looksLikeAudio(b: Blob): Promise<boolean> {
   );
 }
 
-/** The whole audio file of a resolved stream, from any platform (used for offline downloads). */
-export async function fetchAudioFile(s: StreamInfo, onProgress?: (p: number) => void): Promise<Blob> {
+
+/** HLS pieces kept apart: the init section (if any), the media segments and their durations. */
+async function hlsParts(url: string, fetcher: Fetcher, onProgress?: (p: number) => void) {
+  const playlist = await fetcher(url);
+  if (!playlist.ok) throw new Error(`HTTP ${playlist.status}`);
+  const text = await playlist.text();
+  if (/#EXT-X-KEY:METHOD=(?!NONE)/.test(text)) throw new Error('Protected stream');
+  const abs = (u: string) => new URL(u, url).toString();
+  const initUri = text.match(/#EXT-X-MAP:URI="([^"]+)"/)?.[1];
+  const segs = text.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+  if (!segs.length) throw new Error('empty playlist');
+  const durations = [...text.matchAll(/#EXTINF:([\d.]+)/g)].map((m) => Number(m[1]));
+  console.info(`[hls] ${segs.length} segments, init ${initUri ? 'yes' : 'no'}, first ${segs[0].slice(-60)}`);
+  const init = initUri ? await hlsPiece(fetcher, abs(initUri)) : undefined;
+  const out: ArrayBuffer[] = [];
+  for (let i = 0; i < segs.length; i++) {
+    out.push(await hlsPiece(fetcher, abs(segs[i])));
+    onProgress?.((i + 1) / segs.length);
+  }
+  return { init, segs: out, durations };
+}
+
+/** A stream as stored: one file, or an HLS playlist kept piece by piece (playable with hls.js later). */
+export type StreamParts =
+  | { kind: 'file'; blob: Blob }
+  | { kind: 'hls'; init?: ArrayBuffer; segs: ArrayBuffer[]; durations: number[]; mime: string };
+
+/** The pieces of a resolved stream, from any platform (used for offline downloads). */
+export async function fetchStreamParts(s: StreamInfo, onProgress?: (p: number) => void): Promise<StreamParts> {
   let url = s.url;
   // The hint header only means something to the native fetch: a browser would need a CORS preflight for it.
   let fetcher: Fetcher = (u, i) => {
@@ -140,6 +148,14 @@ export async function fetchAudioFile(s: StreamInfo, onProgress?: (p: number) => 
     if (/\.googlevideo\.com\//.test(url)) headers = { 'User-Agent': YT_UA };
   }
   const mime = s.kind === 'hls' ? (s.mime?.split(';')[0] ?? 'audio/mpeg') : (s.mime?.split(';')[0] ?? audioMime(s.url));
-  const parts = s.kind === 'hls' ? await downloadHls(url, fetcher, onProgress) : await downloadRanged(url, fetcher, { headers, onProgress });
-  return new Blob(parts, { type: mime });
+  if (s.kind === 'hls') return { kind: 'hls', ...(await hlsParts(url, fetcher, onProgress)), mime };
+  const parts = await downloadRanged(url, fetcher, { headers, onProgress });
+  return { kind: 'file', blob: new Blob(parts, { type: mime }) };
+}
+
+/** The whole audio file of a resolved stream (HLS pieces joined). */
+export async function fetchAudioFile(s: StreamInfo, onProgress?: (p: number) => void): Promise<Blob> {
+  const p = await fetchStreamParts(s, onProgress);
+  if (p.kind === 'file') return p.blob;
+  return new Blob([...(p.init ? [p.init] : []), ...p.segs], { type: p.mime });
 }
