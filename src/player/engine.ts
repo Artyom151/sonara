@@ -184,7 +184,7 @@ const retried = new Set<string>();
 function onUnavailable(track: Track, e: Error) {
   if (!retried.has(track.key)) {
     retried.add(track.key);
-    console.warn('[player] retrying with a fresh link:', track.title, e.message);
+    console.warn('[player] retrying with a fresh link:', track.title, e);
     api.forgetStream(track.key);
     void load(track, true, audio.currentTime || 0);
     return;

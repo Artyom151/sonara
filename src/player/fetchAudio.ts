@@ -35,7 +35,7 @@ export async function downloadRanged(
     for (let attempt = 0; ; attempt++) {
       const r = await fetcher(url, { headers: { ...opts.headers, [BINARY_HINT]: '1', Range: `bytes=${from}-${to}` } });
       if (r.ok) return { buf: await r.arrayBuffer(), total: Number(r.headers.get('content-range')?.split('/')[1]) || 0 };
-      if (attempt >= 2) throw new Error(`HTTP ${r.status}`);
+      if (attempt >= 2) throw new Error(`HTTP ${r.status} for bytes ${from}-${to} of ${url.slice(0, 160)}`);
     }
   };
   const fromUrl = Number(new URL(url, location.href).searchParams.get('clen')) || 0;

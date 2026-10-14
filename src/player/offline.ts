@@ -101,8 +101,8 @@ async function downloadOne(track: Track) {
   const setProgress = (p: number) => useOffline.setState((s) => ({ queue: s.queue.map((j) => (j.track.key === track.key ? { ...j, progress: p } : j)) }));
   const audio = await fetchAudioFile(await api.stream(track), setProgress);
   // A 30-second preview is not worth keeping as "offline".
-  if (audio.size < 64 * 1024) throw new Error('file too small');
-  if (!(await looksLikeAudio(audio))) throw new Error('not an audio file');
+  if (audio.size < 64 * 1024) throw new Error(`file too small: ${audio.size} bytes (${audio.type || 'no type'})`);
+  if (!(await looksLikeAudio(audio))) throw new Error(`not an audio file: ${audio.size} bytes, ${audio.type || 'no type'}`);
   const art = await fetchArt(track.artworkLarge ?? track.artwork);
   const entry: OfflineEntry = { track: { ...track, sc: undefined }, size: audio.size + (art?.size ?? 0), at: Date.now() };
   await tx(FILES, 'readwrite', (s) => s.put({ audio, art }, track.key));
@@ -121,7 +121,7 @@ async function pump() {
       try {
         await downloadOne(job.track);
       } catch (e) {
-        console.warn('[offline] download failed:', job.track.title, (e as Error).message);
+        console.warn(`[offline] download failed: ${job.track.title} (${job.track.source ?? '?'}, ${job.track.key})`, e);
         useOffline.setState((s) => ({ failed: [...s.failed, job.track.key] }));
       }
       useOffline.setState((s) => ({ queue: s.queue.slice(1) }));

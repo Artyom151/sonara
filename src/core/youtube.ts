@@ -229,14 +229,14 @@ export class YouTube {
           try {
             url += `&pot=${await poToken(this.fetcher, id)}`;
           } catch (e) {
-            console.warn('[youtube] PO token failed:', (e as Error).message);
+            console.warn('[youtube] PO token failed:', e);
             lastError = e;
             continue; // a truncated stream is worse than the next client's
           }
         }
         if (url) return { url, kind: 'progressive', mime: format.mime_type };
       } catch (e) {
-        console.warn(`[youtube] ${client} stream failed:`, (e as Error).message);
+        console.warn(`[youtube] ${client} stream failed for ${id}:`, e);
         lastError = e;
       }
     }

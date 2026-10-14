@@ -100,7 +100,7 @@ export function createCoreApi(
         if (/\/preview\//.test(s.url)) throw new Error('only a preview');
         return s;
       } catch (e) {
-        console.warn(`[match] ${m.source} copy unplayable, trying the next:`, (e as Error).message);
+        console.warn(`[match] ${m.source} copy unplayable, trying the next: ${t.title}`, e);
         matcher.drop(t, m);
       }
     }

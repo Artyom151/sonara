@@ -1,9 +1,9 @@
 import { toast } from '../ui/components/Toast';
 
 /**
- * Keeps the last console output of the app in memory, so it can be copied in one step:
- * Ctrl+Shift+I (Cmd+Shift+I on macOS) or the "Copy logs" button in Settings → About. Nothing is
- * sent anywhere; the text only goes to the clipboard.
+ * Keeps the last console output of the app in memory, so it can be copied in one step with the
+ * "Copy logs" button in Settings → About. Nothing is sent anywhere; the text only goes to the
+ * clipboard. The keyboard shortcut of the inspector is left alone.
  */
 const MAX = 3000;
 const lines: string[] = [];
@@ -113,16 +113,4 @@ export async function copyLogs(): Promise<boolean> {
 
 if (typeof window !== 'undefined') {
   installLogs();
-  // Ctrl+Shift+I / Cmd+Shift+I: copy the logs (the native inspector stays available from the menu).
-  window.addEventListener(
-    'keydown',
-    (e) => {
-      if (e.shiftKey && (e.ctrlKey || e.metaKey) && e.code === 'KeyI') {
-        e.preventDefault();
-        e.stopPropagation();
-        void copyLogs();
-      }
-    },
-    true,
-  );
 }
