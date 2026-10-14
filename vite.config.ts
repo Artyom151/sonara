@@ -30,18 +30,16 @@ function parentOf(pid: number): { ppid: number; cmd: string } {
   }
 }
 
-/** Our ancestors up to and including the `tauri dev` process (pnpm, npx… sit in between). */
-function ancestorsUpToTauri(): number[] {
-  const chain: number[] = [];
+/** Our `tauri dev` ancestor (pnpm and the shell in between are not watched: they may exit early). */
+function tauriAncestor(): number {
   let pid = process.pid;
   for (let i = 0; i < 6; i++) {
     const { ppid, cmd } = parentOf(pid);
     if (ppid <= 1) break;
-    chain.push(ppid);
-    if (/tauri/i.test(cmd)) return chain;
+    if (/tauri/i.test(cmd)) return ppid;
     pid = ppid;
   }
-  return chain.slice(0, 2); // no tauri found: at least our own launcher
+  return 0;
 }
 
 const exitWithTauri = (): Plugin => ({
@@ -49,8 +47,8 @@ const exitWithTauri = (): Plugin => ({
   apply: 'serve',
   configureServer(server) {
     if (!process.env.TAURI_ENV_PLATFORM) return;
-    const watched = ancestorsUpToTauri();
-    if (!watched.length) return;
+    const tauri = tauriAncestor();
+    if (!tauri) return;
     const alive = (pid: number) => {
       try {
         process.kill(pid, 0);
@@ -60,8 +58,8 @@ const exitWithTauri = (): Plugin => ({
       }
     };
     const timer = setInterval(() => {
-      // Orphaned (re-parented) or an ancestor exited: the app is closed.
-      if (process.ppid !== watched[0] || !watched.every(alive)) {
+      // The tauri process is gone: the app is closed.
+      if (!alive(tauri)) {
         clearInterval(timer);
         void server.close().finally(() => process.exit(0));
       }

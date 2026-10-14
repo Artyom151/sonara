@@ -61,17 +61,40 @@ export async function downloadRanged(
 }
 
 /** All segments of an HLS media playlist joined (SoundCloud mp3 / AAC streams, unencrypted). */
+/**
+ * One HLS piece, checked: a failed request or an error page (XML / HTML from a throttling CDN) must
+ * never end up inside the file, or the download plays noise. Retries, then fails the whole download.
+ */
+async function hlsPiece(fetcher: Fetcher, url: string, init?: RequestInit): Promise<ArrayBuffer> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const r = await fetcher(url, init);
+      if (r.ok) {
+        const buf = await r.arrayBuffer();
+        if (await looksLikeAudio(new Blob([buf]))) return buf;
+        throw new Error('not audio');
+      }
+      if (r.status !== 429 && r.status < 500 && attempt >= 1) throw new Error(`HTTP ${r.status}`);
+    } catch (e) {
+      if (attempt >= 3) throw e;
+    }
+    await new Promise((res) => setTimeout(res, 400 * (attempt + 1)));
+  }
+}
+
 async function downloadHls(url: string, fetcher: Fetcher, onProgress?: (p: number) => void): Promise<ArrayBuffer[]> {
-  const text = await (await fetcher(url)).text();
+  const playlist = await fetcher(url);
+  if (!playlist.ok) throw new Error(`HTTP ${playlist.status}`);
+  const text = await playlist.text();
   if (/#EXT-X-KEY:METHOD=(?!NONE)/.test(text)) throw new Error('Protected stream');
   const abs = (u: string) => new URL(u, url).toString();
   const init = text.match(/#EXT-X-MAP:URI="([^"]+)"/)?.[1];
   const segs = text.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+  if (!segs.length) throw new Error('empty playlist');
   const parts: ArrayBuffer[] = [];
-  const bin = { headers: { [BINARY_HINT]: '1' } };
-  if (init) parts.push(await (await fetcher(abs(init), bin)).arrayBuffer());
+  if (init) parts.push(await hlsPiece(fetcher, abs(init)));
   for (let i = 0; i < segs.length; i++) {
-    parts.push(await (await fetcher(abs(segs[i]), bin)).arrayBuffer());
+    parts.push(await hlsPiece(fetcher, abs(segs[i])));
     onProgress?.((i + 1) / segs.length);
   }
   return parts;
@@ -95,7 +118,12 @@ export async function looksLikeAudio(b: Blob): Promise<boolean> {
 /** The whole audio file of a resolved stream, from any platform (used for offline downloads). */
 export async function fetchAudioFile(s: StreamInfo, onProgress?: (p: number) => void): Promise<Blob> {
   let url = s.url;
-  let fetcher: Fetcher = (u, i) => fetch(u, i);
+  // The hint header only means something to the native fetch: a browser would need a CORS preflight for it.
+  let fetcher: Fetcher = (u, i) => {
+    const h = new Headers(i?.headers);
+    h.delete(BINARY_HINT);
+    return fetch(u, { ...i, headers: h });
+  };
   let headers: Record<string, string> | undefined;
   if (isTauri && PROXIED.test(url)) {
     // Desktop: through the local proxy (handles client-bound / origin-checked hosts, CORS *).
