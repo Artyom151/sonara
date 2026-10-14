@@ -712,3 +712,34 @@ button.link:hover {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
+
+/* Equalizer (EqPanel) */
+.eq-bands {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 2px;
+  padding: 14px 10px 8px;
+}
+.eq-band {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.eq-range {
+  -webkit-appearance: slider-vertical;
+  appearance: slider-vertical;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: 28px;
+  height: 128px;
+  accent-color: var(--accent);
+  margin: 0;
+}
+.eq-db,
+.eq-hz {
+  font-size: 10.5px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}

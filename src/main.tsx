@@ -7,6 +7,7 @@ import './styles/desktop.css';
 import './styles/wave.css';
 import './styles/account.css';
 import './player/engine';
+import './player/equalizer';
 import './platform/dpi';
 import './player/likePulse';
 import './platform/mediaControls';

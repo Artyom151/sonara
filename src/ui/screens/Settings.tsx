@@ -1,3 +1,4 @@
+import { EqPanel } from '../components/EqPanel';
 import { glassStatus } from '../glass/liquid';
 import { updatesSupported, useUpdates } from '../../platform/updates';
 import { autoPickBypass, bypassAutoSupported, BYPASS_HOSTS, bypassSupported, type BypassPreset, type BypassService, type BypassServiceConfig } from '../../platform/dpi';
@@ -235,6 +236,8 @@ export function Settings() {
         </Cell>
       </div>
       <div className="group-foot">{t('youtubeKeyHint')}</div>
+
+      <EqPanel />
 
       {bypassSupported && <BypassSettings />}
 
