@@ -11,7 +11,9 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const dir = new URL('../src/ui/glass/', import.meta.url);
-const read = (n) => readFileSync(new URL(n, dir), 'utf8');
+// Git on Windows may check the files out with CRLF line endings: compare them with LF only.
+const lf = (s) => s.replace(/\r\n/g, '\n');
+const read = (n) => lf(readFileSync(new URL(n, dir), 'utf8'));
 
 /** Replace exactly one occurrence; a source change that breaks an anchor fails loudly. */
 function patch(src, from, to, what) {
@@ -66,7 +68,7 @@ export function build() {
     'output modes',
   );
 
-  const header = readFileSync(new URL('shaders.ts', dir), 'utf8').split('export const VERTEX')[0];
+  const header = read('shaders.ts').split('export const VERTEX')[0];
   return `${header}export const VERTEX = /* glsl */ \`${vsh}\`;\n\nexport const FRAGMENT = /* glsl */ \`${fsh}\`;\n`;
 }
 
@@ -74,7 +76,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const out = build();
   const file = new URL('shaders.ts', dir);
   if (process.argv.includes('--check')) {
-    if (readFileSync(file, 'utf8') !== out) {
+    if (lf(readFileSync(file, 'utf8')) !== out) {
       console.error('shaders.ts is out of date with glass.vsh / glass.fsh: run `pnpm shaders`');
       process.exit(1);
     }

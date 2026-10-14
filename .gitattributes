@@ -1,0 +1,3 @@
+*.vsh text eol=lf
+*.fsh text eol=lf
+src/ui/glass/shaders.ts text eol=lf
