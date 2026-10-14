@@ -46,7 +46,7 @@ interface ProbeResult {
   ms: number;
   bytes: number;
 }
-const Bypass = isAndroid
+export const Bypass = isAndroid
   ? registerPlugin<{
       configure(o: { enabled: boolean; rules: { hosts: string[]; strategy: string }[] }): Promise<{ proxy: string | null }>;
       probe(o: { hosts: string[]; strategies: string[]; urls: string[] }): Promise<{ results: ProbeResult[] }>;
@@ -217,9 +217,18 @@ export async function applyBypass(): Promise<string | null> {
   return proxyUrl;
 }
 
+/** Desktop: the user's SOCKS5 server, used by the DPI proxy, the media proxy and the PO-token window. */
+export async function applyUpstream(): Promise<void> {
+  if (!bypassSupported || Bypass) return;
+  const { invoke } = await import('@tauri-apps/api/core');
+  await invoke('net_set_upstream', { url: useSettings.getState().upstreamProxy || null });
+}
+
 if (bypassSupported) {
   void applyBypass().catch((e) => console.warn('[bypass]', e));
+  void applyUpstream().catch((e) => console.warn('[upstream]', e));
   useSettings.subscribe((s, prev) => {
     if (s.bypass !== prev.bypass) void applyBypass().catch((e) => console.warn('[bypass]', e));
+    if (s.upstreamProxy !== prev.upstreamProxy) void applyUpstream().catch((e) => console.warn('[upstream]', e));
   });
 }

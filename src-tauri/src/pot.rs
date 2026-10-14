@@ -25,6 +25,10 @@ fn window(app: &AppHandle) -> Result<WebviewWindow, String> {
         if let Ok(u) = format!("http://127.0.0.1:{port}").parse() {
             b = b.proxy_url(u);
         }
+    } else if let Some((host, port)) = crate::dpi::upstream() {
+        if let Ok(u) = format!("socks5://{host}:{port}").parse() {
+            b = b.proxy_url(u);
+        }
     }
     b.title("Sonara")
         .visible(false)

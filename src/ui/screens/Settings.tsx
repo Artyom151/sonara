@@ -2,7 +2,7 @@ import { trayAvailable } from '../../platform/tray';
 import { EqPanel } from '../components/EqPanel';
 import { glassStatus } from '../glass/liquid';
 import { updatesSupported, useUpdates } from '../../platform/updates';
-import { autoPickBypass, bypassAutoSupported, BYPASS_HOSTS, bypassSupported, type BypassPreset, type BypassService, type BypassServiceConfig } from '../../platform/dpi';
+import { Bypass, autoPickBypass, bypassAutoSupported, BYPASS_HOSTS, bypassSupported, type BypassPreset, type BypassService, type BypassServiceConfig } from '../../platform/dpi';
 import { SOURCE_ORDER, SOURCES } from '../sources';
 import { useEffect, useState } from 'react';
 import { api } from '../../core';
@@ -97,6 +97,17 @@ function BypassSettings() {
           })}
       </div>
       <div className="group-foot">{t('bypassHint')}</div>
+      {!Bypass && (
+        <>
+          <div className="group-label">{t('upstreamProxy')}</div>
+          <div className="group">
+            <Cell noicon label="SOCKS5">
+              <input className="cell-input mono" placeholder="socks5://127.0.0.1:1080" value={s.upstreamProxy} onChange={(e) => s.set({ upstreamProxy: e.target.value.trim() })} />
+            </Cell>
+          </div>
+          <div className="group-foot">{t('upstreamProxyHint')}</div>
+        </>
+      )}
     </>
   );
 }

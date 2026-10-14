@@ -369,8 +369,79 @@ fn resolve_host(host: &str, port: u16) -> std::io::Result<Vec<std::net::SocketAd
     }
 }
 
+/// The user's own SOCKS5 server (`ssh -D`, a VPN client's local port), set from Settings.
+static UPSTREAM: RwLock<Option<(String, u16)>> = RwLock::new(None);
+
+pub fn upstream() -> Option<(String, u16)> {
+    UPSTREAM.read().ok()?.clone()
+}
+
+/// `socks5://host:port` (the scheme is optional); empty turns it off.
+#[tauri::command]
+pub fn net_set_upstream(url: Option<String>) -> Result<(), String> {
+    let parsed = match url.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        None => None,
+        Some(u) => {
+            let rest = u.strip_prefix("socks5://").unwrap_or(u).trim_end_matches('/');
+            let (h, p) = rest.rsplit_once(':').ok_or("Адрес вида socks5://127.0.0.1:1080")?;
+            let port: u16 = p.parse().map_err(|_| "Порт должен быть числом")?;
+            if h.is_empty() {
+                return Err("Не указан хост".into());
+            }
+            Some((h.to_string(), port))
+        }
+    };
+    if let Ok(mut s) = UPSTREAM.write() {
+        *s = parsed;
+    }
+    Ok(())
+}
+
+/// Opens a tunnel to host:port through the SOCKS5 server; the server resolves the name itself.
+fn socks5_connect(proxy_host: &str, proxy_port: u16, host: &str, port: u16) -> std::io::Result<TcpStream> {
+    let addr = (proxy_host, proxy_port).to_socket_addrs()?.next().ok_or_else(|| std::io::Error::other("upstream: no address"))?;
+    let mut s = TcpStream::connect_timeout(&addr, Duration::from_secs(7))?;
+    s.set_read_timeout(Some(Duration::from_secs(15)))?;
+    s.write_all(&[5, 1, 0])?;
+    let mut greet = [0u8; 2];
+    s.read_exact(&mut greet)?;
+    if greet != [5, 0] {
+        return Err(std::io::Error::other("upstream: server wants authentication"));
+    }
+    let name = host.as_bytes();
+    if name.len() > 255 {
+        return Err(std::io::Error::other("upstream: host name too long"));
+    }
+    let mut req = vec![5, 1, 0, 3, name.len() as u8];
+    req.extend_from_slice(name);
+    req.extend_from_slice(&port.to_be_bytes());
+    s.write_all(&req)?;
+    let mut head = [0u8; 4];
+    s.read_exact(&mut head)?;
+    if head[1] != 0 {
+        return Err(std::io::Error::other(format!("upstream: connect to {host}:{port} refused, code {}", head[1])));
+    }
+    let bound = match head[3] {
+        1 => 4 + 2,
+        4 => 16 + 2,
+        3 => {
+            let mut len = [0u8; 1];
+            s.read_exact(&mut len)?;
+            len[0] as usize + 2
+        }
+        _ => return Err(std::io::Error::other("upstream: bad reply address")),
+    };
+    let mut skip = vec![0u8; bound];
+    s.read_exact(&mut skip)?;
+    s.set_read_timeout(None)?;
+    Ok(s)
+}
+
 /// First reachable address, IPv4 first (a dead IPv6 route would stall every tunnel).
 fn connect(host: &str, port: u16) -> std::io::Result<TcpStream> {
+    if let Some((proxy_host, proxy_port)) = upstream() {
+        return socks5_connect(&proxy_host, proxy_port, host, port);
+    }
     let mut addrs = resolve_host(host, port)?;
     addrs.sort_by_key(|a| a.is_ipv6());
     let mut last = std::io::Error::other("no address");

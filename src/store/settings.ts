@@ -19,6 +19,8 @@ export interface Settings {
   youtubeApiKey: string;
   /** Yandex Music OAuth token, entered in Settings (kept on this device only). */
   yandexToken: string;
+  /** Desktop: your own SOCKS5 server (ssh -D, a VPN client), e.g. socks5://127.0.0.1:1080. Empty: direct. */
+  upstreamProxy: string;
   /** Built-in DPI bypass (platform/dpi.ts). */
   bypass: { enabled: boolean; services: Record<'youtube' | 'soundcloud' | 'deezer' | 'yandex', { preset: 'off' | 'tlsrec' | 'split' | 'disorder' | 'strong' | 'custom'; custom: string }> };
   region: string;
@@ -53,6 +55,7 @@ export const useSettings = create<Settings>()(
       sources: { soundcloud: true, youtube: true, deezer: true, yandex: true },
       youtubeApiKey: '',
       yandexToken: '',
+      upstreamProxy: '',
       bypass: {
         enabled: false,
         services: {

@@ -57,6 +57,10 @@ fn agent() -> ureq::Agent {
         if let Ok(p) = ureq::Proxy::new(format!("socks5://127.0.0.1:{port}")) {
             b = b.proxy(p);
         }
+    } else if let Some((host, port)) = crate::dpi::upstream() {
+        if let Ok(p) = ureq::Proxy::new(format!("socks5://{host}:{port}")) {
+            b = b.proxy(p);
+        }
     }
     b.build()
 }
