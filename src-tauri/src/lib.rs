@@ -6,6 +6,17 @@ mod media_proxy;
 mod pot;
 mod tray;
 
+/// Frontend console lines (src/platform/logs.ts) written to the same terminal as the Rust logs.
+#[tauri::command]
+fn log_line(level: String, msg: String) {
+  match level.as_str() {
+    "error" => log::error!(target: "web", "{msg}"),
+    "warn" => log::warn!(target: "web", "{msg}"),
+    "debug" => log::debug!(target: "web", "{msg}"),
+    _ => log::info!(target: "web", "{msg}"),
+  }
+}
+
 use tauri::Manager;
 
 /// Windows: ask WebView2 to trim memory while the window is minimised / hidden
@@ -32,12 +43,14 @@ pub fn run() {
     .plugin(tauri_plugin_http::init())
     .plugin(tauri_plugin_opener::init())
     .manage(discord::Discord::start())
-    .invoke_handler(tauri::generate_handler![cast::cast_discover, cast::cast_connect, cast::cast_disconnect, cast::cast_load, cast::cast_play, cast::cast_seek, cast::cast_volume, tray::tray_update, tray::tray_close_to_tray, tray::tray_available, audio_devices::audio_devices_watch, discord::discord_set, discord::discord_clear, dpi::dpi_configure, dpi::dpi_probe, media_proxy::media_proxy_base, pot::pot_mint])
+    .invoke_handler(tauri::generate_handler![log_line, cast::cast_discover, cast::cast_connect, cast::cast_disconnect, cast::cast_load, cast::cast_play, cast::cast_seek, cast::cast_volume, tray::tray_update, tray::tray_close_to_tray, tray::tray_available, audio_devices::audio_devices_watch, discord::discord_set, discord::discord_clear, dpi::dpi_configure, dpi::dpi_probe, media_proxy::media_proxy_base, pot::pot_mint])
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()
-            .level(log::LevelFilter::Info)
+            .level(log::LevelFilter::Debug)
+            // Everything from our crate and the libraries it uses at debug level, in the terminal.
+            .level_for("sonara_lib", log::LevelFilter::Debug)
             .build(),
         )?;
       }

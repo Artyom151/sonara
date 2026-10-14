@@ -26,9 +26,32 @@ const stamp = () => {
   return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${p(d.getMilliseconds(), 3)}`;
 };
 
+// Dev desktop builds: every line also goes to the terminal running `pnpm desktop:dev`, batched
+// (one IPC call per burst instead of one per line).
+const toTerminal = import.meta.env.DEV && typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+let pending: { level: string; msg: string }[] = [];
+let flushing: ReturnType<typeof setTimeout> | undefined;
+function forward(level: string, msg: string) {
+  pending.push({ level, msg });
+  if (flushing) return;
+  flushing = setTimeout(async () => {
+    flushing = undefined;
+    const batch = pending;
+    pending = [];
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      for (const l of batch) await invoke('log_line', { level: l.level, msg: l.msg });
+    } catch {
+      /* the terminal is gone: nothing to do */
+    }
+  }, 150);
+}
+
 function record(level: string, args: unknown[]) {
-  lines.push(`${stamp()} ${level.toUpperCase().padEnd(5)} ${args.map(fmt).join(' ')}`);
+  const msg = args.map(fmt).join(' ');
+  lines.push(`${stamp()} ${level.toUpperCase().padEnd(5)} ${msg}`);
   if (lines.length > MAX) lines.splice(0, lines.length - MAX);
+  if (toTerminal) forward(level, msg);
 }
 
 /** Wrap console once (a hot reload must not wrap it twice). */
