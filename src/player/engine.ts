@@ -35,6 +35,7 @@ let switching = false;
 const resetSource = () => {
   hls?.destroy();
   hls = null;
+  if (blobUrl) console.info(`[player] revoke ${blobUrl.slice(-8)} (source reset, token ${loadToken})`);
   if (blobUrl) URL.revokeObjectURL(blobUrl);
   blobUrl = null;
 };
@@ -67,6 +68,7 @@ async function attach(url: string, kind: 'progressive' | 'hls') {
     hls.attachMedia(audio);
     return;
   }
+  console.info(`[player] attach ${kind} ${url.slice(0, 24)}… token ${loadToken}`);
   audio.src = url;
 }
 
@@ -220,6 +222,7 @@ audio.addEventListener('pause', () => {
 audio.addEventListener('error', () => {
   const t = usePlayer.getState().current();
   if (!t || t.key !== loadedKey || !audio.src) return;
+  console.warn(`[player] element error on ${audio.src.slice(0, 24)}…: code ${audio.error?.code}, ${audio.error?.message}, readyState ${audio.readyState}, networkState ${audio.networkState}, blobUrl ${blobUrl ? blobUrl.slice(-8) : 'none'}, localKey ${localKey ? 'yes' : 'no'}`);
   if (localKey === t.key) return brokenDownload(t, usePlayer.getState().playing, audio.currentTime, new Error(audio.error?.message || 'Playback error'));
   // Android: retry through the native fetch. Desktop never does (megabytes over IPC freeze the page).
   if (isYouTubeAudio(t) && nativeFetch && !isTauri && !blobUrl) {
