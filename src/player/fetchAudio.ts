@@ -97,6 +97,7 @@ async function downloadHls(url: string, fetcher: Fetcher, onProgress?: (p: numbe
   const segs = text.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
   if (!segs.length) throw new Error('empty playlist');
   const parts: ArrayBuffer[] = [];
+  console.info(`[hls] ${segs.length} segments, init ${init ? 'yes' : 'no'}, first ${segs[0].slice(-60)}`);
   if (init) parts.push(await hlsPiece(fetcher, abs(init)));
   for (let i = 0; i < segs.length; i++) {
     parts.push(await hlsPiece(fetcher, abs(segs[i])));

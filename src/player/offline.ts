@@ -99,7 +99,9 @@ async function fetchArt(url?: string): Promise<Blob | undefined> {
 
 async function downloadOne(track: Track) {
   const setProgress = (p: number) => useOffline.setState((s) => ({ queue: s.queue.map((j) => (j.track.key === track.key ? { ...j, progress: p } : j)) }));
-  const audio = await fetchAudioFile(await api.stream(track), setProgress);
+  const info = await api.stream(track);
+  console.info(`[offline] ${track.source} ${info.kind} mime ${info.mime ?? 'none'} for ${track.title}`);
+  const audio = await fetchAudioFile(info, setProgress);
   // A 30-second preview is not worth keeping as "offline".
   if (audio.size < 64 * 1024) throw new Error(`file too small: ${audio.size} bytes (${audio.type || 'no type'})`);
   if (!(await looksLikeAudio(audio))) throw new Error(`not an audio file: ${audio.size} bytes, ${audio.type || 'no type'}`);
