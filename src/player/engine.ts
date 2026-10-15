@@ -334,6 +334,8 @@ usePlayer.subscribe((s, prev) => {
   if (cur?.key !== prevKey) {
     prevKey = cur?.key;
     if (cur && s.playing) load(cur, true);
+    // Paused and the track changed (shuffle, queue edits): the old position must not carry over.
+    else if (cur && s.position !== 0) usePlayer.setState({ position: 0 });
     else if (!cur) {
       audio.pause();
       resetSource();
