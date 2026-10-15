@@ -13,6 +13,7 @@ import { continueQueue, wantsContinuation } from './autoplay';
 import { castSeek, castSetPlaying, castSetVolume, castTrack, isCasting } from './cast';
 import { initOffline, isDownloaded, offlineBlob, offlinePlayback, removeDownload } from './offline';
 import { useStats } from '../store/stats';
+import { useEq } from './equalizer';
 import { useSleep } from './sleep';
 
 void initOffline();
@@ -112,6 +113,7 @@ async function load(track: Track, autoplay: boolean, startAt = 0) {
   }
   const token = ++loadToken;
   rateEngine.stop();
+  useEq.getState().followTrack(track);
   if (loadedKey !== track.key) retried.delete(track.key);
   loadedKey = track.key;
   usePlayer.getState().patch({ loading: true, error: null, buffered: 0, duration: track.duration || 0 });

@@ -12,6 +12,7 @@ export function EqPanel() {
   const eq = useEq();
   const device = useAudioDevice((s) => s.current);
   const presets: { value: EqPresetId; label: string }[] = [
+    { value: 'adaptive', label: t('eq_adaptive') },
     ...(Object.keys(EQ_PRESETS) as (keyof typeof EQ_PRESETS)[]).map((k) => ({ value: k as EqPresetId, label: t(`eq_${k}` as 'eq_flat') })),
     ...(eq.preset === 'custom' ? [{ value: 'custom' as EqPresetId, label: t('eq_custom') }] : []),
   ];
@@ -36,6 +37,7 @@ export function EqPanel() {
                 onChange={(v) => v !== 'custom' && eq.setPreset(v)}
               />
             </div>
+            {eq.preset === 'adaptive' && <div className="eq-adaptive-hint">{eq.resolved ? `${t('eqAdaptiveNow')}: ${t(`eq_${eq.resolved}` as 'eq_flat')}` : t('eqAdaptiveHint')}</div>}
             <div className="eq-bands" role="group" aria-label={t('equalizer')}>
               {EQ_FREQS.map((f, i) => (
                 <label key={f} className="eq-band">

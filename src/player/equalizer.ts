@@ -2,10 +2,11 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useAudioDevice } from '../platform/audioDevices';
 import { ensureGraph, getGraph } from './audioGraph';
-import { BANDS, deviceKey, EQ_PRESETS, EQ_RANGE, type EqPresetId } from './eqCurves';
+import type { Track } from '../core/types';
+import { adaptivePreset, BANDS, deviceKey, EQ_PRESETS, EQ_RANGE, type EqPresetId, type FixedPresetId } from './eqCurves';
 
 export { BANDS, deviceKey, EQ_PRESETS, EQ_RANGE };
-export type { EqPresetId };
+export type { EqPresetId, FixedPresetId };
 
 /**
  * Ten-band equalizer (31 Hz … 16 kHz, ±12 dB) with a preamp, presets and a saved profile per
@@ -24,7 +25,11 @@ interface EqState extends EqCurve {
   /** Remember the curve for the connected headphones and restore it on their next connection. */
   perDevice: boolean;
   setEnabled: (v: boolean) => void;
+  /** Adaptive: the preset that matches the track playing now (null when not adaptive). */
+  resolved: FixedPresetId | null;
   setPreset: (p: Exclude<EqPresetId, 'custom'>) => void;
+  /** Adaptive mode: pick the curve for this track. */
+  followTrack: (t: Track) => void;
   setBand: (i: number, db: number) => void;
   setPreamp: (db: number) => void;
   setPerDevice: (v: boolean) => void;
@@ -32,6 +37,8 @@ interface EqState extends EqCurve {
 }
 
 const clamp = (v: number) => Math.max(-EQ_RANGE, Math.min(EQ_RANGE, v));
+/** The preamp drops with the boost of a preset so it does not clip. */
+const presetPreamp = (p: FixedPresetId) => (p === 'flat' ? 0 : -Math.max(...EQ_PRESETS[p]) / 2);
 
 export const useEq = create<EqState>()(
   persist(
@@ -43,7 +50,16 @@ export const useEq = create<EqState>()(
       profiles: {},
       perDevice: true,
       setEnabled: (enabled) => set({ enabled }),
-      setPreset: (p) => set({ preset: p, gains: EQ_PRESETS[p].slice(), preamp: p === 'flat' ? 0 : -Math.max(...EQ_PRESETS[p]) / 2 }),
+      resolved: null,
+      setPreset: (p) => {
+        if (p === 'adaptive') return set({ preset: 'adaptive', resolved: null });
+        set({ preset: p, resolved: null, gains: EQ_PRESETS[p].slice(), preamp: presetPreamp(p) });
+      },
+      followTrack: (t) => {
+        if (get().preset !== 'adaptive') return;
+        const p = adaptivePreset([t.genre, ...(t.tags ?? [])]);
+        set({ resolved: p, gains: EQ_PRESETS[p].slice(), preamp: presetPreamp(p) });
+      },
       setBand: (i, db) =>
         set((s) => {
           const gains = s.gains.slice();
