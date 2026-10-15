@@ -830,3 +830,9 @@ button.link:hover {
 .stats-top { list-style: none; margin: 0; padding: 0; }
 .stats-top li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid rgba(127, 127, 127, 0.18); }
 .stats-top li small { opacity: 0.6; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* Full-screen player footer: the buttons shrink with the window instead of being cut off at the edges. */
+.player-foot { gap: clamp(4px, 2vw, 10px); min-width: 0; }
+.player-foot .ctl,
+.np-rate .ctl { width: clamp(32px, 10.5vw, 44px); height: clamp(32px, 10.5vw, 44px); flex-shrink: 0; }
+.player-foot-group { flex: 1; min-width: 0; display: flex; justify-content: center; gap: clamp(2px, 1.5vw, 8px); }

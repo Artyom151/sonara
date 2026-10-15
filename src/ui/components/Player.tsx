@@ -464,7 +464,7 @@ export function Player() {
                 {showLine && lyrics?.synced && !desktop ? (
                   <LyricPill lyrics={lyrics} onOpen={() => open({ type: 'lyrics' })} />
                 ) : (
-                  <div style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: 8 }}>
+                  <div className="player-foot-group">
                     <button className={`ctl ${repeat !== 'off' ? 'on' : 'dim'}`} aria-label={t('repeat')} onClick={() => usePlayer.getState().cycleRepeat()}>
                       <IconRepeat size={20} one={repeat === 'one'} />
                     </button>
