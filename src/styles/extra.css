@@ -808,3 +808,25 @@ button.link:hover {
 .island-chip i {
   font-style: normal;
 }
+
+/* Playback speed in the full-screen player (ui/components/Player.tsx). */
+.np-rate { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 10px; }
+.np-rate button:disabled { opacity: 0.3; }
+.np-rate-sign { font-size: 22px; line-height: 1; }
+.np-rate-value { font: inherit; font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 600; min-width: 64px; padding: 4px 10px; border-radius: 12px; background: rgba(127, 127, 127, 0.16); color: inherit; border: 0; cursor: pointer; }
+
+/* Listening statistics on the profile (ui/components/ListeningStats.tsx). */
+.stats-empty { opacity: 0.6; margin: 4px 0 0; }
+.stats-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stats-tile { padding: 12px 10px; border-radius: 18px; text-align: center; display: flex; flex-direction: column; gap: 4px; }
+.stats-tile b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.stats-tile small { opacity: 0.6; font-size: 12px; }
+.stats-bars { margin-top: 12px; padding: 14px 12px 10px; border-radius: 18px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; }
+.stats-day { display: flex; flex-direction: column; align-items: center; gap: 6px; height: 110px; }
+.stats-bar-track { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
+.stats-bar { width: 70%; min-height: 2px; border-radius: 6px; background: var(--accent); }
+.stats-day small { opacity: 0.6; font-size: 11px; text-transform: capitalize; }
+.stats-subhead { margin: 14px 0 6px; font-size: 15px; }
+.stats-top { list-style: none; margin: 0; padding: 0; }
+.stats-top li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid rgba(127, 127, 127, 0.18); }
+.stats-top li small { opacity: 0.6; white-space: nowrap; font-variant-numeric: tabular-nums; }

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { goToArtist } from '../artists';
 import { api } from '../../core';
 import type { Lyrics, Track } from '../../core/types';
-import { seek, setVolume, togglePlay } from '../../player/engine';
+import { seek, setRate, setVolume, togglePlay } from '../../player/engine';
 import { useLibrary } from '../../store/library';
 import { usePlayer } from '../../store/player';
 import { useSettings } from '../../store/settings';
@@ -277,6 +277,7 @@ export function Player() {
   const loading = usePlayer((s) => s.loading);
   const shuffle = usePlayer((s) => s.shuffle);
   const volume = usePlayer((s) => s.volume);
+  const rate = usePlayer((s) => s.rate);
   const repeat = usePlayer((s) => s.repeat);
   const liked = useLibrary((s) => (track ? s.likes.some((x) => x.key === track.key) : false));
   const disliked = useLibrary((s) => (track ? s.dislikes.includes(track.key) : false));
@@ -441,6 +442,17 @@ export function Player() {
                         </button>
                       }
                     />
+                  </div>
+                  <div className="np-rate">
+                    <button className="ctl dim" aria-label={t('speedDown')} onClick={() => setRate(rate - 0.05)} disabled={rate <= 0.5}>
+                      <span className="np-rate-sign">−</span>
+                    </button>
+                    <button className="np-rate-value" onClick={() => setRate(1)} title={t('speedReset')} aria-label={t('speedReset')}>
+                      {rate.toFixed(2)}×
+                    </button>
+                    <button className="ctl dim" aria-label={t('speedUp')} onClick={() => setRate(rate + 0.05)} disabled={rate >= 1.5}>
+                      <span className="np-rate-sign">+</span>
+                    </button>
                   </div>
                 </div>
               </div>

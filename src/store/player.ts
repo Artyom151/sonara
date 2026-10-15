@@ -25,6 +25,8 @@ interface PlayerState {
   shuffle: boolean;
   repeat: Repeat;
   volume: number;
+  /** Playback speed, 0.5 to 1.5; pitch follows the speed (like a record), see engine setRate. */
+  rate: number;
   error: string | null;
   expanded: boolean;
   current: () => Track | undefined;
@@ -65,6 +67,7 @@ export const usePlayer = create<PlayerState>()(
       shuffle: false,
       repeat: 'off',
       volume: 1,
+      rate: 1,
       error: null,
       expanded: false,
       current: () => get().queue[get().index],
@@ -139,6 +142,7 @@ export const usePlayer = create<PlayerState>()(
         shuffle: s.shuffle,
         repeat: s.repeat,
         volume: s.volume,
+        rate: s.rate,
         position: s.position,
       }),
     },

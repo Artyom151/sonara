@@ -11,6 +11,7 @@ import { audioMime, downloadRanged, mediaProxyBase, PROXIED, YT_UA } from './fet
 import { continueQueue, wantsContinuation } from './autoplay';
 import { castSeek, castSetPlaying, castSetVolume, castTrack, isCasting } from './cast';
 import { initOffline, isDownloaded, offlinePlayback, removeDownload } from './offline';
+import { useStats } from '../store/stats';
 import { useSleep } from './sleep';
 
 void initOffline();
@@ -65,6 +66,7 @@ async function attach(url: string, kind: 'progressive' | 'hls') {
   switching = true;
   setTimeout(() => (switching = false), 0);
   resetSource();
+  applyRate(usePlayer.getState().rate);
   if (kind === 'hls' && !audio.canPlayType('application/vnd.apple.mpegurl')) {
     const { default: HlsCtor } = await import('hls.js');
     hls = new HlsCtor({ enableWorker: true });
@@ -201,7 +203,36 @@ function onUnavailable(track: Track, e: Error) {
   if (useSettings.getState().skipUnavailable && st.index + 1 < st.queue.length) setTimeout(() => usePlayer.getState().next(true), 400);
 }
 
-audio.addEventListener('timeupdate', () => usePlayer.getState().patch({ position: audio.currentTime }));
+audio.addEventListener('timeupdate', () => {
+  usePlayer.getState().patch({ position: audio.currentTime });
+  trackListening();
+});
+
+// Listening statistics: media seconds heard while playing. Jumps (seeks) are not listening.
+let statKey = '';
+let statPos = 0;
+let statSum = 0;
+let statCounted = false;
+function trackListening() {
+  const cur = usePlayer.getState().current();
+  const now = audio.currentTime;
+  if (!cur || audio.paused || cur.key !== statKey) {
+    statKey = cur?.key ?? '';
+    statSum = 0;
+    statCounted = false;
+    statPos = now;
+    return;
+  }
+  const d = now - statPos;
+  statPos = now;
+  if (d <= 0 || d > 2) return;
+  useStats.getState().add(cur.artist, d);
+  statSum += d;
+  if (!statCounted && statSum >= 30) {
+    statCounted = true;
+    useStats.getState().countPlay(cur.artist);
+  }
+}
 audio.addEventListener('durationchange', () => {
   // Streams without a known length report 0 or Infinity: keep the catalogue duration then.
   if (Number.isFinite(audio.duration) && audio.duration > 0) usePlayer.getState().patch({ duration: audio.duration });
@@ -281,6 +312,19 @@ export const setVolume = (v: number) => {
   usePlayer.getState().patch({ volume: v });
 };
 
+/** Speed in steps of 0.05 between 0.5 and 1.5. Pitch changes with it, as on a record. */
+export const setRate = (r: number) => {
+  const rate = Math.min(1.5, Math.max(0.5, Math.round(r * 20) / 20));
+  applyRate(rate);
+  usePlayer.getState().patch({ rate });
+};
+
+function applyRate(rate: number) {
+  audio.preservesPitch = false;
+  (audio as HTMLMediaElement & { webkitPreservesPitch?: boolean }).webkitPreservesPitch = false;
+  audio.playbackRate = rate;
+}
+
 // React to store changes — edge-triggered: only a change of track or of `playing` acts on the element.
 let prevKey: string | undefined;
 usePlayer.subscribe((s, prev) => {
@@ -318,6 +362,7 @@ usePlayer.subscribe((s, prev) => {
   const s = usePlayer.getState();
   prevKey = s.queue[s.index]?.key;
   audio.volume = s.volume;
+  applyRate(s.rate);
   usePlayer.setState({ playing: false, loading: false });
 }
 

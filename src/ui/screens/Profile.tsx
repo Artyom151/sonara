@@ -3,6 +3,7 @@ import { useAccount } from '../../account/store';
 import { useLibrary } from '../../store/library';
 import { useUi } from '../../store/ui';
 import { Avatar } from '../components/Avatar';
+import { ListeningStats } from '../components/ListeningStats';
 import { TrackList } from '../components/TrackRow';
 import { useT } from '../i18n';
 import { IconGear, IconPencil, IconPerson } from '../icons';
@@ -79,6 +80,7 @@ export function Profile() {
           </div>
         </div>
       </div>
+      <ListeningStats />
       {recent.length > 0 && (
         <section className="section">
           <div className="section-head">
