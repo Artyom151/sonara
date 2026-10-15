@@ -5,6 +5,7 @@ import { api } from '../../core';
 import type { Lyrics, Track } from '../../core/types';
 import { seek, setRate, setVolume, togglePlay } from '../../player/engine';
 import { useLibrary } from '../../store/library';
+import { likePulse } from '../../player/likePulse';
 import { usePlayer } from '../../store/player';
 import { useSettings } from '../../store/settings';
 import { useUi } from '../../store/ui';
@@ -269,6 +270,7 @@ function LyricPill({ lyrics, onOpen }: { lyrics: Lyrics | null | undefined; onOp
 }
 
 export function Player() {
+  const lastArtTap = useRef(0);
   const t = useT();
   const expanded = usePlayer((s) => s.expanded);
   const track = usePlayer((s) => s.queue[s.index]);
@@ -376,6 +378,14 @@ export function Player() {
                     onDragEnd={(_, info) => {
                       if (info.offset.x < -80) usePlayer.getState().next();
                       else if (info.offset.x > 80) usePlayer.getState().prev();
+                    }}
+                    // Double tap on the cover likes the track (a single tap does nothing here).
+                    onTap={() => {
+                      const now = performance.now();
+                      if (now - lastArtTap.current > 320) return void (lastArtTap.current = now);
+                      lastArtTap.current = 0;
+                      likePulse.at = now;
+                      useLibrary.getState().toggleLike(track);
                     }}
                   >
                     <Art src={track.artworkLarge ?? track.artwork} seed={track.key} />
