@@ -199,8 +199,8 @@ function onUnavailable(track: Track, e: Error) {
   console.warn('[player]', track.title, e);
   const st = usePlayer.getState();
   st.patch({ loading: false, error: e.message });
-  toast(`«${track.title}» — ${navigator.language.startsWith('ru') ? 'недоступен' : 'unavailable'}`);
-  pushNotice({ kind: 'warn', text: tr('Track unavailable', 'Трек недоступен'), detail: track.title });
+  if (useSettings.getState().islandPlayer) pushNotice({ kind: 'warn', text: tr('Track unavailable', 'Трек недоступен'), detail: track.title });
+  else toast(`«${track.title}» — ${navigator.language.startsWith('ru') ? 'недоступен' : 'unavailable'}`);
   if (useSettings.getState().skipUnavailable && st.index + 1 < st.queue.length) setTimeout(() => usePlayer.getState().next(true), 400);
 }
 

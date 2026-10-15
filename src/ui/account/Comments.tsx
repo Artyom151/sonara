@@ -19,6 +19,20 @@ const ago = (iso: string, ru: boolean) => {
   return f(s / 86400, 'd', 'д');
 };
 
+/** Top-level comments newest first, each followed by its replies oldest first (orphans stay top-level). */
+function threaded(items: Comment[]) {
+  const ids = new Set(items.map((c) => c.id));
+  return items
+    .filter((c) => !c.parentId || !ids.has(c.parentId))
+    .flatMap((c) => [
+      { c, reply: false },
+      ...items
+        .filter((r) => r.parentId === c.id)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+        .map((r) => ({ c: r, reply: true })),
+    ]);
+}
+
 /** Comments for a track, live-updating (Supabase Realtime or local events in mock mode). */
 export function useComments(trackKey?: string) {
   const provider = useAccount((s) => s.provider);
@@ -56,6 +70,7 @@ export function CommentsPanel({ compact }: { compact?: boolean }) {
   const { items, loading, error, setItems } = useComments(track?.key);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [replyTo, setReplyTo] = useState<Comment | null>(null);
 
   if (!track) return null;
 
@@ -64,9 +79,10 @@ export function CommentsPanel({ compact }: { compact?: boolean }) {
     if (!body || !profile || sending) return;
     setSending(true);
     try {
-      const c = await provider().comments.post(profile, track.key, body.slice(0, 500), Math.floor(position));
+      const c = await provider().comments.post(profile, track.key, body.slice(0, 500), Math.floor(position), replyTo?.id ?? null);
       setItems((list) => (list.some((x) => x.id === c.id) ? list : [c, ...list]));
       setText('');
+      setReplyTo(null);
     } catch (e) {
       toast((e as Error).message === 'comments_not_setup' ? t('commentsNotSetup') : t('errNetwork'));
     } finally {
@@ -90,11 +106,11 @@ export function CommentsPanel({ compact }: { compact?: boolean }) {
           </div>
         )}
         <AnimatePresence initial={false}>
-          {items.map((c) => (
+          {threaded(items).map(({ c, reply }) => (
             <motion.div
               key={c.id}
               layout
-              className="comment"
+              className={`comment ${reply ? 'comment-reply' : ''}`}
               initial={{ opacity: 0, y: -10, scale: 0.97 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, x: 40, transition: { duration: 0.2 } }}
@@ -108,9 +124,16 @@ export function CommentsPanel({ compact }: { compact?: boolean }) {
                   <span>· {ago(c.createdAt, ru)}</span>
                 </div>
                 <p>{c.body}</p>
-                <button className="comment-time" onClick={() => seek(c.position)}>
-                  {fmtTime(c.position)}
-                </button>
+                <div className="comment-actions">
+                  <button className="comment-time" onClick={() => seek(c.position)}>
+                    {fmtTime(c.position)}
+                  </button>
+                  {profile && !reply && (
+                    <button className="comment-reply-btn" onClick={() => setReplyTo(c)}>
+                      {t('reply')}
+                    </button>
+                  )}
+                </div>
               </div>
               {profile?.id === c.author.id && (
                 <button
@@ -130,6 +153,17 @@ export function CommentsPanel({ compact }: { compact?: boolean }) {
           ))}
         </AnimatePresence>
       </div>
+
+      {profile && replyTo && (
+        <div className="composer-reply">
+          <span>
+            {t('replyingTo')} @{replyTo.author.username}
+          </span>
+          <button type="button" onClick={() => setReplyTo(null)} aria-label={t('cancelReply')}>
+            ×
+          </button>
+        </div>
+      )}
 
       {profile ? (
         <form

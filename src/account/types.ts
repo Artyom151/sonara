@@ -16,6 +16,8 @@ export interface Comment {
   /** Seconds into the track. */
   position: number;
   createdAt: string;
+  /** The comment this one answers (replies are one level deep); null for a top-level comment. */
+  parentId?: string | null;
   author: Pick<Profile, 'id' | 'username' | 'displayName' | 'avatar'>;
 }
 
@@ -67,7 +69,7 @@ export interface AccountProvider {
   };
   comments: {
     list(trackKey: string): Promise<Comment[]>;
-    post(author: Profile, trackKey: string, body: string, position: number): Promise<Comment>;
+    post(author: Profile, trackKey: string, body: string, position: number, parentId?: string | null): Promise<Comment>;
     remove(id: string): Promise<void>;
     /** Live inserts/deletes for a track; returns an unsubscribe function. */
     subscribe(trackKey: string, onChange: () => void): () => void;

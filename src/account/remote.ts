@@ -188,7 +188,7 @@ export function remoteProvider(sb: SupabaseClient): AccountProvider {
       async list(trackKey) {
         const { data, error } = await sb
           .from('comments')
-          .select('id, track_key, body, position, created_at, author:profiles(id, username, display_name, avatar)')
+          .select('id, track_key, body, position, created_at, parent_id, author:profiles(id, username, display_name, avatar)')
           .eq('track_key', trackKey)
           .order('created_at', { ascending: false })
           .limit(200);
@@ -200,16 +200,17 @@ export function remoteProvider(sb: SupabaseClient): AccountProvider {
             body: r.body,
             position: r.position,
             createdAt: r.created_at,
+            parentId: r.parent_id ?? null,
             author: r.author
               ? { id: r.author.id, username: r.author.username, displayName: r.author.display_name || r.author.username, avatar: r.author.avatar }
               : { id: '', username: 'user', displayName: 'User', avatar: 'preset:0' },
           }),
         );
       },
-      async post(author, trackKey, body, position) {
+      async post(author, trackKey, body, position, parentId = null) {
         const { data, error } = await sb
           .from('comments')
-          .insert({ track_key: trackKey, user_id: author.id, body, position })
+          .insert({ track_key: trackKey, user_id: author.id, body, position, parent_id: parentId })
           .select('id, created_at')
           .single();
         if (error) throw new Error(error.code === 'PGRST205' ? 'comments_not_setup' : error.message);
@@ -219,6 +220,7 @@ export function remoteProvider(sb: SupabaseClient): AccountProvider {
           body,
           position,
           createdAt: data.created_at,
+          parentId,
           author: { id: author.id, username: author.username, displayName: author.displayName, avatar: author.avatar },
         };
       },

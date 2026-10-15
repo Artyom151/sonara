@@ -13,6 +13,8 @@ import com.google.android.gms.cast.MediaMetadata;
 import com.google.android.gms.cast.MediaSeekOptions;
 import com.google.android.gms.cast.MediaStatus;
 import com.google.android.gms.cast.framework.CastContext;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.cast.framework.CastSession;
 import com.google.android.gms.cast.framework.SessionManager;
 import com.google.android.gms.cast.framework.SessionManagerListener;
@@ -53,6 +55,9 @@ public class CastPlugin extends Plugin {
         @Override public void onSessionSuspended(CastSession s, int reason) {}
     };
 
+    /** Why the Cast SDK could not start (shown to the user as the notice detail). */
+    private String reason = "";
+
     private boolean ensure() {
         if (sessions != null) return true;
         try {
@@ -61,6 +66,8 @@ public class CastPlugin extends Plugin {
             sessions.addSessionManagerListener(listener, CastSession.class);
             return true;
         } catch (Exception | LinkageError e) {
+            int play = GoogleApiAvailability.getInstance().isGooglePlayServicesAvailable(getContext());
+            reason = (play == ConnectionResult.SUCCESS ? "" : "play services " + play + "; ") + e.getClass().getSimpleName() + (e.getMessage() != null ? ": " + e.getMessage() : "");
             return false;
         }
     }
@@ -124,7 +131,7 @@ public class CastPlugin extends Plugin {
     @PluginMethod
     public void pick(PluginCall call) {
         if (!ensure()) {
-            call.reject("unavailable");
+            call.reject("unavailable: " + reason);
             return;
         }
         getActivity().runOnUiThread(() -> {

@@ -153,13 +153,14 @@ export const mockProvider: AccountProvider = {
       // Keep author details current (renames / new avatars).
       return (all[trackKey] ?? []).map((c) => ({ ...c, author: byId.get(c.author.id) ?? c.author })).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
     },
-    async post(author, trackKey, body, position) {
+    async post(author, trackKey, body, position, parentId = null) {
       const all = read<Record<string, Comment[]>>(COMMENTS, {});
       const c: Comment = {
         id: crypto.randomUUID(),
         trackKey,
         body,
         position,
+        parentId,
         createdAt: new Date().toISOString(),
         author: { id: author.id, username: author.username, displayName: author.displayName, avatar: author.avatar },
       };

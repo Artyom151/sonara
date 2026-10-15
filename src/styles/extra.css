@@ -836,3 +836,10 @@ button.link:hover {
 .player-foot .ctl,
 .np-rate .ctl { width: clamp(32px, 10.5vw, 44px); height: clamp(32px, 10.5vw, 44px); flex-shrink: 0; }
 .player-foot-group { flex: 1; min-width: 0; display: flex; justify-content: center; gap: clamp(2px, 1.5vw, 8px); }
+
+/* Replies to comments (ui/account/Comments.tsx). */
+.comment.comment-reply { margin-left: 44px; }
+.comment-actions { display: flex; align-items: center; gap: 12px; }
+.comment-reply-btn { font-size: 12px; opacity: 0.6; background: none; border: 0; color: inherit; padding: 2px 0; cursor: pointer; }
+.composer-reply { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 12px; font-size: 12px; opacity: 0.85; }
+.composer-reply button { background: none; border: 0; color: inherit; font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px; }
