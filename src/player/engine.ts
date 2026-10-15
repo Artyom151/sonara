@@ -314,10 +314,17 @@ export const setVolume = (v: number) => {
 
 /** Speed in steps of 0.05 between 0.5 and 1.5. Pitch changes with it, as on a record. */
 export const setRate = (r: number) => {
+  if (!rateSupported) return;
   const rate = Math.min(1.5, Math.max(0.5, Math.round(r * 20) / 20));
   applyRate(rate);
   usePlayer.getState().patch({ rate });
 };
+
+/**
+ * Playback speed works on Android, Windows and macOS. On Linux (WebKitGTK with GStreamer) any
+ * playbackRate other than 1 stops playback and can crash the web process, so the control is off there.
+ */
+export const rateSupported = /Android/.test(navigator.userAgent) || !/Linux/.test(navigator.userAgent);
 
 /**
  * Speed of the element. A new source starts at defaultPlaybackRate (set here), and the rate itself
@@ -325,6 +332,7 @@ export const setRate = (r: number) => {
  * GStreamer pipeline start in the wrong place and end early.
  */
 function applyRate(rate: number) {
+  if (!rateSupported) return void (audio.playbackRate = 1);
   audio.preservesPitch = false;
   audio.defaultPlaybackRate = rate;
   if (audio.readyState >= 1) audio.playbackRate = rate;

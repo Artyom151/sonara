@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { goToArtist } from '../artists';
 import { api } from '../../core';
 import type { Lyrics, Track } from '../../core/types';
-import { seek, setRate, setVolume, togglePlay } from '../../player/engine';
+import { rateSupported, seek, setRate, setVolume, togglePlay } from '../../player/engine';
 import { useLibrary } from '../../store/library';
 import { usePlayer } from '../../store/player';
 import { useSettings } from '../../store/settings';
@@ -443,6 +443,7 @@ export function Player() {
                       }
                     />
                   </div>
+                  {rateSupported && (
                   <div className="np-rate">
                     <button className="ctl dim" aria-label={t('speedDown')} onClick={() => setRate(rate - 0.05)} disabled={rate <= 0.5}>
                       <span className="np-rate-sign">−</span>
@@ -454,6 +455,7 @@ export function Player() {
                       <span className="np-rate-sign">+</span>
                     </button>
                   </div>
+                  )}
                 </div>
               </div>
 
