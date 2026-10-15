@@ -1,4 +1,5 @@
 import { StrictMode } from 'react';
+import { Component, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/app.css';
 import './styles/controls.css';
@@ -41,9 +42,37 @@ if (isCapacitor) {
   });
 }
 
+/**
+ * A render error used to unmount the whole app and leave a black window. Now the error is logged
+ * and shown with a reload button.
+ */
+class RootBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  state: { error: Error | null } = { error: null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidCatch(error: Error, info: { componentStack?: string | null }) {
+    console.error('[render] crashed:', error, info.componentStack ?? '');
+  }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div style={{ padding: 24, fontFamily: 'monospace', fontSize: 13, color: 'var(--text, #fff)', background: '#000', minHeight: '100vh', boxSizing: 'border-box' }}>
+        <div style={{ fontSize: 17, marginBottom: 12 }}>Sonara crashed while drawing the screen</div>
+        <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', opacity: 0.8 }}>{this.state.error.message}</pre>
+        <button style={{ marginTop: 12, padding: '8px 14px' }} onClick={() => location.reload()}>
+          Reload
+        </button>
+      </div>
+    );
+  }
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <RootBoundary>
+      <App />
+    </RootBoundary>
   </StrictMode>,
 );
 
