@@ -76,6 +76,7 @@ async function attach(url: string, kind: 'progressive' | 'hls') {
   }
   console.info(`[player] attach ${kind} ${url.slice(0, 24)}… token ${loadToken}`);
   audio.src = url;
+  applyRate(usePlayer.getState().rate);
 }
 
 /** Pause the local element without the store hearing about it (its pause event would stop the cast). */
@@ -321,7 +322,8 @@ export const setRate = (r: number) => {
 
 function applyRate(rate: number) {
   audio.preservesPitch = false;
-  (audio as HTMLMediaElement & { webkitPreservesPitch?: boolean }).webkitPreservesPitch = false;
+  // Loading a new source resets playbackRate to defaultPlaybackRate, so both are set.
+  audio.defaultPlaybackRate = rate;
   audio.playbackRate = rate;
 }
 
