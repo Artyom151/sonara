@@ -12,9 +12,10 @@ export interface MomentData {
 }
 
 export const SIZE = 1080;
-export const VIDEO_SECONDS = 4;
-/** Video frames are a quarter of the still's pixels: recording at full size froze the desktop webview. */
-export const VIDEO_SIZE = SIZE / 2;
+export const VIDEO_SECONDS = 3;
+/** Video frames are a ninth of the still's pixels and 12 per second: the recording runs on the device itself, so it must stay light (phones included). */
+export const VIDEO_SIZE = SIZE / 3;
+export const VIDEO_FPS = 12;
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
@@ -159,7 +160,7 @@ export async function cardVideo(d: MomentData): Promise<Blob | null> {
   const backdrop = makeBackdrop(d.art);
   let stream: MediaStream;
   try {
-    stream = c.captureStream(30);
+    stream = c.captureStream(VIDEO_FPS);
   } catch {
     return null;
   }
@@ -178,7 +179,7 @@ export async function cardVideo(d: MomentData): Promise<Blob | null> {
       const t = (performance.now() - start) / 1000;
       if (t >= VIDEO_SECONDS) return resolve();
       drawFrame(ctx, d, t / 1.6, t, backdrop, VIDEO_SIZE / SIZE);
-      setTimeout(frame, 1000 / 15);
+      setTimeout(frame, 1000 / VIDEO_FPS);
     };
     frame();
   });
