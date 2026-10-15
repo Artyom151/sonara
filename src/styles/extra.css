@@ -808,37 +808,3 @@ button.link:hover {
 .island-chip i {
   font-style: normal;
 }
-
-/* Easter egg (ui/components/Party.tsx): confetti falls once, the card sits on top, a tap closes it. */
-.party {
-  position: fixed;
-  inset: 0;
-  z-index: 9000;
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-  background: rgba(0, 0, 0, 0.35);
-  cursor: pointer;
-}
-.party-piece {
-  position: absolute;
-  top: -20px;
-  animation-name: party-fall;
-  animation-timing-function: cubic-bezier(0.25, 0.5, 0.5, 1);
-  animation-fill-mode: both;
-}
-@keyframes party-fall {
-  from { transform: translate(0, 0) rotate(0deg); }
-  to { transform: translate(var(--drift), 110vh) rotate(720deg); }
-}
-.party-card {
-  padding: 22px 28px;
-  border-radius: 24px;
-  text-align: center;
-  color: #fff;
-  background: rgba(28, 28, 30, 0.85);
-  backdrop-filter: blur(20px);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
-}
-.party-title { font-size: 26px; font-weight: 700; }
-.party-sub { margin-top: 6px; font-size: 15px; opacity: 0.75; }

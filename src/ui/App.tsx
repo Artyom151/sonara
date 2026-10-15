@@ -17,7 +17,6 @@ import { TitleBar, isMac } from './desktop/TitleBar';
 import { isTauri } from '../platform';
 import { useDesktop } from './useMedia';
 import { Toasts } from './components/Toast';
-import { PartyLayer } from './components/Party';
 import { IslandPlayer } from './components/IslandPlayer';
 import { UpdateNotice } from './components/UpdateNotice';
 import { Handoff } from './components/Handoff';
@@ -116,7 +115,6 @@ export function App() {
       <Player />
       <Modals />
       <Toasts />
-      <PartyLayer />
       <UpdateNotice />
       <Handoff />
       <AnimatePresence>{splash && <Splash key="splash" onDone={done} />}</AnimatePresence>
