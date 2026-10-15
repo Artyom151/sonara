@@ -925,12 +925,6 @@ button.link:hover {
   opacity: 0.7;
 }
 
-/* Share a moment: live preview sheet (ui/components/MomentSheet.tsx). */
-.moment-scrim { position: fixed; inset: 0; z-index: 9500; background: rgb(0 0 0 / 0.45); display: grid; place-items: center; padding: 16px; }
-.moment-sheet { width: min(92vw, 420px); padding: 16px; border-radius: 24px; display: flex; flex-direction: column; gap: 12px; }
-.moment-title { font-weight: 600; font-size: 15px; }
-.moment-preview { width: 100%; height: auto; border-radius: 16px; background: #0b0b10; display: block; }
-.moment-actions { display: flex; flex-direction: column; gap: 8px; }
 
 /* Buttons in the iOS 26 manner: tall capsules, a wide hit area, a soft glass fill, clear weight. */
 .btn {
@@ -961,5 +955,3 @@ button.link:hover {
   padding: 0 22px;
   font-size: 15px;
 }
-.moment-range { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
-.moment-range input { width: 100%; accent-color: var(--accent); }

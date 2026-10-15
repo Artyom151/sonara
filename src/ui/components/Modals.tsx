@@ -34,7 +34,6 @@ import { EditProfileSheet } from '../account/EditProfileSheet';
 import { CommentsPanel } from '../account/Comments';
 import { SourceMark } from './TrackRow';
 import { openExternal, shareTrack } from './actions';
-import { openMoment } from './MomentSheet';
 import { openArtistPage, splitArtists } from '../artists';
 import { toast } from './Toast';
 
@@ -103,15 +102,6 @@ function TrackMenu({ m }: { m: Extract<Modal, { type: 'track' }> }) {
     { label: liked ? t('unlike') : t('like'), icon: <IconHeart size={18} filled={liked} />, onSelect: () => useLibrary.getState().toggleLike(track), separatorBefore: true },
     { label: t('dislike'), icon: <IconBan size={18} />, checked: disliked, onSelect: () => useLibrary.getState().toggleDislike(track) },
     { label: t('share'), icon: <IconShare size={18} />, onSelect: () => shareTrack(track, t('copied')), separatorBefore: true },
-    {
-      label: t('shareMoment'),
-      icon: <IconShare size={18} />,
-      onSelect: () => {
-        // The current track shares the moment it is at; any other starts from the beginning.
-        const st = usePlayer.getState();
-        openMoment(track, st.current()?.key === track.key ? st.position : 0);
-      },
-    },
     ...(track.url ? [{ label: `${t('openIn')} ${sourceName(track.source)}`, icon: <IconExternal size={18} />, onSelect: () => openExternal(track.url!) }] : []),
     ...(m.playlistId
       ? [{ label: t('removeFromPlaylist'), icon: <IconTrash size={18} />, destructive: true, onSelect: () => useLibrary.getState().removeFromPlaylist(m.playlistId!, track.key) }]
