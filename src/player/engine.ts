@@ -76,7 +76,6 @@ async function attach(url: string, kind: 'progressive' | 'hls') {
   }
   console.info(`[player] attach ${kind} ${url.slice(0, 24)}… token ${loadToken}`);
   audio.src = url;
-  applyRate(usePlayer.getState().rate);
 }
 
 /** Pause the local element without the store hearing about it (its pause event would stop the cast). */
@@ -320,12 +319,17 @@ export const setRate = (r: number) => {
   usePlayer.getState().patch({ rate });
 };
 
+/**
+ * Speed of the element. A new source starts at defaultPlaybackRate (set here), and the rate itself
+ * is applied once the metadata is in: changing it while the source is still loading made WebKit's
+ * GStreamer pipeline start in the wrong place and end early.
+ */
 function applyRate(rate: number) {
   audio.preservesPitch = false;
-  // Loading a new source resets playbackRate to defaultPlaybackRate, so both are set.
   audio.defaultPlaybackRate = rate;
-  audio.playbackRate = rate;
+  if (audio.readyState >= 1) audio.playbackRate = rate;
 }
+audio.addEventListener('loadedmetadata', () => (audio.playbackRate = usePlayer.getState().rate));
 
 // React to store changes — edge-triggered: only a change of track or of `playing` acts on the element.
 let prevKey: string | undefined;
