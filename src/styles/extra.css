@@ -924,3 +924,10 @@ button.link:hover {
   font-size: 12px;
   opacity: 0.7;
 }
+
+/* Share a moment: live preview sheet (ui/components/MomentSheet.tsx). */
+.moment-scrim { position: fixed; inset: 0; z-index: 9500; background: rgb(0 0 0 / 0.45); display: grid; place-items: center; padding: 16px; }
+.moment-sheet { width: min(92vw, 420px); padding: 16px; border-radius: 24px; display: flex; flex-direction: column; gap: 12px; }
+.moment-title { font-weight: 600; font-size: 15px; }
+.moment-preview { width: 100%; height: auto; border-radius: 16px; background: #0b0b10; display: block; }
+.moment-actions { display: flex; flex-direction: column; gap: 8px; }
