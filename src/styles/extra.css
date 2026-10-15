@@ -885,3 +885,15 @@ button.link:hover {
 .island-notice-text small {
   max-width: 100%;
 }
+
+/* Notices are as wide as their text, with the same inset on both sides. */
+.island.is-notice:not(.open) {
+  min-width: 0;
+  width: max-content;
+}
+.island.is-notice.desk:not(.open) {
+  min-width: 0;
+}
+.island-notice {
+  padding: 0 18px;
+}
