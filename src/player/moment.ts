@@ -13,6 +13,8 @@ export interface MomentData {
 
 export const SIZE = 1080;
 export const VIDEO_SECONDS = 4;
+/** Video frames are a quarter of the still's pixels: recording at full size froze the desktop webview. */
+export const VIDEO_SIZE = SIZE / 2;
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
@@ -53,9 +55,11 @@ export function makeBackdrop(art: CanvasImageSource | null): HTMLCanvasElement |
   return c;
 }
 
-export function drawFrame(ctx: CanvasRenderingContext2D, d: MomentData, phase = 0, elapsed = 0, backdrop: HTMLCanvasElement | null = null) {
+/** `k` scales the whole card (the video is drawn at half size to keep recording light). */
+export function drawFrame(ctx: CanvasRenderingContext2D, d: MomentData, phase = 0, elapsed = 0, backdrop: HTMLCanvasElement | null = null, k = 1) {
   const W = SIZE;
   ctx.save();
+  ctx.scale(k, k);
   ctx.fillStyle = '#0b0b10';
   ctx.fillRect(0, 0, W, W);
   if (backdrop) ctx.drawImage(backdrop, 0, 0);
@@ -65,9 +69,12 @@ export function drawFrame(ctx: CanvasRenderingContext2D, d: MomentData, phase = 
   const size = cover * pulse;
   const x = (W - size) / 2;
   const y = 130 + (cover - size) / 2;
+  // A hard dark plate under the cover instead of a blurred shadow (blur per frame is what hangs).
   ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.6)';
-  ctx.shadowBlur = 50;
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.beginPath();
+  ctx.roundRect(x + 10, y + 16, size, size, 36);
+  ctx.fill();
   ctx.beginPath();
   ctx.roundRect(x, y, size, size, 36);
   ctx.fillStyle = '#222';
@@ -109,10 +116,10 @@ export function drawFrame(ctx: CanvasRenderingContext2D, d: MomentData, phase = 
   ctx.restore();
 }
 
-export function makeCanvas(): HTMLCanvasElement {
+export function makeCanvas(size = SIZE): HTMLCanvasElement {
   const c = document.createElement('canvas');
-  c.width = SIZE;
-  c.height = SIZE;
+  c.width = size;
+  c.height = size;
   return c;
 }
 
@@ -147,7 +154,7 @@ export async function cardVideo(d: MomentData): Promise<Blob | null> {
   if (typeof MediaRecorder === 'undefined' || !('captureStream' in HTMLCanvasElement.prototype)) return null;
   const type = VIDEO_TYPES.find((t) => MediaRecorder.isTypeSupported(t));
   if (!type) return null;
-  const c = makeCanvas();
+  const c = makeCanvas(VIDEO_SIZE);
   const ctx = c.getContext('2d')!;
   const backdrop = makeBackdrop(d.art);
   let stream: MediaStream;
@@ -170,7 +177,7 @@ export async function cardVideo(d: MomentData): Promise<Blob | null> {
     const frame = () => {
       const t = (performance.now() - start) / 1000;
       if (t >= VIDEO_SECONDS) return resolve();
-      drawFrame(ctx, d, t / 1.6, t, backdrop);
+      drawFrame(ctx, d, t / 1.6, t, backdrop, VIDEO_SIZE / SIZE);
       setTimeout(frame, 1000 / 15);
     };
     frame();

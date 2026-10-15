@@ -931,3 +931,33 @@ button.link:hover {
 .moment-title { font-weight: 600; font-size: 15px; }
 .moment-preview { width: 100%; height: auto; border-radius: 16px; background: #0b0b10; display: block; }
 .moment-actions { display: flex; flex-direction: column; gap: 8px; }
+
+/* Buttons in the iOS 26 manner: tall capsules, a wide hit area, a soft glass fill, clear weight. */
+.btn {
+  height: 54px;
+  min-height: 54px;
+  padding: 0 28px;
+  border-radius: 999px;
+  --g-radius: 999px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  flex: 1 1 auto;
+}
+.btn.primary,
+.btn.tonal {
+  border-radius: 999px;
+}
+.btn.tonal {
+  background: rgb(255 255 255 / 0.12);
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.18), 0 6px 18px -10px rgb(0 0 0 / 0.5);
+}
+.btn.primary {
+  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.3), 0 10px 24px -12px var(--accent);
+}
+.btn.small {
+  height: 42px;
+  min-height: 42px;
+  padding: 0 22px;
+  font-size: 15px;
+}
