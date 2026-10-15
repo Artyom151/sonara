@@ -1,10 +1,17 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { create } from 'zustand';
+import { useSettings } from '../../store/settings';
+import { pushNotice } from '../../store/islandNotice';
 
 const useToasts = create<{ items: { id: number; text: string }[] }>(() => ({ items: [] }));
 let n = 0;
 
+/**
+ * One message for the user. With the island player on, it takes the island (like every other
+ * notice); otherwise it is a toast.
+ */
 export function toast(text: string) {
+  if (useSettings.getState().islandPlayer) return pushNotice({ kind: 'queue', text });
   const id = ++n;
   useToasts.setState((s) => ({ items: [...s.items.slice(-2), { id, text }] }));
   setTimeout(() => useToasts.setState((s) => ({ items: s.items.filter((t) => t.id !== id) })), 2600);
