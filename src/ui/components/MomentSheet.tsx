@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Track } from '../../core/types';
 import { drawFrame, loadArt, makeBackdrop, cardPng, cardVideo, makeCanvas, SIZE, type MomentData } from '../../player/moment';
 import { toast } from './Toast';
-import { useT } from '../i18n';
+import { fmtTime, useT } from '../i18n';
 
 /**
  * "Share a moment" with a live preview: the card is drawn right here, so you see what will be
@@ -25,7 +25,20 @@ export function MomentSheet() {
   const position = useMoment((s) => s.position);
   const [prep, setPrep] = useState<Prepared | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [range, setRange] = useState<{ from: number; to: number }>({ from: 0, to: 0 });
   const canvas = useRef<HTMLCanvasElement>(null);
+  const max = track?.duration || Math.max(600, range.to);
+
+  // A new sheet starts from the moment itself, up to 30 seconds long.
+  useEffect(() => {
+    if (!track) return;
+    setRange({ from: position, to: Math.min(track.duration || position + 30, position + 30) });
+    // Only when the sheet opens for a track.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [track]);
+
+  const setFrom = (v: number) => setRange((r) => ({ from: Math.min(v, r.to - 1), to: r.to }));
+  const setTo = (v: number) => setRange((r) => ({ from: r.from, to: Math.max(v, r.from + 1) }));
 
   // Prepare the cover once per track (drawing it is then cheap).
   useEffect(() => {
@@ -33,7 +46,7 @@ export function MomentSheet() {
     let alive = true;
     loadArt(track.artworkLarge ?? track.artwork).then((art) => {
       if (!alive) return;
-      const data: MomentData = { title: track.title, artist: track.artist, position, duration: track.duration || 0, art };
+      const data: MomentData = { title: track.title, artist: track.artist, position, duration: track.duration || 0, art, from: position, to: position };
       setPrep({ data, backdrop: makeBackdrop(art) });
     });
     return () => {
@@ -48,8 +61,8 @@ export function MomentSheet() {
     if (!prep || !canvas.current) return;
     const ctx = canvas.current.getContext('2d');
     if (!ctx) return;
-    drawFrame(ctx, { ...prep.data, position }, 0, 0, prep.backdrop);
-  }, [prep, position]);
+    drawFrame(ctx, { ...prep.data, from: range.from, to: range.to }, 0, 0, prep.backdrop);
+  }, [prep, range]);
 
   const close = () => useMoment.setState({ track: null });
 
@@ -91,7 +104,7 @@ export function MomentSheet() {
     const step = (m: string) => console.info(`[moment] ${m} at ${((performance.now() - t0) / 1000).toFixed(2)} s`);
     try {
       step('video: start');
-      const video = await cardVideo({ ...prep.data, position });
+      const video = await cardVideo({ ...prep.data, from: range.from, to: range.to });
       step(`video: recorded ${video ? video.size + ' bytes' : 'nothing'}`);
       if (!video) return toast(t('momentNoVideo'));
       await share(new File([video], 'sonara-moment.' + (video.type.includes('mp4') ? 'mp4' : 'webm'), { type: video.type }));
@@ -111,6 +124,18 @@ export function MomentSheet() {
           <motion.div className="moment-sheet glass" initial={{ scale: 0.94, y: 16 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.94, y: 16 }} onClick={(e) => e.stopPropagation()}>
             <div className="moment-title">{t('shareMoment')}</div>
             <canvas ref={canvas} className="moment-preview" width={SIZE} height={SIZE} aria-label={t('shareMoment')} />
+            <label className="moment-range">
+              <span>
+                {t('momentFrom')} {fmtTime(range.from)}
+              </span>
+              <input type="range" min={0} max={max} step={1} value={range.from} onChange={(e) => setFrom(Number(e.target.value))} />
+            </label>
+            <label className="moment-range">
+              <span>
+                {t('momentTo')} {fmtTime(range.to)}
+              </span>
+              <input type="range" min={0} max={max} step={1} value={range.to} onChange={(e) => setTo(Number(e.target.value))} />
+            </label>
             <div className="moment-actions">
               <button className="btn primary" disabled={!prep || !!busy} onClick={saveImage}>
                 <span>{busy === 'image' ? t('momentWorking') : t('momentImage')}</span>

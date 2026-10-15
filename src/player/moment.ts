@@ -9,6 +9,9 @@ export interface MomentData {
   position: number;
   duration: number;
   art: CanvasImageSource | null;
+  /** The chosen part of the track, in seconds (defaults to the position for both). */
+  from?: number;
+  to?: number;
 }
 
 export const SIZE = 1080;
@@ -92,24 +95,31 @@ export function drawFrame(ctx: CanvasRenderingContext2D, d: MomentData, phase = 
   ctx.font = '400 40px system-ui, sans-serif';
   ctx.fillText(ellipsize(ctx, d.artist, W - 160), W / 2, 850);
 
-  // Progress: where the moment is in the track, moving on during the video.
+  // The track's timeline: the chosen part is bright, and a knob moves through it during the video.
+  const from = d.from ?? d.position;
+  const to = Math.max(from, d.to ?? from);
+  const total = d.duration > 0 ? d.duration : Math.max(to, 1);
   const bar = { x: 140, y: 930, w: W - 280, h: 10 };
-  const pos = Math.min(d.duration || Infinity, d.position + elapsed);
-  const p = d.duration > 0 ? Math.min(1, pos / d.duration) : 0;
+  const at = (s: number) => bar.x + bar.w * Math.min(1, s / total);
+  const cur = Math.min(to, from + (to - from) * Math.min(1, elapsed / VIDEO_SECONDS));
   ctx.fillStyle = 'rgba(255,255,255,0.2)';
   ctx.beginPath();
   ctx.roundRect(bar.x, bar.y, bar.w, bar.h, 5);
   ctx.fill();
   ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  ctx.roundRect(bar.x, bar.y, Math.max(bar.h, bar.w * p), bar.h, 5);
+  ctx.roundRect(at(from), bar.y, Math.max(bar.h, at(to) - at(from)), bar.h, 5);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(at(cur), bar.y + bar.h / 2, 11, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
   ctx.fill();
   ctx.textAlign = 'left';
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
   ctx.font = '500 34px system-ui, sans-serif';
-  ctx.fillText(fmt(pos), bar.x, 990);
+  ctx.fillText(fmt(from), bar.x, 990);
   ctx.textAlign = 'right';
-  ctx.fillText(d.duration ? fmt(d.duration) : '', bar.x + bar.w, 990);
+  ctx.fillText(fmt(to), bar.x + bar.w, 990);
   ctx.textAlign = 'center';
   ctx.fillStyle = 'rgba(255,255,255,0.5)';
   ctx.font = '600 30px system-ui, sans-serif';

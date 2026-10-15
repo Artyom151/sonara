@@ -961,3 +961,5 @@ button.link:hover {
   padding: 0 22px;
   font-size: 15px;
 }
+.moment-range { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.moment-range input { width: 100%; accent-color: var(--accent); }
