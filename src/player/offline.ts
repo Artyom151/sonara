@@ -114,6 +114,15 @@ export async function offlinePlayback(key: string): Promise<OfflinePlayback | nu
   return result;
 }
 
+/** The stored audio of a download as one Blob (an HLS download is its pieces joined). */
+export async function offlineBlob(key: string): Promise<Blob | null> {
+  if (!isDownloaded(key)) return null;
+  const f = await tx<{ audio?: Blob; hls?: StoredHls } | undefined>(FILES, 'readonly', (s) => s.get(key)).catch(() => undefined);
+  if (f?.audio) return f.audio;
+  if (f?.hls) return new Blob([...(f.hls.init ? [f.hls.init] : []), ...f.hls.segs], { type: f.hls.segs[0]?.type || 'audio/mp4' });
+  return null;
+}
+
 const artUrls = new Map<string, string>();
 /** Cover of a downloaded track as an object URL (cached), for offline display. */
 export async function offlineArtUrl(key: string): Promise<string | null> {

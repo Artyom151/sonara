@@ -7,10 +7,11 @@ import { usePlayer } from '../store/player';
 import { useSettings } from '../store/settings';
 import { pushNotice, tr } from '../store/islandNotice';
 import { toast } from '../ui/components/Toast';
-import { audioMime, downloadRanged, mediaProxyBase, PROXIED, YT_UA } from './fetchAudio';
+import { audioMime, downloadRanged, fetchAudioFile, mediaProxyBase, PROXIED, YT_UA } from './fetchAudio';
+import * as rateEngine from './rateEngine';
 import { continueQueue, wantsContinuation } from './autoplay';
 import { castSeek, castSetPlaying, castSetVolume, castTrack, isCasting } from './cast';
-import { initOffline, isDownloaded, offlinePlayback, removeDownload } from './offline';
+import { initOffline, isDownloaded, offlineBlob, offlinePlayback, removeDownload } from './offline';
 import { useStats } from '../store/stats';
 import { useSleep } from './sleep';
 
@@ -110,6 +111,7 @@ async function load(track: Track, autoplay: boolean, startAt = 0) {
     // Not castable (a download, a local link): fall through and play it here.
   }
   const token = ++loadToken;
+  rateEngine.stop();
   if (loadedKey !== track.key) retried.delete(track.key);
   loadedKey = track.key;
   usePlayer.getState().patch({ loading: true, error: null, buffered: 0, duration: track.duration || 0 });
@@ -133,14 +135,13 @@ async function load(track: Track, autoplay: boolean, startAt = 0) {
       await attach(base ? base + encodeURIComponent(s.url) : await viaNativeBlob(s.url, token), 'progressive');
     } else await attach(s.url, s.kind);
     // Resume position only once metadata is known; setting it earlier is ignored or aborts play().
-    if (startAt > 1) {
-      const seekTo = () => {
-        if (startAt < (audio.duration || Infinity) - 2) audio.currentTime = startAt;
-      };
-      if (audio.readyState >= 1) seekTo();
-      else audio.addEventListener('loadedmetadata', seekTo, { once: true });
+    if (speedByBuffer()) {
+      audio.pause();
+      await playBuffered(track, startAt, autoplay);
+    } else {
+      if (startAt > 1) seekElement(startAt);
+      if (autoplay) await playSafe(track, s.url);
     }
-    if (autoplay) await playSafe(track, s.url);
     useLibrary.getState().pushRecent(track);
   } catch (e) {
     if (token !== loadToken) return;
@@ -295,6 +296,10 @@ export const seek = (t: number) => {
     castSeek(t);
     return usePlayer.getState().patch({ position: t });
   }
+  if (speedByBuffer()) {
+    rateEngine.seek(t);
+    return usePlayer.getState().patch({ position: t });
+  }
   audio.currentTime = t;
   usePlayer.getState().patch({ position: t });
 };
@@ -308,23 +313,85 @@ export const togglePlay = () => {
 
 export const setVolume = (v: number) => {
   audio.volume = v;
+  rateEngine.setVolume(v);
   castSetVolume(v);
   usePlayer.getState().patch({ volume: v });
 };
 
 /** Speed in steps of 0.05 between 0.5 and 1.5. Pitch changes with it, as on a record. */
 export const setRate = (r: number) => {
-  if (!rateSupported) return;
   const rate = Math.min(1.5, Math.max(0.5, Math.round(r * 20) / 20));
-  applyRate(rate);
   usePlayer.getState().patch({ rate });
+  if (nativeRate) return void applyRate(rate);
+  // Linux: the element stays at 1x; the speed comes from the decoded buffer.
+  const cur = usePlayer.getState().current();
+  if (!cur) return;
+  if (rate === 1) {
+    // Back to the element: continue from where the sound is.
+    const from = rateEngine.hasBuffer(cur.key) ? rateEngine.pause() : audio.currentTime;
+    rateEngine.stop();
+    seekElement(from);
+    if (usePlayer.getState().playing) audio.play().catch(() => {});
+    return;
+  }
+  if (rateEngine.hasBuffer(cur.key)) return void rateEngine.setRate(rate);
+  const from = audio.currentTime;
+  audio.pause();
+  void playBuffered(cur, from, usePlayer.getState().playing);
 };
 
+function seekElement(t: number) {
+  const go = () => {
+    if (t < (audio.duration || Infinity) - 2) audio.currentTime = t;
+  };
+  if (audio.readyState >= 1) go();
+  else audio.addEventListener('loadedmetadata', go, { once: true });
+}
+
+/** Linux, speed other than 1×: the element is not used for sound. */
+const speedByBuffer = () => !nativeRate && usePlayer.getState().rate !== 1;
+
+/** The track as one decoded buffer for rateEngine: the offline copy first, then the stream. */
+async function speedBuffer(track: Track) {
+  if (rateEngine.hasBuffer(track.key)) return;
+  const blob = (await offlineBlob(track.key)) ?? (await fetchAudioFile(await api.stream(track)));
+  await rateEngine.load(track.key, blob);
+}
+
+function setSpeedHandlers() {
+  // The engine's `ended` handler moves on to the next track, the same as for the element.
+  rateEngine.setHandlers(
+    () => audio.dispatchEvent(new Event('ended')),
+    (p) => usePlayer.getState().patch({ position: p }),
+  );
+}
+
+/** Plays `track` from `from` through Web Audio at the chosen speed. Falls back to 1× if it cannot. */
+async function playBuffered(track: Track, from: number, autoplay: boolean) {
+  const token = loadToken;
+  try {
+    await speedBuffer(track);
+  } catch (e) {
+    console.warn('[speed] cannot decode, playing at 1x:', track.title, e);
+    toast(tr('Speed is not available for this track', 'Скорость для этого трека недоступна'));
+    usePlayer.getState().patch({ rate: 1 });
+    return void load(track, autoplay, from);
+  }
+  if (token !== loadToken) return;
+  setSpeedHandlers();
+  rateEngine.setRate(usePlayer.getState().rate);
+  rateEngine.setVolume(usePlayer.getState().volume);
+  rateEngine.seek(from);
+  if (autoplay) rateEngine.play();
+  usePlayer.getState().patch({ loading: false });
+}
+
 /**
- * Playback speed works on Android, Windows and macOS. On Linux (WebKitGTK with GStreamer) any
- * playbackRate other than 1 stops playback and can crash the web process, so the control is off there.
+ * Speed through the media element works on Android, Windows and macOS. On Linux (WebKitGTK with
+ * GStreamer) any playbackRate other than 1 stops playback and can crash the web process, so there
+ * the speed comes from a decoded buffer instead (rateEngine.ts).
  */
-export const rateSupported = /Android/.test(navigator.userAgent) || !/Linux/.test(navigator.userAgent);
+export const nativeRate = /Android/.test(navigator.userAgent) || !/Linux/.test(navigator.userAgent);
 
 /**
  * Speed of the element. A new source starts at defaultPlaybackRate (set here), and the rate itself
@@ -332,7 +399,7 @@ export const rateSupported = /Android/.test(navigator.userAgent) || !/Linux/.tes
  * GStreamer pipeline start in the wrong place and end early.
  */
 function applyRate(rate: number) {
-  if (!rateSupported) return void (audio.playbackRate = 1);
+  if (!nativeRate) return void (audio.playbackRate = 1);
   audio.preservesPitch = false;
   audio.defaultPlaybackRate = rate;
   if (audio.readyState >= 1) audio.playbackRate = rate;
@@ -365,11 +432,17 @@ usePlayer.subscribe((s, prev) => {
   }
   if (s.playing) {
     if (loadedKey !== cur.key) return void load(cur, true, s.position);
+    if (speedByBuffer()) {
+      if (rateEngine.hasBuffer(cur.key)) rateEngine.play();
+      else void playBuffered(cur, s.position, true);
+      return;
+    }
     audio.play().catch((e) => {
       if ((e as Error).name !== 'AbortError') usePlayer.getState().patch({ playing: false });
     });
-  } else if (!audio.paused) {
-    audio.pause();
+  } else {
+    if (speedByBuffer()) rateEngine.pause();
+    if (!audio.paused) audio.pause();
   }
 });
 
