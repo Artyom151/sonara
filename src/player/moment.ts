@@ -36,19 +36,29 @@ function ellipsize(ctx: CanvasRenderingContext2D, text: string, max: number) {
 }
 
 /** One frame. `phase` 0..1 drives the cover pulse; `elapsed` seconds move the progress bar. */
-export function drawFrame(ctx: CanvasRenderingContext2D, d: MomentData, phase = 0, elapsed = 0) {
+/**
+ * Soft backdrop from the cover: the cover drawn tiny and stretched back up, made once per card.
+ * (A canvas blur filter on every frame froze the desktop webview.)
+ */
+export function makeBackdrop(art: CanvasImageSource | null): HTMLCanvasElement | null {
+  if (!art) return null;
+  const small = document.createElement('canvas');
+  small.width = small.height = 24;
+  small.getContext('2d')!.drawImage(art, 0, 0, 24, 24);
+  const c = makeCanvas();
+  const ctx = c.getContext('2d')!;
+  ctx.imageSmoothingEnabled = true;
+  ctx.globalAlpha = 0.45;
+  ctx.drawImage(small, 0, 0, SIZE, SIZE);
+  return c;
+}
+
+export function drawFrame(ctx: CanvasRenderingContext2D, d: MomentData, phase = 0, elapsed = 0, backdrop: HTMLCanvasElement | null = null) {
   const W = SIZE;
   ctx.save();
   ctx.fillStyle = '#0b0b10';
   ctx.fillRect(0, 0, W, W);
-  if (d.art) {
-    // Soft backdrop from the cover itself.
-    ctx.save();
-    ctx.globalAlpha = 0.45;
-    ctx.filter = 'blur(60px)';
-    ctx.drawImage(d.art, -120, -120, W + 240, W + 240);
-    ctx.restore();
-  }
+  if (backdrop) ctx.drawImage(backdrop, 0, 0);
   // Cover, pulsing a little in the video.
   const cover = 560;
   const pulse = 1 + 0.025 * Math.sin(phase * Math.PI * 2);
@@ -109,26 +119,37 @@ export function makeCanvas(): HTMLCanvasElement {
 /** The still as PNG. A tainted canvas (cover from another origin) is redrawn without the cover. */
 export async function cardPng(d: MomentData): Promise<Blob | null> {
   const c = makeCanvas();
-  const ctx = c.getContext('2d')!;
-  drawFrame(ctx, d);
+  drawFrame(c.getContext('2d')!, d, 0, 0, makeBackdrop(d.art));
   try {
-    return await new Promise<Blob | null>((res) => c.toBlob((b) => res(b), 'image/png'));
+    return await withTimeout(new Promise<Blob | null>((res) => c.toBlob((b) => res(b), 'image/png')), 10_000);
   } catch {
     const plain = makeCanvas();
     drawFrame(plain.getContext('2d')!, { ...d, art: null });
-    return new Promise((res) => plain.toBlob((b) => res(b), 'image/png'));
+    return withTimeout(new Promise<Blob | null>((res) => plain.toBlob((b) => res(b), 'image/png')), 10_000);
   }
+}
+
+/** Rejects after `ms`: a stuck recorder or encoder must not hang the share. */
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const id = setTimeout(() => reject(new Error('timeout')), ms);
+    p.then(
+      (v) => (clearTimeout(id), resolve(v)),
+      (e) => (clearTimeout(id), reject(e)),
+    );
+  });
 }
 
 const VIDEO_TYPES = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4'];
 
-/** A short video of the card, or null where recording is not available. */
+/** A short video of the card, or null where recording is not available or does not finish. */
 export async function cardVideo(d: MomentData): Promise<Blob | null> {
   if (typeof MediaRecorder === 'undefined' || !('captureStream' in HTMLCanvasElement.prototype)) return null;
   const type = VIDEO_TYPES.find((t) => MediaRecorder.isTypeSupported(t));
   if (!type) return null;
   const c = makeCanvas();
   const ctx = c.getContext('2d')!;
+  const backdrop = makeBackdrop(d.art);
   let stream: MediaStream;
   try {
     stream = c.captureStream(30);
@@ -142,18 +163,19 @@ export async function cardVideo(d: MomentData): Promise<Blob | null> {
     rec.onstop = () => res(new Blob(chunks, { type: type.split(';')[0] }));
     rec.onerror = () => rej(new Error('recording failed'));
   });
+  // A timer, not requestAnimationFrame: the frames keep coming while the window is in the background.
   const start = performance.now();
   rec.start();
   await new Promise<void>((resolve) => {
-    const tick = () => {
+    const frame = () => {
       const t = (performance.now() - start) / 1000;
       if (t >= VIDEO_SECONDS) return resolve();
-      drawFrame(ctx, d, t / 1.6, t);
-      requestAnimationFrame(tick);
+      drawFrame(ctx, d, t / 1.6, t, backdrop);
+      setTimeout(frame, 1000 / 15);
     };
-    tick();
+    frame();
   });
   rec.stop();
   stream.getTracks().forEach((t) => t.stop());
-  return done;
+  return withTimeout(done, 5_000).catch(() => null);
 }
