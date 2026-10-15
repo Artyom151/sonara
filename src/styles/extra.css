@@ -843,3 +843,45 @@ button.link:hover {
 .comment-reply-btn { font-size: 12px; opacity: 0.6; background: none; border: 0; color: inherit; padding: 2px 0; cursor: pointer; }
 .composer-reply { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 12px; font-size: 12px; opacity: 0.85; }
 .composer-reply button { background: none; border: 0; color: inherit; font-size: 18px; line-height: 1; cursor: pointer; padding: 0 4px; }
+
+/* Island notices, aligned: one centred row, the text trimmed with an ellipsis, a width that follows the window. */
+.island.is-notice:not(.open) {
+  height: 44px;
+  width: max-content;
+  min-width: min(70vw, 240px);
+  max-width: min(90vw, 340px);
+}
+.island.is-notice.desk:not(.open) {
+  height: 38px;
+  min-width: min(60vw, 240px);
+  max-width: min(80vw, 340px);
+}
+.island-notice {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  gap: 10px;
+  min-width: 0;
+  height: 100%;
+  padding: 0 16px 0 8px;
+}
+.island-notice-dot {
+  margin: 0;
+}
+.island-notice-text {
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+  gap: 1px;
+}
+.island-notice-text b,
+.island-notice-text small {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.island-notice-text small {
+  max-width: 100%;
+}
