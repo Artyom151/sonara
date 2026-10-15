@@ -37,3 +37,29 @@ export async function shareTrack(track: Track, copiedLabel: string) {
     /* clipboard blocked */
   }
 }
+
+/**
+ * Share a moment of a track: the card as a short video when the platform records it, else as an
+ * image. Uses the system share sheet when there is one, otherwise saves the file.
+ */
+export async function shareMoment(track: Track, position: number, savedLabel: string) {
+  const { loadArt, cardPng, cardVideo } = await import('../../player/moment');
+  const art = await loadArt(track.artworkLarge ?? track.artwork);
+  const data = { title: track.title, artist: track.artist, position, duration: track.duration || 0, art };
+  const video = await cardVideo(data).catch(() => null);
+  const file = video
+    ? new File([video], 'sonara-moment.' + (video.type.includes('mp4') ? 'mp4' : 'webm'), { type: video.type })
+    : await cardPng(data).then((b) => (b ? new File([b], 'sonara-moment.png', { type: 'image/png' }) : null));
+  if (!file) return toast(savedLabel);
+  try {
+    if (navigator.canShare?.({ files: [file] })) return await navigator.share({ files: [file], title: track.title, text: `${track.title} — ${track.artist}` });
+  } catch (e) {
+    if ((e as Error).name === 'AbortError') return;
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(file);
+  a.download = file.name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast(savedLabel);
+}
