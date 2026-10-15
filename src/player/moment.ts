@@ -183,7 +183,11 @@ export async function cardVideo(d: MomentData): Promise<Blob | null> {
     };
     frame();
   });
+  console.info('[moment] frames drawn, stopping the recorder');
   rec.stop();
   stream.getTracks().forEach((t) => t.stop());
-  return withTimeout(done, 5_000).catch(() => null);
+  return withTimeout(done, 5_000).catch((e) => {
+    console.warn('[moment] recorder did not finish:', e);
+    return null;
+  });
 }

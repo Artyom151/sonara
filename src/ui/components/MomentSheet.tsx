@@ -87,10 +87,15 @@ export function MomentSheet() {
   const recordVideo = async () => {
     if (!prep) return;
     setBusy('video');
+    const t0 = performance.now();
+    const step = (m: string) => console.info(`[moment] ${m} at ${((performance.now() - t0) / 1000).toFixed(2)} s`);
     try {
+      step('video: start');
       const video = await cardVideo({ ...prep.data, position });
+      step(`video: recorded ${video ? video.size + ' bytes' : 'nothing'}`);
       if (!video) return toast(t('momentNoVideo'));
       await share(new File([video], 'sonara-moment.' + (video.type.includes('mp4') ? 'mp4' : 'webm'), { type: video.type }));
+      step('video: shared');
     } catch (e) {
       console.warn('[moment] video failed', e);
       toast(t('momentNoVideo'));
