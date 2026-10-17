@@ -28,6 +28,8 @@ export interface Settings {
   skipUnavailable: boolean;
   /** Levelling: tracks from different sources play at about the same loudness. */
   normalize: boolean;
+  /** Karaoke: the centre of the stereo mix (most vocals) is taken out. */
+  karaoke: boolean;
   /** Wave sliders, 0..1 (0.5 = neutral): familiar ↔ new, calm ↔ energetic, popular ↔ rare. */
   waveMood: { familiar: number; energy: number; popular: number };
   /** Wave: only artists the listener has not heard yet. */
@@ -79,6 +81,7 @@ export const useSettings = create<Settings>()(
       normalize: false,
       waveMood: { familiar: 0.5, energy: 0.5, popular: 0.5 },
       waveDiscovery: false,
+      karaoke: false,
       waveBlocked: { genres: [], artists: [] },
       showLyricsLine: true,
       lyricsPanel: true,

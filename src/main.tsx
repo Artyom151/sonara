@@ -12,6 +12,7 @@ import './player/equalizer';
 import './platform/dpi';
 import './player/likePulse';
 import './player/normalize';
+import './player/karaoke';
 import './platform/mediaControls';
 import './platform/audioDevices';
 import './platform/network';
