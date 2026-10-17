@@ -12,11 +12,10 @@ function apply() {
   const g = getGraph();
   if (!g) return;
   const t = g.ctx.currentTime;
-  const amount = Math.min(1, Math.max(0, useSettings.getState().karaokeAmount));
-  g.dry.gain.setTargetAtTime(on ? 1 - amount : 1, t, 0.05);
-  g.kwet.gain.setTargetAtTime(on ? amount : 0, t, 0.05);
+  g.dry.gain.setTargetAtTime(on ? 0 : 1, t, 0.05);
+  g.kwet.gain.setTargetAtTime(on ? 1 : 0, t, 0.05);
 }
 
 useSettings.subscribe((s, prev) => {
-  if (s.karaoke !== prev.karaoke || s.karaokeAmount !== prev.karaokeAmount) apply();
+  if (s.karaoke !== prev.karaoke) apply();
 });

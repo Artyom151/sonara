@@ -244,11 +244,6 @@ export function Settings() {
         <Cell icon={<IconMusic size={17} />} color="#bf5af2" label={t('karaoke')}>
           <Toggle checked={s.karaoke} onChange={(v) => s.set({ karaoke: v })} />
         </Cell>
-        {s.karaoke && (
-          <Cell noicon label={`${t('karaokeAmount')} ${Math.round(s.karaokeAmount * 100)}%`}>
-            <input type="range" min={0} max={1} step={0.05} value={s.karaokeAmount} onChange={(e) => s.set({ karaokeAmount: Number(e.target.value) })} />
-          </Cell>
-        )}
         <Cell icon={<IconMusic size={17} />} color="#ff9f0a" label={t('normalize')}>
           <Toggle checked={s.normalize} onChange={(v) => s.set({ normalize: v })} />
         </Cell>
