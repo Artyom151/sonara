@@ -329,8 +329,8 @@ export const setVolume = (v: number) => {
 export const setRate = (r: number) => {
   const rate = Math.min(1.5, Math.max(0.5, Math.round(r * 20) / 20));
   usePlayer.getState().patch({ rate });
-  if (nativeRate) return void applyRate(rate);
-  // Linux: the element stays at 1x; the speed comes from the decoded buffer.
+  if (!usesBuffer()) return void applyRate(rate);
+  // Desktop: the element stays at 1x; the speed comes from the decoded buffer.
   const cur = usePlayer.getState().current();
   if (!cur) return;
   if (rate === 1) {
@@ -356,7 +356,9 @@ function seekElement(t: number) {
 }
 
 /** Linux, speed other than 1×: the element is not used for sound. */
-const speedByBuffer = () => !nativeRate && usePlayer.getState().rate !== 1;
+const speedByBuffer = () => usesBuffer() && usePlayer.getState().rate !== 1;
+/** Desktop and Linux: the speed comes from the decoded buffer (its pitch follows the speed on every system). */
+const usesBuffer = () => isTauri || !nativeRate;
 
 /** The track as one decoded buffer for rateEngine: the offline copy first, then the stream. */
 async function speedBuffer(track: Track) {

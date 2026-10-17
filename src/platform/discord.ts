@@ -22,8 +22,8 @@ if (isTauri) {
 
   const send = () => {
     const { discordEnabled, lang } = useSettings.getState();
-    // Settings value, or the build default (.env VITE_DISCORD_APP_ID) for installs that saved an empty one.
-    const discordAppId = useSettings.getState().discordAppId.trim() || ((import.meta.env.VITE_DISCORD_APP_ID as string | undefined) ?? '');
+    // The application is the build's own (.env VITE_DISCORD_APP_ID, set for release builds); there is no setting for it.
+    const discordAppId = ((import.meta.env.VITE_DISCORD_APP_ID as string | undefined) ?? '').trim();
     const s = usePlayer.getState();
     const t = s.queue[s.index];
     if (!discordEnabled || !discordAppId.trim() || !t) {
@@ -63,7 +63,7 @@ if (isTauri) {
     if (key !== lastKey || s.playing !== lastPlaying || (seeked && Date.now() - lastSent > 1500)) send();
   });
   useSettings.subscribe((s, prev) => {
-    if (s.discordEnabled !== prev.discordEnabled || s.discordAppId !== prev.discordAppId) send();
+    if (s.discordEnabled !== prev.discordEnabled) send();
   });
   window.addEventListener('beforeunload', () => call('discord_clear'));
   send();

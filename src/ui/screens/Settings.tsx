@@ -97,17 +97,6 @@ function BypassSettings() {
           })}
       </div>
       <div className="group-foot">{t('bypassHint')}</div>
-      {!Bypass && (
-        <>
-          <div className="group-label">{t('upstreamProxy')}</div>
-          <div className="group">
-            <Cell noicon label="SOCKS5">
-              <input className="cell-input mono" placeholder="socks5://127.0.0.1:1080" value={s.upstreamProxy} onChange={(e) => s.set({ upstreamProxy: e.target.value.trim() })} />
-            </Cell>
-          </div>
-          <div className="group-foot">{t('upstreamProxyHint')}</div>
-        </>
-      )}
     </>
   );
 }
@@ -239,9 +228,6 @@ export function Settings() {
             </Cell>
           );
         })}
-        <Cell noicon label={t('yandexToken')}>
-          <input className="cell-input mono" type="password" placeholder="y0_…" value={s.yandexToken} onChange={(e) => s.set({ yandexToken: e.target.value.trim() })} />
-        </Cell>
         <Cell noicon label={t('soundcloudClientId')}>
           <span className="cell-value mono">{clientId.length > 12 ? `${clientId.slice(0, 6)}…${clientId.slice(-4)}` : clientId}</span>
           <button
@@ -254,9 +240,6 @@ export function Settings() {
           >
             <span>{t('refresh')}</span>
           </button>
-        </Cell>
-        <Cell noicon label={t('youtubeKey')}>
-          <input className="cell-input mono" type="password" placeholder="AIza…" value={s.youtubeApiKey} onChange={(e) => s.set({ youtubeApiKey: e.target.value.trim() })} />
         </Cell>
         <Cell noicon label={t('region')}>
           <Select value={s.region} options={REGIONS.map((r) => ({ value: r, label: r }))} onChange={(v) => s.set({ region: v })} />
@@ -273,6 +256,9 @@ export function Settings() {
         <Cell icon={<IconMusic size={17} />} color="#0a84ff" label={t('autoplay')}>
           <Toggle checked={s.autoplay} onChange={(v) => s.set({ autoplay: v })} />
         </Cell>
+        <Cell icon={<IconMusic size={17} />} color="#ff9f0a" label={t('normalize')}>
+          <Toggle checked={s.normalize} onChange={(v) => s.set({ normalize: v })} />
+        </Cell>
         <Cell icon={<IconMusic size={17} />} color="#5e5ce6" label={t('skipUnavailable')}>
           <Toggle checked={s.skipUnavailable} onChange={(v) => s.set({ skipUnavailable: v })} />
         </Cell>
@@ -288,9 +274,6 @@ export function Settings() {
             <TrayCell />
             <Cell icon={<IconDiscord size={18} />} color="#5865F2" label={t('discordStatus')}>
               <Toggle checked={s.discordEnabled} onChange={(v) => s.set({ discordEnabled: v })} />
-            </Cell>
-            <Cell noicon label="Application ID">
-              <input className="cell-input mono" inputMode="numeric" placeholder={(import.meta.env.VITE_DISCORD_APP_ID as string | undefined) || '123456789012345678'} value={s.discordAppId} onChange={(e) => s.set({ discordAppId: e.target.value.replace(/\D/g, '') })} />
             </Cell>
           </div>
           <div className="group-foot">{t('discordHint')}</div>

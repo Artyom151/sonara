@@ -26,6 +26,8 @@ export interface Settings {
   region: string;
   autoplay: boolean;
   skipUnavailable: boolean;
+  /** Levelling: tracks from different sources play at about the same loudness. */
+  normalize: boolean;
   showLyricsLine: boolean;
   /** Desktop: lyrics column in the full-screen player. */
   lyricsPanel: boolean;
@@ -68,6 +70,7 @@ export const useSettings = create<Settings>()(
       region: 'US',
       autoplay: true,
       skipUnavailable: true,
+      normalize: false,
       showLyricsLine: true,
       lyricsPanel: true,
       crossfade: 0,

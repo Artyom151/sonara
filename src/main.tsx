@@ -11,6 +11,7 @@ import './player/engine';
 import './player/equalizer';
 import './platform/dpi';
 import './player/likePulse';
+import './player/normalize';
 import './platform/mediaControls';
 import './platform/audioDevices';
 import './platform/network';
