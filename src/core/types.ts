@@ -79,6 +79,8 @@ export interface StreamInfo {
 export interface LyricLine {
   time: number;
   text: string;
+  /** Word timings when the source gives them (word-sync highlight); the words make up `text`. */
+  words?: { time: number; text: string }[];
 }
 
 export interface Lyrics {

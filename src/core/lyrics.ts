@@ -71,7 +71,11 @@ export function parseTtml(ttml: string): LyricLine[] {
     // Background vocals (ttm:role="x-bg") stay out of the main line.
     const body = m[2].replace(/<span[^>]*ttm:role="x-bg"[^>]*>[\s\S]*?<\/span>\s*<\/span>|<span[^>]*ttm:role="x-bg"[^>]*>[\s\S]*?<\/span>/g, '');
     const text = decode(body.replace(/<\/span>\s*<span/g, '</span> <span').replace(/<\/span><span/g, '</span><span'));
-    if (text) lines.push({ time: ttmlTime(m[1]), text });
+    // Word timings: the spans with a begin time, when there are several (word-sync).
+    const words = [...body.matchAll(/<span\b[^>]*\bbegin="([^"]+)"[^>]*>([^<]*)<\/span>/g)]
+      .map((w) => ({ time: ttmlTime(w[1]), text: decode(w[2]) }))
+      .filter((w) => w.text);
+    if (text) lines.push({ time: ttmlTime(m[1]), text, ...(words.length > 1 ? { words } : {}) });
   }
   return lines.sort((a, b) => a.time - b.time);
 }

@@ -966,3 +966,5 @@ button.link:hover {
 .why-reason { font-size: 15px; margin: 0; }
 .why-sub { font-size: 12px; opacity: 0.6; }
 .why-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.lyric-word { transition: opacity 0.2s; opacity: 0.45; }
+.lyric-word.on { opacity: 1; }

@@ -239,7 +239,7 @@ export function LyricsView({ lyrics, className }: { lyrics: Lyrics | null | unde
       )}
       {s.map((l, i) => (
         <p key={i} className={`${i === idx ? 'active' : i < idx ? 'past' : ''} ${l.text.trim() ? '' : 'lyric-gap'}`} onClick={() => seek(l.time)}>
-          {l.text.trim() ? l.text : i === idx && s[i + 1] ? <GapMark next={s[i + 1].time} size={26} /> : <IconNote size={26} />}
+          {l.text.trim() ? (i === idx && l.words ? <WordsLine words={l.words} /> : l.text) : i === idx && s[i + 1] ? <GapMark next={s[i + 1].time} size={26} /> : <IconNote size={26} />}
         </p>
       ))}
     </div>
@@ -528,3 +528,19 @@ export function Player() {
     </AnimatePresence>
   );
 }
+
+/** The active line with word-sync: words already reached by the playback are bright. */
+function WordsLine({ words }: { words: { time: number; text: string }[] }) {
+  const pos = usePlayer((s) => s.position);
+  return (
+    <>
+      {words.map((w, i) => (
+        <span key={i} className={`lyric-word ${pos >= w.time ? 'on' : ''}`}>
+          {w.text}
+          {i < words.length - 1 ? ' ' : ''}
+        </span>
+      ))}
+    </>
+  );
+}
+
