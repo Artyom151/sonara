@@ -154,6 +154,8 @@ export interface RankCtx {
   script: Script | null;
   /** Artists of the seeds (lower case): same-artist tracks are never "off topic". */
   seedArtists: Set<string>;
+  /** Extra score for a candidate (the wave's mood sliders), added to the ranking. */
+  bias?: (c: Candidate) => number;
 }
 
 export function makeCtx(seeds: Track[], profile: Profile, recentArtists: string[] = []): RankCtx {
@@ -215,6 +217,7 @@ export function scoreCandidate(c: Candidate, ctx: RankCtx): number | null {
   const f = flagsOf(t);
   if (f.live && !ctx.seedFlags.live) s -= 0.25;
   if (t.plays) s += Math.min(0.08, Math.log10(t.plays + 1) / 80);
+  if (ctx.bias) s += ctx.bias(c);
   return s;
 }
 

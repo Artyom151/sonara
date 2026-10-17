@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { rerollWave, startWave, stopWave, useWave } from '../../player/wave';
 import { useLibrary } from '../../store/library';
+import { useSettings } from '../../store/settings';
 import { usePlayer } from '../../store/player';
 import { useUi } from '../../store/ui';
 import { Art } from '../components/controls';
@@ -86,6 +87,7 @@ export function WaveScreen() {
               ))}
             </div>
           )}
+          <WaveMood />
           <div className="ws-actions">
             <button
               className="btn primary"
@@ -221,3 +223,30 @@ function WaveRow({ track, reason, index, now, playing }: { track: import('../../
     </div>
   );
 }
+
+/** Mood sliders and discovery for the wave: they change what the next tracks are picked from. */
+function WaveMood() {
+  const t = useT();
+  const mood = useSettings((s) => s.waveMood);
+  const discovery = useSettings((s) => s.waveDiscovery);
+  const set = useSettings.getState().set;
+  const row = (key: 'familiar' | 'energy' | 'popular', left: StrKey, right: StrKey) => (
+    <label className="wave-slider">
+      <span>{t(left)}</span>
+      <input type="range" min={0} max={1} step={0.05} value={mood[key]} onChange={(e) => set({ waveMood: { ...mood, [key]: Number(e.target.value) } })} />
+      <span>{t(right)}</span>
+    </label>
+  );
+  return (
+    <div className="wave-mood">
+      {row('familiar', 'waveKnown', 'waveNew')}
+      {row('energy', 'waveCalm', 'waveEnergetic')}
+      {row('popular', 'wavePopular', 'waveRare')}
+      <label className="wave-discovery">
+        <span>{t('waveDiscovery')}</span>
+        <input type="checkbox" checked={discovery} onChange={(e) => set({ waveDiscovery: e.target.checked })} />
+      </label>
+    </div>
+  );
+}
+

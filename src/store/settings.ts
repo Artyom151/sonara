@@ -28,6 +28,12 @@ export interface Settings {
   skipUnavailable: boolean;
   /** Levelling: tracks from different sources play at about the same loudness. */
   normalize: boolean;
+  /** Wave sliders, 0..1 (0.5 = neutral): familiar ↔ new, calm ↔ energetic, popular ↔ rare. */
+  waveMood: { familiar: number; energy: number; popular: number };
+  /** Wave: only artists the listener has not heard yet. */
+  waveDiscovery: boolean;
+  /** Wave never picks these (taste corrections from "Why this?"). */
+  waveBlocked: { genres: string[]; artists: string[] };
   showLyricsLine: boolean;
   /** Desktop: lyrics column in the full-screen player. */
   lyricsPanel: boolean;
@@ -71,6 +77,9 @@ export const useSettings = create<Settings>()(
       autoplay: true,
       skipUnavailable: true,
       normalize: false,
+      waveMood: { familiar: 0.5, energy: 0.5, popular: 0.5 },
+      waveDiscovery: false,
+      waveBlocked: { genres: [], artists: [] },
       showLyricsLine: true,
       lyricsPanel: true,
       crossfade: 0,

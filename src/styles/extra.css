@@ -955,3 +955,7 @@ button.link:hover {
   padding: 0 22px;
   font-size: 15px;
 }
+.wave-mood { display: flex; flex-direction: column; gap: 8px; margin: 10px 16px; }
+.wave-slider { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; font-size: 12px; }
+.wave-slider input { width: 100%; accent-color: var(--accent); }
+.wave-discovery { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }

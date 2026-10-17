@@ -6,6 +6,8 @@ import { usePlayer } from '../store/player';
 import { useSettings } from '../store/settings';
 import { toast } from '../ui/components/Toast';
 import { collect } from './similar';
+import { useStats } from '../store/stats';
+import { isBlocked, knownArtists, moodBias } from './waveMood';
 import { cosine, features, makeCtx, mix, pick, topTokens, words, type Candidate, type Profile } from './taste';
 
 /* ───────────────────────────── Sonara Wave ─────────────────────────────
@@ -89,9 +91,21 @@ async function refill(count = 12) {
     if (!useWave.getState().active) return;
     const seen = new Set(useWave.getState().seen);
     const dislikes = new Set(useLibrary.getState().dislikes);
-    const pool = candidates.filter((c) => !seen.has(c.track.key) && !dislikes.has(c.track.key));
+    const settings = useSettings.getState();
+    const known = knownArtists(useStats.getState().artists);
+    // Discovery: only artists not heard yet. Blocks: "Why this?" corrections, never again.
+    const pool = candidates.filter(
+      (c) =>
+        !seen.has(c.track.key) &&
+        !dislikes.has(c.track.key) &&
+        !isBlocked(c.track, settings.waveBlocked) &&
+        !(settings.waveDiscovery && known.has(c.track.artist.toLowerCase().trim())),
+    );
     const queue = usePlayer.getState().queue;
-    const ctx = makeCtx([...waveSeeds, ...anchors], useWave.getState().profile, queue.slice(-6).map((t) => t.artist.toLowerCase().trim()));
+    const ctx = {
+      ...makeCtx([...waveSeeds, ...anchors], useWave.getState().profile, queue.slice(-6).map((t) => t.artist.toLowerCase().trim())),
+      bias: moodBias(settings.waveMood, known),
+    };
     const chosen = pick(pool, ctx, count);
     if (!chosen.length) return;
     const picked = chosen.map((c) => c.track);
