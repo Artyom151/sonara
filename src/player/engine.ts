@@ -11,7 +11,7 @@ import { audioMime, downloadRanged, fetchAudioFile, mediaProxyBase, PROXIED, YT_
 import * as rateEngine from './rateEngine';
 import { continueQueue, wantsContinuation } from './autoplay';
 import { castSeek, castSetPlaying, castSetVolume, castTrack, isCasting } from './cast';
-import { initOffline, isDownloaded, offlineBlob, offlinePlayback, removeDownload } from './offline';
+import { initOffline, isDownloaded, offlineBlob, offlinePlayback } from './offline';
 import { useStats } from '../store/stats';
 import { useEq } from './equalizer';
 import { useSleep } from './sleep';
@@ -120,7 +120,7 @@ async function load(track: Track, autoplay: boolean, startAt = 0) {
   updateMediaSession(track);
   try {
     // Downloaded: play the stored file, no network needed.
-    const local = await offlinePlayback(track.key);
+    const local = streamOnly.has(track.key) ? null : await offlinePlayback(track.key);
     if (token !== loadToken) return;
     const s = local ? { url: local.url, kind: local.kind } : await api.stream(track);
     if (token !== loadToken) return;
@@ -153,10 +153,15 @@ async function load(track: Track, autoplay: boolean, startAt = 0) {
 }
 
 /** A download that does not play (damaged file): drop it and stream the track instead. */
+/** Tracks whose saved copy did not play in this session: they stream, and the copy is kept. */
+const streamOnly = new Set<string>();
+
+/** A saved copy that does not play is kept (never deleted): the track plays from the network instead. */
 function brokenDownload(track: Track, autoplay: boolean, startAt: number, e: Error) {
-  console.warn('[player] download unplayable, streaming instead:', track.title, e);
+  console.warn('[player] saved copy does not play, streaming it; the copy stays in downloads:', track.title, e);
   localKey = null;
-  void removeDownload(track.key).then(() => load(track, autoplay, startAt));
+  streamOnly.add(track.key);
+  void load(track, autoplay, startAt);
 }
 
 async function playSafe(track: Track, url: string) {
