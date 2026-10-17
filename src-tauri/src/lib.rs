@@ -48,6 +48,20 @@ pub fn run() {
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()
+            // The terminal only: the colour codes would end up in a log file.
+            .clear_targets()
+            .target(tauri_plugin_log::Target::new(tauri_plugin_log::TargetKind::Stdout))
+            // Terminal colours: info light green, warn light yellow, error light red.
+            .format(|out, message, record| {
+              let colour = match record.level() {
+                log::Level::Error => "\x1b[91m",
+                log::Level::Warn => "\x1b[93m",
+                log::Level::Info => "\x1b[92m",
+                _ => "",
+              };
+              let reset = if colour.is_empty() { "" } else { "\x1b[0m" };
+              out.finish(format_args!("{colour}[{}][{}] {message}{reset}", record.level(), record.target()));
+            })
             .level(log::LevelFilter::Debug)
             // Everything from our crate and the libraries it uses at debug level, in the terminal.
             .level_for("sonara_lib", log::LevelFilter::Debug)
