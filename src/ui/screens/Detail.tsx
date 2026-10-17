@@ -13,7 +13,8 @@ import { toast } from '../components/Toast';
 import { ArtistScreen } from './Artist';
 import { TrackList } from '../components/TrackRow';
 import { useT } from '../i18n';
-import { IconCamera, IconCheck, IconChevronLeft, IconHeart, IconMore, IconPencil, IconPlay, IconPlus, IconShuffle, IconTrash } from '../icons';
+import { IconCamera, IconCheck, IconChevronLeft, IconHeart, IconMore, IconPencil, IconPlay, IconPlus, IconShuffle, IconTrash, IconWaveform } from '../icons';
+import { startWave } from '../../player/wave';
 import { useAsync } from '../useAsync';
 import { usePersonalPicks } from '../../player/recommend';
 import { MixCard, TrendTile, useHome } from './Home';
@@ -86,6 +87,10 @@ function Collection({
           <button className="btn glass glass-press" onClick={() => play(true)} disabled={!tracks.length}>
             <IconShuffle size={18} />
             <span>{t('shuffle')}</span>
+          </button>
+          <button className="btn glass glass-press" onClick={() => startWave({ kind: 'tracks', tracks, title })} disabled={!tracks.length}>
+            <IconWaveform size={18} />
+            <span>{t('radioFromCollection')}</span>
           </button>
         </div>
         {tracks.length > 0 && (
