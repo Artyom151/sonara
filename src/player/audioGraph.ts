@@ -19,14 +19,6 @@ export interface Graph {
   analyser: AnalyserNode;
   /** Loudness levelling (player/normalize.ts): a gain after the equalizer. */
   norm: GainNode;
-  /** Normal path (before the analyser) and the karaoke path (L − R, centre removed). */
-  dry: GainNode;
-  kwet: GainNode;
-  lastBand: BiquadFilterNode;
-  split: ChannelSplitterNode;
-  merge: ChannelMergerNode;
-  mono: GainNode;
-  invRight: GainNode;
 }
 
 let graph: Graph | null = null;
@@ -56,31 +48,11 @@ export function ensureGraph(): Graph | null {
     analyser.smoothingTimeConstant = 0.8;
     let node: AudioNode = src.connect(preamp);
     for (const b of bands) node = node.connect(b);
-    const lastBand = bands[bands.length - 1];
-    // Normal path: the bands, then the analyser (the levelling measures it).
-    const dry = ctx.createGain();
-    lastBand.connect(dry);
-    dry.connect(analyser);
+    node.connect(analyser);
     const norm = ctx.createGain();
     analyser.connect(norm);
     norm.connect(ctx.destination);
-    // Karaoke path: left minus right is what is not in the centre (most vocals), in mono.
-    const split = ctx.createChannelSplitter(2);
-    const invRight = ctx.createGain();
-    invRight.gain.value = -1;
-    const mono = ctx.createGain();
-    const merge = ctx.createChannelMerger(2);
-    const kwet = ctx.createGain();
-    kwet.gain.value = 0;
-    lastBand.connect(split);
-    split.connect(mono, 0);
-    split.connect(invRight, 1);
-    invRight.connect(mono);
-    mono.connect(merge, 0, 0);
-    mono.connect(merge, 0, 1);
-    merge.connect(kwet);
-    kwet.connect(norm);
-    graph = { ctx, preamp, bands, analyser, norm, dry, kwet, lastBand, split, merge, mono, invRight };
+    graph = { ctx, preamp, bands, analyser, norm };
     // Keep it running: the context starts suspended until a gesture and may be suspended by the OS.
     const resume = () => void ctx.resume().catch(() => {});
     audio.addEventListener('play', resume);

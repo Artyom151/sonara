@@ -241,9 +241,6 @@ export function Settings() {
         <Cell icon={<IconMusic size={17} />} color="#0a84ff" label={t('autoplay')}>
           <Toggle checked={s.autoplay} onChange={(v) => s.set({ autoplay: v })} />
         </Cell>
-        <Cell icon={<IconMusic size={17} />} color="#bf5af2" label={t('karaoke')}>
-          <Toggle checked={s.karaoke} onChange={(v) => s.set({ karaoke: v })} />
-        </Cell>
         <Cell icon={<IconMusic size={17} />} color="#ff9f0a" label={t('normalize')}>
           <Toggle checked={s.normalize} onChange={(v) => s.set({ normalize: v })} />
         </Cell>
