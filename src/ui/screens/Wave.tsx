@@ -4,7 +4,7 @@ import { useLibrary } from '../../store/library';
 import { useSettings } from '../../store/settings';
 import { usePlayer } from '../../store/player';
 import { useUi } from '../../store/ui';
-import { Art } from '../components/controls';
+import { Art, Slider } from '../components/controls';
 import { EqBars, SourceMark } from '../components/TrackRow';
 import { useWaveColors, useWavePlaying } from '../desktop/WaveHero';
 import { WaveOrb } from '../desktop/WaveOrb';
@@ -230,12 +230,16 @@ function WaveMood() {
   const mood = useSettings((s) => s.waveMood);
   const discovery = useSettings((s) => s.waveDiscovery);
   const set = useSettings.getState().set;
+  // The same slider as the volume control: left and right ends are labels.
   const row = (key: 'familiar' | 'energy' | 'popular', left: StrKey, right: StrKey) => (
-    <label className="wave-slider">
-      <span>{t(left)}</span>
-      <input type="range" min={0} max={1} step={0.05} value={mood[key]} onChange={(e) => set({ waveMood: { ...mood, [key]: Number(e.target.value) } })} />
-      <span>{t(right)}</span>
-    </label>
+    <div className="wave-slider">
+      <Slider
+        value={mood[key]}
+        onChange={(v) => set({ waveMood: { ...mood, [key]: v } })}
+        left={<span className="wave-end">{t(left)}</span>}
+        right={<span className="wave-end">{t(right)}</span>}
+      />
+    </div>
   );
   return (
     <div className="wave-mood">

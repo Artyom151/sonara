@@ -956,8 +956,6 @@ button.link:hover {
   font-size: 15px;
 }
 .wave-mood { display: flex; flex-direction: column; gap: 8px; margin: 10px 16px; }
-.wave-slider { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; font-size: 12px; }
-.wave-slider input { width: 100%; accent-color: var(--accent); }
 .wave-discovery { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
 .why-scrim { position: fixed; inset: 0; z-index: 9400; background: rgb(0 0 0 / 0.4); display: grid; place-items: center; padding: 16px; }
 .why-sheet { width: min(92vw, 400px); padding: 18px; border-radius: 24px; display: flex; flex-direction: column; gap: 12px; }
@@ -968,3 +966,6 @@ button.link:hover {
 .why-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .lyric-word { transition: opacity 0.2s; opacity: 0.45; }
 .lyric-word.on { opacity: 1; }
+/* Wave mood sliders: the volume slider look, with the two ends labelled. */
+.wave-slider { margin: 2px 0; }
+.wave-end { font-size: 12px; opacity: 0.7; white-space: nowrap; }
