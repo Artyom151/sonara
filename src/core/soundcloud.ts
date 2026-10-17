@@ -49,7 +49,11 @@ export class SoundCloud {
     if (!refresh) {
       const cached = this.store.get('sc.client_id');
       const at = Number(this.store.get('sc.client_id.at') ?? 0);
-      if (cached && Date.now() - at < CLIENT_ID_TTL) return cached;
+      if (cached && Date.now() - at < CLIENT_ID_TTL) {
+        // Past half its life: renew it in the background, so no request ever waits for the scrape.
+        if (Date.now() - at > CLIENT_ID_TTL / 2) void this.clientId(true).catch(() => {});
+        return cached;
+      }
     }
     if (!this.pendingId) {
       this.pendingId = this.scrapeClientId()

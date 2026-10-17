@@ -45,6 +45,8 @@ export function createCoreApi(
   tokens: SourceTokens = {},
 ): SonaraApi & { sc: SoundCloud; yt: YouTube; dz: Deezer; ym: YandexMusic; matcher: RecordingMatcher; match: (t: Track) => Promise<Track | null> } {
   const sc = new SoundCloud(fetcher, store);
+  // Warm up in the background: the public client_id is ready before the first search.
+  void sc.clientId().catch(() => {});
   const yt = new YouTube(fetcher);
   const dz = new Deezer(fetcher, yt);
   // .env ships placeholders ("your_…"): those count as unset.

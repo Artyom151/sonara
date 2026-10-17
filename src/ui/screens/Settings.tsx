@@ -149,11 +149,9 @@ export function Settings() {
   const account = useAccount();
   const desktop = useDesktop();
   const cloud = useCloud();
-  const [clientId, setClientId] = useState('…');
   const [dynamicOk, setDynamicOk] = useState<boolean | null>(null);
 
   useEffect(() => {
-    api.clientId().then(setClientId).catch(() => setClientId('—'));
     getSystemPalette().then((p) => setDynamicOk(p.supported));
   }, []);
 
@@ -228,19 +226,6 @@ export function Settings() {
             </Cell>
           );
         })}
-        <Cell noicon label={t('soundcloudClientId')}>
-          <span className="cell-value mono">{clientId.length > 12 ? `${clientId.slice(0, 6)}…${clientId.slice(-4)}` : clientId}</span>
-          <button
-            className="btn small glass glass-press"
-            style={{ height: 30, padding: '0 12px', fontSize: 13 }}
-            onClick={() => {
-              setClientId('…');
-              api.clientId(true).then((id) => (setClientId(id), toast(`${t('soundcloudClientId')}: ${t('done')}`))).catch(() => setClientId('—'));
-            }}
-          >
-            <span>{t('refresh')}</span>
-          </button>
-        </Cell>
         <Cell noicon label={t('region')}>
           <Select value={s.region} options={REGIONS.map((r) => ({ value: r, label: r }))} onChange={(v) => s.set({ region: v })} />
         </Cell>
