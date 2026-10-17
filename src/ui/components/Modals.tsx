@@ -26,6 +26,7 @@ import {
   IconWaveform,
 } from '../icons';
 import { startWave } from '../../player/wave';
+import { openWhy } from './WhySheet';
 import { Alert, Art, Field, Menu, Sheet, type MenuItem } from './controls';
 import { MixCover, PlaylistCover } from './MixCover';
 import { LyricsView, useLyrics } from './Player';
@@ -93,6 +94,7 @@ function TrackMenu({ m }: { m: Extract<Modal, { type: 'track' }> }) {
     { ...toArtist, separatorBefore: isCurrent },
     // A live, endless wave built around this track (player/wave.ts).
     { label: t('waveFromThisTrack'), icon: <IconWaveform size={18} />, onSelect: () => void startWave({ kind: 'track', track }), separatorBefore: true },
+    { label: t('whyThis'), icon: <IconWaveform size={18} />, onSelect: () => openWhy(track) },
     { label: t('playNext'), icon: <IconQueue size={18} />, onSelect: () => (usePlayer.getState().playNext(track), toast(t('added'))) },
     { label: t('addToQueue'), icon: <IconMusicList size={18} />, onSelect: () => (usePlayer.getState().addToQueue([track]), toast(t('added'))) },
     { label: t('addToPlaylist'), icon: <IconPlus size={18} />, onSelect: () => setTimeout(() => open({ type: 'addToPlaylist', tracks: [track] })) },
