@@ -1,7 +1,7 @@
 import type Hls from 'hls.js';
 import { api } from '../core';
 import type { Track } from '../core/types';
-import { isTauri, nativeFetch } from '../platform';
+import { isAndroid, isTauri, nativeFetch } from '../platform';
 import { useLibrary } from '../store/library';
 import { usePlayer } from '../store/player';
 import { useSettings } from '../store/settings';
@@ -69,7 +69,9 @@ async function attach(url: string, kind: 'progressive' | 'hls') {
   setTimeout(() => (switching = false), 0);
   resetSource();
   applyRate(usePlayer.getState().rate);
-  if (kind === 'hls' && !audio.canPlayType('application/vnd.apple.mpegurl')) {
+  // Android's WebView claims native HLS but its media player cannot open SoundCloud's signed playlists
+  // (FileNotFoundException: No content provider): those go through hls.js there.
+  if (kind === 'hls' && (isAndroid || !audio.canPlayType('application/vnd.apple.mpegurl'))) {
     const { default: HlsCtor } = await import('hls.js');
     hls = new HlsCtor({ enableWorker: true });
     hls.loadSource(url);
