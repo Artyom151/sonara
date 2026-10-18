@@ -130,11 +130,12 @@ public class CastPlugin extends Plugin {
 
     @PluginMethod
     public void pick(PluginCall call) {
-        if (!ensure()) {
-            call.reject("unavailable: " + reason);
-            return;
-        }
+        // CastContext must be created on the main thread (it throws IllegalStateException elsewhere).
         getActivity().runOnUiThread(() -> {
+            if (!ensure()) {
+                call.reject("unavailable: " + reason);
+                return;
+            }
             CastSession current = sessions.getCurrentCastSession();
             if (current != null && current.isConnected()) {
                 JSObject d = new JSObject();
