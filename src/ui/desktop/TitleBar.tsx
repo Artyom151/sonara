@@ -1,12 +1,34 @@
 import { useEffect, useState } from 'react';
+import { useAccount } from '../../account/store';
 import { isTauri } from '../../platform';
+import { useSettings } from '../../store/settings';
+import { useUi } from '../../store/ui';
+import { Avatar } from '../components/Avatar';
+import { Logo } from '../components/Brand';
+import { useT } from '../i18n';
 
 type Win = Awaited<ReturnType<typeof getWin>>;
 export const isMac = /Mac/.test(navigator.platform) || /Mac OS X/.test(navigator.userAgent);
 const getWin = async () => (await import('@tauri-apps/api/window')).getCurrentWindow();
 
-/** Frameless window chrome: a drag strip plus minimise / maximise / close (Tauri only). */
+/** The brand on the left; the signed-in name and avatar on the right. */
+function UserChip() {
+  const t = useT();
+  const profile = useAccount((s) => s.profile);
+  const fallback = useSettings((s) => s.displayName);
+  const setTab = useUi((s) => s.setTab);
+  const name = profile?.displayName || fallback || t('listener');
+  return (
+    <button className="top-user glass-press" onClick={() => setTab('profile')} aria-label={t('profile')}>
+      <span>{name}</span>
+      <Avatar avatar={profile?.avatar} name={name} size={28} />
+    </button>
+  );
+}
+
+/** Window chrome: brand, user chip, a drag strip and, off macOS, minimise / maximise / close. */
 export function TitleBar() {
+  const setTab = useUi((s) => s.setTab);
   const [win, setWin] = useState<Win | null>(null);
   const [maximized, setMaximized] = useState(false);
 
@@ -23,7 +45,13 @@ export function TitleBar() {
 
   return (
     <div className="titlebar" data-tauri-drag-region>
-      {/* macOS uses native traffic lights (tauri.macos.conf.json: overlay title bar). */}
+      <button className="top-brand" onClick={() => setTab('home')} aria-label="Sonara">
+        <Logo size={24} />
+        <span>Sonara</span>
+      </button>
+      <div className="top-spacer" data-tauri-drag-region />
+      <UserChip />
+      {/* macOS keeps its native traffic lights (tauri.macos.conf.json). */}
       {win && !isMac && (
         <div className="win-controls">
           <button className="win-btn" aria-label="Minimize" onClick={() => win.minimize()}>

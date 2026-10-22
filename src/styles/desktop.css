@@ -10,29 +10,63 @@
 .app.desk {
   display: grid;
   grid-template-columns: 76px minmax(0, 1fr);
-  grid-template-rows: 40px minmax(0, 1fr) auto;
+  grid-template-rows: 52px minmax(0, 1fr) auto;
   --gutter: 36px;
   background: var(--bg);
 }
 
-/* Title bar */
+/* Title bar: brand, a drag strip, the user chip and the window buttons. */
 .titlebar {
-  grid-column: 2;
+  grid-column: 1 / -1;
   grid-row: 1;
   position: relative;
   z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-left: 20px;
   user-select: none;
 }
-.win-controls {
-  position: absolute;
-  top: 0;
-  right: 0;
+.app.desk.mac .titlebar {
+  padding-left: 84px;
+}
+.top-brand {
   display: flex;
-  height: 40px;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+.top-spacer {
+  flex: 1;
+  align-self: stretch;
+}
+.top-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 4px 0 14px;
+  margin-right: 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  transition: color 0.2s, background-color 0.2s;
+}
+.top-user:hover {
+  color: var(--text);
+  background: rgb(var(--fg-rgb) / 0.06);
+}
+.win-controls {
+  display: flex;
+  height: 52px;
+  align-self: flex-start;
 }
 .win-btn {
   width: 46px;
-  height: 40px;
+  height: 52px;
   display: grid;
   place-items: center;
   color: var(--text-2);
@@ -49,46 +83,35 @@
   color: #fff;
 }
 
-/* Icon rail */
+/* Icon rail: a floating capsule, centred on the side of the window. */
 .rail {
   grid-column: 1;
-  grid-row: 1 / 4;
+  grid-row: 2 / 4;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  padding: 14px 0 22px;
-}
-.rail-logo {
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  margin-bottom: 26px;
-  border-radius: 14px;
-  transition: transform 0.35s var(--ease-spring);
-}
-.rail-logo:active {
-  transform: scale(0.92);
+  justify-content: center;
+  z-index: 40;
 }
 .rail-items {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+  padding: 6px;
+  --g-radius: 999px;
+  --lg-tint: rgb(var(--elevated-rgb) / 0.55);
+  --lg-blur: 10px;
 }
 .rail-btn {
   position: relative;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   display: grid;
   place-items: center;
   color: var(--text-2);
-  border-radius: 16px;
+  border-radius: 50%;
   transition: color 0.2s;
 }
-.rail-btn:hover {
-  color: var(--text);
-}
+.rail-btn:hover,
 .rail-btn.active {
   color: var(--text);
 }
@@ -97,34 +120,11 @@
   z-index: 2;
 }
 .rail-lens {
-  position: absolute !important;
+  position: absolute;
   inset: 0;
-  --g-radius: 16px;
-  --lg-tint: rgb(var(--fg-rgb) / 0.08);
-  --lg-strength: 6;
+  border-radius: 50%;
+  background: rgb(var(--fg-rgb) / 0.1);
   z-index: 1;
-}
-.rail-avatar {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  padding: 2px;
-  background: conic-gradient(from 200deg, var(--accent), var(--accent-tertiary, var(--accent-strong)), var(--accent));
-  transition: transform 0.35s var(--ease-spring);
-}
-.rail-avatar span {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  background: var(--bg);
-  font-weight: 700;
-  font-size: 16px;
-}
-.rail-avatar:hover,
-.rail-avatar.active {
-  transform: scale(1.06);
 }
 
 /* Content panel */
@@ -297,16 +297,7 @@
   border-top-color: var(--bg);
 }
 .pbar-progress {
-  display: grid;
-  grid-template-columns: 40px 1fr 40px;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  color: var(--text-2);
-  font-variant-numeric: tabular-nums;
-}
-.pbar-progress > span:last-child {
-  text-align: right;
+  padding: 0 8px;
 }
 .pbar-progress .scrub {
   margin: 0;
@@ -472,7 +463,6 @@
 .app.desk.rail-right .rail {
   grid-column: 2;
 }
-.app.desk.rail-right .titlebar,
 .app.desk.rail-right .main,
 .app.desk.rail-right .pbar {
   grid-column: 1;
@@ -483,4 +473,18 @@
 }
 .app.desk.rail-right .pbar {
   margin: 0 12px 22px 24px;
+}
+
+.pbar-time {
+  display: block;
+  margin-top: 3px;
+  font-family: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+.pbar-time i {
+  font-style: normal;
+  opacity: 0.5;
 }

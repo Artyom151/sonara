@@ -23,10 +23,15 @@ import {
   IconSpeakerLow,
 } from '../icons';
 
-/** Time label isolated from the bar so 4×/s time updates re-render only this span. */
-function TimeLabel({ kind }: { kind: 'position' | 'duration' }) {
-  const v = usePlayer((s) => Math.floor(kind === 'position' ? s.position : s.duration));
-  return <span>{fmtTime(v)}</span>;
+/** Position / duration in its own component, so the frequent time updates re-render only this. */
+function TimeLabel() {
+  const position = usePlayer((s) => Math.floor(s.position));
+  const duration = usePlayer((s) => Math.floor(s.duration));
+  return (
+    <span className="pbar-time">
+      {fmtTime(position)} <i>/</i> {fmtTime(duration)}
+    </span>
+  );
 }
 
 /** Desktop bottom player: track | transport + progress | lyrics, queue, volume. */
@@ -65,6 +70,7 @@ export function PlayerBar() {
                 <button className="pbar-artist link" onClick={(e) => goToArtist(track, e.currentTarget.getBoundingClientRect())}>
                   {track.artist}
                 </button>
+                <TimeLabel />
               </div>
               <button className="pbar-icon" aria-label="More" onClick={(e) => open({ type: 'track', track, anchor: e.currentTarget.getBoundingClientRect() })}>
                 <IconMore size={18} />
@@ -97,9 +103,7 @@ export function PlayerBar() {
             </button>
           </div>
           <div className="pbar-progress">
-            <TimeLabel kind="position" />
             <Scrubber compact />
-            <TimeLabel kind="duration" />
           </div>
         </div>
 
