@@ -1063,3 +1063,10 @@ button.link:hover {
 .look-frame-pick { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: 0; color: inherit; font-size: 12px; cursor: pointer; padding: 6px; border-radius: 14px; }
 .look-frame-pick.on { background: rgb(127 127 127 / 0.16); }
 .stats-entry { width: calc(100% - 32px); margin: 12px 16px 0; padding: 14px 16px; border-radius: 18px; display: flex; align-items: center; justify-content: space-between; color: inherit; font: inherit; font-weight: 600; border: 0; cursor: pointer; }
+
+/* Listen together sheet (ui/components/TogetherSheet.tsx). */
+.together { display: flex; flex-direction: column; gap: 12px; padding: 4px 4px 16px; align-items: stretch; }
+.together-hint, .together-role { font-size: 13px; opacity: 0.7; margin: 0; }
+.together-code { font-size: 34px; font-weight: 700; letter-spacing: 0.2em; text-align: center; font-variant-numeric: tabular-nums; padding: 10px 0; }
+.together-join { display: flex; gap: 8px; }
+.together-input { flex: 1; min-width: 0; height: 44px; border-radius: 14px; border: 0; padding: 0 14px; background: rgb(127 127 127 / 0.16); color: inherit; font: inherit; letter-spacing: 0.15em; text-transform: uppercase; }

@@ -28,6 +28,7 @@ export type Modal =
   | { type: 'auth'; tab?: 'signIn' | 'signUp' }
   | { type: 'editProfile' }
   | { type: 'look' }
+  | { type: 'together' }
   | { type: 'comments' }
   | { type: 'confirm'; title: string; message?: string; action: string; destructive?: boolean; onConfirm: () => void };
 

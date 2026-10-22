@@ -52,6 +52,9 @@ export function Profile() {
             <button className="btn tonal small" onClick={() => open({ type: 'look' })}>
               <span>{t('appearance')}</span>
             </button>
+            <button className="btn tonal small" onClick={() => open({ type: 'together' })}>
+              <span>{t('together')}</span>
+            </button>
           </div>
         </div>
       ) : (
