@@ -2,6 +2,7 @@
 @import './glass.css';
 @import './theme.css';
 @import './home.css';
+@import './daylist.css';
 
 :root {
   color-scheme: dark;

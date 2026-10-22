@@ -13,6 +13,8 @@ const en = {
   removeFromPlaylist: 'Remove from playlist', like: 'Like', unlike: 'Remove from Likes', share: 'Share',
   openIn: 'Open in', lyrics: 'Lyrics', queue: 'Up next', moveInQueue: 'Drag to reorder; arrow keys also work', removeFromQueue: 'Remove from queue', removedFromQueue: 'Removed', undo: 'Undo', noLyrics: 'No lyrics for this track', instrumental: 'Instrumental',
   goodNight: 'Good night', goodMorning: 'Good morning', goodAfternoon: 'Good afternoon', goodEvening: 'Good evening', daylist: 'Daylist', daylistPitch: 'Music for this time of your day',
+  daylistTitle: '{day} {part} {tag}', daylistMix: 'mix', daylistLateNight: 'late-night', daylistMorning: 'morning', daylistLateMorning: 'late-morning', daylistAfternoon: 'afternoon', daylistEvening: 'evening', daylistNight: 'night',
+  daylistOverline: 'MUSIC FOR YOUR DAY', daylistPersonal: 'Inspired by your listening at this time', daylistFresh: 'Fresh music for your day', daylistNext: 'Next update', daylistSave: 'Save a copy', daylistSaved: 'Saved daylist', daylistRefresh: 'Refresh', daylistFinding: 'Finding music', daylistEmpty: 'No close matches yet. Like a few tracks or listen longer to tune your daylist.', daylistRecommended: 'Recommended for you',
   settings: 'Settings', appearance: 'Appearance', theme: 'Theme', themeSystem: 'System', themeLight: 'Light', themeDark: 'Dark', railSide: 'Sidebar', railLeft: 'Left', railRight: 'Right', accent: 'Accent color', accentSystem: 'Material You (system)',
   accentArtwork: 'From artwork', accentSonara: 'Sonara violet', accentCustom: 'Custom', tintInterface: 'Tint interface',
   tintInterfaceHint: 'Color backgrounds and glass with the accent palette', glassStyle: 'Glass', glassClear: 'Clear', glassTinted: 'Tinted',
@@ -103,6 +105,8 @@ const ru: typeof en = {
   removeFromPlaylist: 'Убрать из плейлиста', like: 'Нравится', unlike: 'Убрать из лайков', share: 'Поделиться',
   openIn: 'Открыть в', lyrics: 'Текст', queue: 'Далее', moveInQueue: 'Перетащите для перестановки; также работают стрелки', removeFromQueue: 'Удалить из очереди', removedFromQueue: 'Удалено', undo: 'Отменить', noLyrics: 'Текст не найден', instrumental: 'Инструментал',
   goodNight: 'Доброй ночи', goodMorning: 'Доброе утро', goodAfternoon: 'Добрый день', goodEvening: 'Добрый вечер', daylist: 'Подборка дня', daylistPitch: 'Музыка под это время вашего дня',
+  daylistTitle: '{day}: {part} {tag}', daylistMix: 'микс', daylistLateNight: 'ночной', daylistMorning: 'утренний', daylistLateMorning: 'предобеденный', daylistAfternoon: 'дневной', daylistEvening: 'вечерний', daylistNight: 'поздний',
+  daylistOverline: 'МУЗЫКА ПОД ВАШ ДЕНЬ', daylistPersonal: 'По вашему вкусу в это время суток', daylistFresh: 'Новые треки по вашему вкусу', daylistNext: 'Следующее обновление', daylistSave: 'Сохранить копию', daylistSaved: 'Сохранённая подборка по времени', daylistRefresh: 'Обновить', daylistFinding: 'Подбираем музыку', daylistEmpty: 'Пока нет точных совпадений. Поставьте лайки любимым трекам или послушайте музыку подольше.', daylistRecommended: 'Рекомендации',
   settings: 'Настройки', appearance: 'Оформление', theme: 'Тема', themeSystem: 'Как в системе', themeLight: 'Светлая', themeDark: 'Тёмная', railSide: 'Боковая панель', railLeft: 'Слева', railRight: 'Справа', accent: 'Акцентный цвет', accentSystem: 'Material You (системный)',
   accentArtwork: 'По обложке', accentSonara: 'Фиолетовый Sonara', accentCustom: 'Свой', tintInterface: 'Окрашивать интерфейс',
   tintInterfaceHint: 'Фон и стекло в цветах акцентной палитры', glassStyle: 'Стекло', glassClear: 'Прозрачное', glassTinted: 'Тонированное',
@@ -184,9 +188,10 @@ export type StrKey = keyof typeof en;
 
 export const resolveLang = (l: string) => (l === 'auto' ? (navigator.language.toLowerCase().startsWith('ru') ? 'ru' : 'en') : l);
 
+export const useLang = () => resolveLang(useSettings((s) => s.lang));
+
 export function useT() {
-  const lang = resolveLang(useSettings((s) => s.lang));
-  const dict = lang === 'ru' ? ru : en;
+  const dict = useLang() === 'ru' ? ru : en;
   return (k: StrKey) => dict[k];
 }
 
