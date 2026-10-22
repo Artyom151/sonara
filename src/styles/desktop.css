@@ -476,3 +476,36 @@
   font-style: normal;
   opacity: 0.5;
 }
+
+/* Collections: the cover on the left, title and actions beside it. */
+.app.desk .hero {
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 28px;
+  padding: 8px var(--gutter) 28px;
+  text-align: left;
+}
+.app.desk .hero-art {
+  width: 232px;
+  flex: none;
+}
+.app.desk .hero-copy {
+  align-items: flex-start;
+}
+.app.desk .hero h1 {
+  margin: 0 0 6px;
+  font-size: clamp(32px, 3.6vw, 52px);
+  letter-spacing: -0.035em;
+}
+.app.desk .hero p {
+  font-size: 14px;
+}
+.app.desk .hero-actions {
+  flex-wrap: nowrap;
+  width: auto;
+  max-width: none;
+}
+.app.desk .hero-actions .btn {
+  flex: none;
+  padding: 0 22px;
+}

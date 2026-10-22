@@ -77,28 +77,26 @@ function Collection({
       <div className="hero">
         <div className="hero-bg" style={{ background: `radial-gradient(70% 60% at 50% 30%, ${color}, transparent 75%)` }} />
         <div className="hero-art">{cover ?? <Art src={artwork} seed={contextId} />}</div>
-        <h1>{title}</h1>
-        {subtitle && <p>{subtitle}</p>}
-        <div className="hero-actions">
-          <button className="btn primary" onClick={() => play(false)} disabled={!tracks.length}>
-            <IconPlay size={18} />
-            <span>{t('play')}</span>
-          </button>
-          <button className="btn glass glass-press" onClick={() => play(true)} disabled={!tracks.length}>
-            <IconShuffle size={18} />
-            <span>{t('shuffle')}</span>
-          </button>
-          <button className="btn glass glass-press" onClick={() => startWave({ kind: 'tracks', tracks, title })} disabled={!tracks.length}>
-            <IconWaveform size={18} />
-            <span>{t('radioFromCollection')}</span>
-          </button>
-        </div>
-        {tracks.length > 0 && (
-          <div className="hero-actions" style={{ marginTop: 8 }}>
-            <DownloadAllButton tracks={tracks} />
+        <div className="hero-copy">
+          <h1>{title}</h1>
+          {subtitle && <p>{subtitle}</p>}
+          <div className="hero-actions">
+            <button className="btn primary" onClick={() => play(false)} disabled={!tracks.length}>
+              <IconPlay size={18} />
+              <span>{t('play')}</span>
+            </button>
+            <button className="btn tonal" onClick={() => play(true)} disabled={!tracks.length}>
+              <IconShuffle size={18} />
+              <span>{t('shuffle')}</span>
+            </button>
+            <button className="btn tonal" onClick={() => startWave({ kind: 'tracks', tracks, title })} disabled={!tracks.length}>
+              <IconWaveform size={18} />
+              <span>{t('radioFromCollection')}</span>
+            </button>
+            {tracks.length > 0 && <DownloadAllButton tracks={tracks} />}
           </div>
-        )}
-        {extra}
+          {extra}
+        </div>
       </div>
       {loading && (
         <div className="empty">

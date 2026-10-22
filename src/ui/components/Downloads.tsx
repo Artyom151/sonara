@@ -33,7 +33,7 @@ export function DownloadAllButton({ tracks }: { tracks: Track[] }) {
   const busy = queued > 0;
   return (
     <button
-      className="btn glass glass-press"
+      className="btn tonal"
       disabled={!tracks.length}
       aria-label={t('downloadAll')}
       onClick={() => {
