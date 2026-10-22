@@ -5,6 +5,32 @@ Russian version: [CHANGELOG_ru.md](CHANGELOG_ru.md).
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-22
+
+Pre-release. The new interface and the features below are not yet tested on every device.
+
+### Added
+- **Redesigned interface** for phones and desktop: light and dark themes, neutral surfaces with the accent taken from the cover, Material You, a preset or a custom colour. The desktop sidebar can sit on the left or the right.
+- **Full-screen player** after the desktop reference: a cover card with Up next, About and Lyrics panels, the speed control over the cover, a vertical volume control on phones, swipe down to close.
+- **Android home screen widgets** in three sizes (4×1 bar, 2×2 cover, 4×2 large) with a cover shape per widget, chosen from the Material 3 shapes.
+- **Listen together**: create a room and share its code; guests follow the host's track, position and pause.
+- **Current lyric line** in the Android media notification and the 4×1 and 4×2 widgets.
+- **Profile appearance**: a banner (gradient or your photo), a page background (gradient or the cover of the last played track) and an avatar frame.
+- **Statistics** on their own screen, opened from the profile.
+- **Daylist** that remembers what it offered for ten days and brings new tracks.
+- **Scrubbing shows the time** under the finger.
+
+### Changed
+- Likes tab: the liked songs card with Play and Shuffle, a grid of playlists.
+- Home: greeting, a carousel of Wave, the daylist and mixes, recently played tiles.
+- Settings: theme and sidebar side; the Copy logs button is gone from About.
+- The 2.0 interface is neutral by default; the earlier tinted look can be turned back on in Settings.
+
+### Fixed
+- The equalizer reaches the sound: the audio element is shared correctly with the audio graph, and the saved curve is applied when the graph is built.
+- The Android app no longer crashes when lyric updates arrive while the service starts.
+- Dev server: `tauri dev` and `pnpm dev` reuse a running Vite instead of failing with "port 5173 is already in use".
+
 ## [1.2.4] - 2026-10-22
 
 ### Added
