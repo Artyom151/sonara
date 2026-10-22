@@ -493,11 +493,12 @@
   display: none;
 }
 .app:not(.desk) .pl-panel {
-  inset: auto 10px 56px;
-  max-height: calc(100% - 80px);
+  inset: auto 10px 10px;
+  max-height: calc(100% - 20px);
 }
-.app:not(.desk) .pl-rail {
-  right: 10px;
+.app:not(.desk) .pl-tabs {
+  position: static;
+  inset: auto;
 }
 .pl-volume {
   padding: 0 14px 0 2px;
@@ -541,38 +542,61 @@
   --lg-tint: rgb(14 14 16 / 0.6);
 }
 
-/* Phone volume: a vertical capsule on the left of the cover, filled from the bottom. */
+/* Phone volume: a thin line on the left of the cover that widens into a capsule while dragged. */
 .pl-vol {
   position: absolute;
   z-index: 2;
-  left: 12px;
+  left: 4px;
   top: 50%;
-  width: 46px;
-  height: 44%;
-  min-height: 110px;
-  max-height: 180px;
+  width: 30px;
+  height: 40%;
+  min-height: 100px;
+  max-height: 170px;
   transform: translateY(-50%);
-  border-radius: 23px;
-  overflow: hidden;
   touch-action: none;
   cursor: ns-resize;
-  --g-radius: 23px;
-  --lg-tint: rgb(0 0 0 / 0.3);
 }
-.pl-vol > .pl-vol-fill {
+.pl-vol-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 5px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 0.28);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transition: width 0.3s var(--ease-spring), left 0.3s var(--ease-spring);
+}
+.pl-vol.active .pl-vol-bar {
+  width: 44px;
+  left: 30px;
+}
+.pl-vol-fill {
   position: absolute;
   inset: auto 0 0;
-  background: rgb(255 255 255 / 0.92);
+  background: rgb(255 255 255 / 0.95);
 }
-.pl-vol > .pl-vol-icon {
+.pl-vol-icon {
   position: absolute;
   left: 50%;
   bottom: 12px;
   transform: translateX(-50%);
   color: #fff;
   mix-blend-mode: difference;
+  opacity: 0;
+  transition: opacity 0.2s;
   pointer-events: none;
+}
+.pl-vol.active .pl-vol-icon {
+  opacity: 1;
 }
 .pl-art {
   touch-action: none;
+}
+
+.app:not(.desk) .pl-stage {
+  align-self: end;
 }

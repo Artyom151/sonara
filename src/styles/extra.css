@@ -1040,3 +1040,15 @@ button.link:hover {
 .together-code { font-size: 34px; font-weight: 700; letter-spacing: 0.2em; text-align: center; font-variant-numeric: tabular-nums; padding: 10px 0; }
 .together-join { display: flex; gap: 8px; }
 .together-input { flex: 1; min-width: 0; height: 44px; border-radius: 14px; border: 0; padding: 0 14px; background: rgb(127 127 127 / 0.16); color: inherit; font: inherit; letter-spacing: 0.15em; text-transform: uppercase; }
+
+.look-photo {
+  background: rgb(var(--fg-rgb) / 0.1) center / cover no-repeat;
+  color: var(--text-2);
+}
+.look-photo.on {
+  color: #fff;
+}
+.profile-banner {
+  background-size: cover;
+  background-position: center;
+}

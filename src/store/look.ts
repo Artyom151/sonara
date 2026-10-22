@@ -21,15 +21,18 @@ export type Background = number | 'artwork';
 
 interface LookState {
   banner: number;
+  /** A photo for the banner (JPEG data URL, kept on this device); null uses the gradient. */
+  bannerImage: string | null;
   background: Background;
   frame: number;
-  set: (patch: Partial<Pick<LookState, 'banner' | 'background' | 'frame'>>) => void;
+  set: (patch: Partial<Pick<LookState, 'banner' | 'bannerImage' | 'background' | 'frame'>>) => void;
 }
 
 export const useLook = create<LookState>()(
   persist(
     (set) => ({
       banner: 0,
+      bannerImage: null,
       background: 'artwork',
       frame: 0,
       set: (patch) => set(patch),

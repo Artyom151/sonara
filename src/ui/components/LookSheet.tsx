@@ -1,15 +1,27 @@
+import { useRef } from 'react';
+import { bannerImage as toBanner, blobToDataUrl } from '../../account/image';
 import { Sheet } from './controls';
+import { toast } from './Toast';
 import { FRAME_COUNT, LOOK_GRADIENTS, useLook } from '../../store/look';
 import { useAccount } from '../../account/store';
 import { useLibrary } from '../../store/library';
 import { useT } from '../i18n';
-import { IconCheck } from '../icons';
+import { IconCamera, IconCheck } from '../icons';
 import { Avatar } from './Avatar';
 
 /** Appearance of the profile: banner, page background and avatar frame. */
 export function LookSheet({ onClose }: { onClose: () => void }) {
   const t = useT();
-  const { banner, background, frame, set } = useLook();
+  const { banner, bannerImage, background, frame, set } = useLook();
+  const file = useRef<HTMLInputElement>(null);
+  const pick = async (f: File | undefined) => {
+    if (!f) return;
+    try {
+      set({ bannerImage: await blobToDataUrl(await toBanner(f)) });
+    } catch {
+      toast(t('bannerPhotoError'));
+    }
+  };
   const profile = useAccount((s) => s.profile);
   const recent = useLibrary((s) => s.recent);
   const hasArtwork = Boolean(recent[0]?.artworkLarge ?? recent[0]?.artwork);
@@ -19,18 +31,31 @@ export function LookSheet({ onClose }: { onClose: () => void }) {
       <div className="look">
         <div className="look-label">{t('banner')}</div>
         <div className="look-row">
-          {LOOK_GRADIENTS.map((g, i) => (
-            <button
-              key={i}
-              className={`look-swatch ${banner === i ? 'on' : ''}`}
-              style={{ background: `linear-gradient(120deg, ${g.from}, ${g.to})` }}
-              aria-label={`${t('banner')} ${i + 1}`}
-              aria-pressed={banner === i}
-              onClick={() => set({ banner: i })}
-            >
-              {banner === i && <IconCheck size={16} />}
-            </button>
-          ))}
+          <button
+            className={`look-swatch look-photo ${bannerImage ? 'on' : ''}`}
+            style={bannerImage ? { backgroundImage: `url("${bannerImage}")` } : undefined}
+            aria-label={t('bannerPhoto')}
+            title={t('bannerPhoto')}
+            onClick={() => file.current?.click()}
+          >
+            {bannerImage ? <IconCheck size={16} /> : <IconCamera size={18} />}
+          </button>
+          <input ref={file} type="file" accept="image/*" hidden onChange={(e) => void pick(e.target.files?.[0])} />
+          {LOOK_GRADIENTS.map((g, i) => {
+            const on = !bannerImage && banner === i;
+            return (
+              <button
+                key={i}
+                className={`look-swatch ${on ? 'on' : ''}`}
+                style={{ background: `linear-gradient(120deg, ${g.from}, ${g.to})` }}
+                aria-label={`${t('banner')} ${i + 1}`}
+                aria-pressed={on}
+                onClick={() => set({ banner: i, bannerImage: null })}
+              >
+                {on && <IconCheck size={16} />}
+              </button>
+            );
+          })}
         </div>
 
         <div className="look-label">{t('background')}</div>

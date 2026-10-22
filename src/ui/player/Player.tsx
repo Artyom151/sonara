@@ -126,19 +126,41 @@ function PanelTab({ icon, label, active, onClick }: { icon: ReactNode; label: Re
   );
 }
 
-/** Actions floating on the right of the cover. */
-function Rail({ track }: { track: Track }) {
+function PanelTabs({ panel, onToggle, lyrics }: { panel: Panel | null; onToggle: (p: Panel) => void; lyrics: Lyrics | null | undefined }) {
+  const t = useT();
+  return (
+    <div className="pl-tabs">
+      <PanelTab icon={<IconQueue size={15} />} label={t('queue')} active={panel === 'queue'} onClick={() => onToggle('queue')} />
+      <PanelTab icon={<IconMusic size={15} />} label={t('aboutTrack')} active={panel === 'about'} onClick={() => onToggle('about')} />
+      <PanelTab
+        icon={<IconQuote size={15} />}
+        label={lyrics?.synced ? <LyricLine lyrics={lyrics} fallback={t('lyrics')} /> : t('lyrics')}
+        active={panel === 'lyrics'}
+        onClick={() => onToggle('lyrics')}
+      />
+    </div>
+  );
+}
+
+function LikeButton({ track, className }: { track: Track; className: string }) {
+  const t = useT();
+  const liked = useLibrary((s) => s.likes.some((x) => x.key === track.key));
+  return (
+    <button className={`${className} ${liked ? 'liked' : ''}`} aria-label={t('like')} onClick={() => useLibrary.getState().toggleLike(track)}>
+      <IconHeart size={19} filled={liked} />
+    </button>
+  );
+}
+
+/** Dislike, add to a playlist and Cast: in the cover rail on desktop, in the action row on phones. */
+function TrackActions({ track, className }: { track: Track; className: string }) {
   const t = useT();
   const open = useUi((s) => s.open);
-  const liked = useLibrary((s) => s.likes.some((x) => x.key === track.key));
   const disliked = useLibrary((s) => s.dislikes.includes(track.key));
   return (
-    <div className="pl-rail glass">
-      <button className={`pl-rail-btn ${liked ? 'liked' : ''}`} aria-label={t('like')} onClick={() => useLibrary.getState().toggleLike(track)}>
-        <IconHeart size={19} filled={liked} />
-      </button>
+    <>
       <button
-        className={`pl-rail-btn ${disliked ? 'on' : ''}`}
+        className={`${className} ${disliked ? 'on' : ''}`}
         aria-label={t('dislike')}
         onClick={() => {
           useLibrary.getState().toggleDislike(track);
@@ -147,10 +169,20 @@ function Rail({ track }: { track: Track }) {
       >
         <IconBan size={18} />
       </button>
-      <button className="pl-rail-btn" aria-label={t('addToPlaylist')} onClick={() => open({ type: 'addToPlaylist', tracks: [track] })}>
+      <button className={className} aria-label={t('addToPlaylist')} onClick={() => open({ type: 'addToPlaylist', tracks: [track] })}>
         <IconPlus size={18} />
       </button>
-      <CastButton className="pl-rail-btn" size={18} />
+      <CastButton className={className} size={18} />
+    </>
+  );
+}
+
+/** Desktop: actions floating on the right of the cover. */
+function Rail({ track }: { track: Track }) {
+  return (
+    <div className="pl-rail glass">
+      <LikeButton track={track} className="pl-rail-btn" />
+      <TrackActions track={track} className="pl-rail-btn" />
     </div>
   );
 }
@@ -161,7 +193,7 @@ function VolumePill() {
   const t = useT();
   const volume = usePlayer((s) => s.volume);
   const box = useRef<HTMLDivElement>(null);
-  const down = useRef(false);
+  const [active, setActive] = useState(false);
   const set = (clientY: number) => {
     const r = box.current!.getBoundingClientRect();
     setVolume(Math.min(1, Math.max(0, 1 - (clientY - r.top) / r.height)));
@@ -169,7 +201,7 @@ function VolumePill() {
   return (
     <div
       ref={box}
-      className="pl-vol glass"
+      className={`pl-vol ${active ? 'active' : ''}`}
       role="slider"
       tabIndex={0}
       aria-orientation="vertical"
@@ -180,12 +212,12 @@ function VolumePill() {
       onPointerDown={(e) => {
         e.stopPropagation();
         e.currentTarget.setPointerCapture(e.pointerId);
-        down.current = true;
+        setActive(true);
         set(e.clientY);
       }}
-      onPointerMove={(e) => down.current && set(e.clientY)}
-      onPointerUp={() => (down.current = false)}
-      onPointerCancel={() => (down.current = false)}
+      onPointerMove={(e) => active && set(e.clientY)}
+      onPointerUp={() => setActive(false)}
+      onPointerCancel={() => setActive(false)}
       onKeyDown={(e) => {
         switch (e.key) {
           case 'ArrowUp':
@@ -195,22 +227,30 @@ function VolumePill() {
         }
       }}
     >
-      <div className="pl-vol-fill" style={{ height: `${volume * 100}%` }} />
-      <span className="pl-vol-icon">{volume < 0.4 ? <IconSpeakerLow size={16} /> : <IconSpeaker size={16} />}</span>
+      <div className="pl-vol-bar">
+        <div className="pl-vol-fill" style={{ height: `${volume * 100}%` }} />
+        <span className="pl-vol-icon">{volume < 0.4 ? <IconSpeakerLow size={16} /> : <IconSpeaker size={16} />}</span>
+      </div>
     </div>
   );
 }
 
-function Stage({ track, lyrics, view, onSwipeDown }: { track: Track; lyrics: Lyrics | null | undefined; view: View; onSwipeDown?: (e: React.PointerEvent) => void }) {
-  const t = useT();
+interface StageProps {
+  track: Track;
+  lyrics: Lyrics | null | undefined;
+  view: View;
+  panel: Panel | null;
+  onToggle: (p: Panel) => void;
+  onSwipeDown?: (e: React.PointerEvent) => void;
+}
+
+function Stage({ track, lyrics, view, panel, onToggle, onSwipeDown }: StageProps) {
   const playing = usePlayer((s) => s.playing);
-  const [panel, setPanel] = useState<Panel | null>(null);
   const lastTap = useRef(0);
   const desktop = useDesktop();
   const rate = usePlayer((s) => s.rate);
   const x = useMotionValue(0);
   const gesture = useRef<{ x: number; y: number; axis: 'x' | 'y' | null } | null>(null);
-  const toggle = (p: Panel) => setPanel((cur) => (cur === p ? null : p));
   const art = track.artworkLarge ?? track.artwork;
 
   const likeOnDoubleTap = () => {
@@ -294,7 +334,7 @@ function Stage({ track, lyrics, view, onSwipeDown }: { track: Track; lyrics: Lyr
             <SpeedControl rate={rate} />
           </div>
           {!desktop && <VolumePill />}
-          <Rail track={track} />
+          {desktop && <Rail track={track} />}
           <AnimatePresence>
             {panel && (
               <motion.div
@@ -308,16 +348,7 @@ function Stage({ track, lyrics, view, onSwipeDown }: { track: Track; lyrics: Lyr
               </motion.div>
             )}
           </AnimatePresence>
-          <div className="pl-tabs">
-            <PanelTab icon={<IconQueue size={15} />} label={t('queue')} active={panel === 'queue'} onClick={() => toggle('queue')} />
-            <PanelTab icon={<IconMusic size={15} />} label={t('aboutTrack')} active={panel === 'about'} onClick={() => toggle('about')} />
-            <PanelTab
-              icon={<IconQuote size={15} />}
-              label={lyrics?.synced ? <LyricLine lyrics={lyrics} fallback={t('lyrics')} /> : t('lyrics')}
-              active={panel === 'lyrics'}
-              onClick={() => toggle('lyrics')}
-            />
-          </div>
+          {desktop && <PanelTabs panel={panel} onToggle={onToggle} lyrics={lyrics} />}
         </>
       )}
     </div>
@@ -378,6 +409,8 @@ export function Player() {
   const desktop = useDesktop();
   const open = useUi((s) => s.open);
   const [view, setView] = useState<View>('cover');
+  const [panel, setPanel] = useState<Panel | null>(null);
+  const togglePanel = (p: Panel) => setPanel((cur) => (cur === p ? null : p));
   const { items: comments } = useComments(expanded ? track?.key : undefined);
   const lyrics = useLyrics(expanded ? track : undefined);
   const colors = usePlayerColors(track);
@@ -433,7 +466,15 @@ export function Player() {
             </button>
           </header>
 
-          <Stage track={track} lyrics={lyrics} view={view} onSwipeDown={desktop ? undefined : (e) => dragControls.start(e)} />
+          <Stage
+            track={track}
+            lyrics={lyrics}
+            view={view}
+            panel={panel}
+            onToggle={togglePanel}
+            onSwipeDown={desktop ? undefined : (e) => dragControls.start(e)}
+          />
+          {!desktop && <PanelTabs panel={panel} onToggle={togglePanel} lyrics={lyrics} />}
 
           <div className="pl-meta">
             {desktop && (
@@ -453,7 +494,7 @@ export function Player() {
                 {track.artist}
               </button>
             </div>
-            {desktop ? <Volume /> : commentsButton}
+            {desktop ? <Volume /> : <LikeButton track={track} className="pl-btn" />}
           </div>
 
           <footer className="pl-bar">
@@ -462,7 +503,8 @@ export function Player() {
               <TimeCode />
               <Transport />
               <div className="pl-actions">
-                {desktop && commentsButton}
+                {!desktop && <TrackActions track={track} className="pl-btn" />}
+                {commentsButton}
                 <button className="pl-btn" aria-label={t('queue')} onClick={() => open({ type: 'queue' })}>
                   <IconQueue size={19} />
                 </button>

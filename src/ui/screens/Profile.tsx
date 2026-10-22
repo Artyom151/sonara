@@ -16,7 +16,7 @@ export function Profile() {
   const recent = useLibrary((s) => s.recent);
   const push = useUi((s) => s.push);
   const open = useUi((s) => s.open);
-  const { banner, background, frame } = useLook();
+  const { banner, bannerImage, background, frame } = useLook();
   const artwork = recent[0]?.artworkLarge ?? recent[0]?.artwork;
   const bannerGradient = LOOK_GRADIENTS[banner % LOOK_GRADIENTS.length];
   const bg = background === 'artwork' ? (artwork ? `url("${artwork}")` : null) : null;
@@ -25,7 +25,10 @@ export function Profile() {
   return (
     <div className="screen profile-page">
       <div className="profile-bg" aria-hidden style={bg ? { backgroundImage: bg } : { background: `linear-gradient(180deg, ${(bgGradient ?? LOOK_GRADIENTS[0]).from}, ${(bgGradient ?? LOOK_GRADIENTS[0]).to})` }} />
-      <div className="profile-banner" style={{ background: `linear-gradient(120deg, ${bannerGradient.from}, ${bannerGradient.to})` }}>
+      <div
+        className="profile-banner"
+        style={bannerImage ? { backgroundImage: `url("${bannerImage}")` } : { background: `linear-gradient(120deg, ${bannerGradient.from}, ${bannerGradient.to})` }}
+      >
         <button className="profile-gear glass glass-icon glass-press" aria-label={t('settings')} onClick={() => push({ name: 'settings' })}>
           <IconGear size={20} />
         </button>
