@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useDragControls, type PanInfo } from 'motion/react';
+import { animate, AnimatePresence, motion, useDragControls, useMotionValue, type PanInfo } from 'motion/react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { CommentsPanel, useComments } from '../account/Comments';
 import { goToArtist } from '../artists';
@@ -88,7 +88,6 @@ function UpNext() {
 function About({ track }: { track: Track }) {
   const t = useT();
   const context = usePlayer((s) => s.context);
-  const rate = usePlayer((s) => s.rate);
   return (
     <div className="pl-about">
       <dl>
@@ -102,10 +101,6 @@ function About({ track }: { track: Track }) {
         <dd>{fmtTime(track.duration)}</dd>
       </dl>
       <LikedBy track={track} />
-      <div className="pl-about-speed">
-        <span>{t('speed')}</span>
-        <SpeedControl rate={rate} />
-      </div>
     </div>
   );
 }
@@ -161,11 +156,60 @@ function Rail({ track }: { track: Track }) {
 }
 
 /** The cover card: artwork, the action rail, and the Up next / About / Lyrics panels over it. */
-function Stage({ track, lyrics, view }: { track: Track; lyrics: Lyrics | null | undefined; view: View }) {
+/** iOS 26 style volume: a vertical capsule that fills from the bottom; drag up or down. */
+function VolumePill() {
+  const t = useT();
+  const volume = usePlayer((s) => s.volume);
+  const box = useRef<HTMLDivElement>(null);
+  const down = useRef(false);
+  const set = (clientY: number) => {
+    const r = box.current!.getBoundingClientRect();
+    setVolume(Math.min(1, Math.max(0, 1 - (clientY - r.top) / r.height)));
+  };
+  return (
+    <div
+      ref={box}
+      className="pl-vol glass"
+      role="slider"
+      tabIndex={0}
+      aria-orientation="vertical"
+      aria-label={t('volume')}
+      aria-valuemin={0}
+      aria-valuemax={1}
+      aria-valuenow={volume}
+      onPointerDown={(e) => {
+        e.stopPropagation();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        down.current = true;
+        set(e.clientY);
+      }}
+      onPointerMove={(e) => down.current && set(e.clientY)}
+      onPointerUp={() => (down.current = false)}
+      onPointerCancel={() => (down.current = false)}
+      onKeyDown={(e) => {
+        switch (e.key) {
+          case 'ArrowUp':
+            return setVolume(Math.min(1, volume + 0.05));
+          case 'ArrowDown':
+            return setVolume(Math.max(0, volume - 0.05));
+        }
+      }}
+    >
+      <div className="pl-vol-fill" style={{ height: `${volume * 100}%` }} />
+      <span className="pl-vol-icon">{volume < 0.4 ? <IconSpeakerLow size={16} /> : <IconSpeaker size={16} />}</span>
+    </div>
+  );
+}
+
+function Stage({ track, lyrics, view, onSwipeDown }: { track: Track; lyrics: Lyrics | null | undefined; view: View; onSwipeDown?: (e: React.PointerEvent) => void }) {
   const t = useT();
   const playing = usePlayer((s) => s.playing);
   const [panel, setPanel] = useState<Panel | null>(null);
   const lastTap = useRef(0);
+  const desktop = useDesktop();
+  const rate = usePlayer((s) => s.rate);
+  const x = useMotionValue(0);
+  const gesture = useRef<{ x: number; y: number; axis: 'x' | 'y' | null } | null>(null);
   const toggle = (p: Panel) => setPanel((cur) => (cur === p ? null : p));
   const art = track.artworkLarge ?? track.artwork;
 
@@ -202,14 +246,43 @@ function Stage({ track, lyrics, view }: { track: Track; lyrics: Lyrics | null | 
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.35 }}
-          drag={view === 'cover' ? 'x' : false}
-          dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.35}
-          onDragEnd={(_, info) => {
-            if (info.offset.x < -80) usePlayer.getState().next();
-            if (info.offset.x > 80) usePlayer.getState().prev();
+          style={{ x }}
+          // The first 10 px decide: sideways switches the track, down closes the player, no move is a tap.
+          onPointerDown={(e) => {
+            gesture.current = { x: e.clientX, y: e.clientY, axis: null };
+            e.currentTarget.setPointerCapture(e.pointerId);
           }}
-          onTap={likeOnDoubleTap}
+          onPointerMove={(e) => {
+            const g = gesture.current;
+            if (!g) return;
+            const dx = e.clientX - g.x;
+            const dy = e.clientY - g.y;
+            if (!g.axis) {
+              if (Math.hypot(dx, dy) < 10) return;
+              g.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+            }
+            if (g.axis === 'y') {
+              gesture.current = null;
+              e.currentTarget.releasePointerCapture(e.pointerId);
+              if (dy > 0) onSwipeDown?.(e);
+              return;
+            }
+            if (view === 'cover') x.set(dx * 0.6);
+          }}
+          onPointerUp={(e) => {
+            const g = gesture.current;
+            gesture.current = null;
+            if (!g) return;
+            if (!g.axis) return likeOnDoubleTap();
+            const dx = e.clientX - g.x;
+            if (view === 'cover' && dx < -80) usePlayer.getState().next();
+            if (view === 'cover' && dx > 80) usePlayer.getState().prev();
+            void animate(x, 0, { type: 'spring', stiffness: 400, damping: 34 });
+          }}
+          onPointerCancel={() => {
+            gesture.current = null;
+            void animate(x, 0, { type: 'spring', stiffness: 400, damping: 34 });
+          }}
         >
           <Art src={art} seed={track.key} />
         </motion.div>
@@ -217,6 +290,10 @@ function Stage({ track, lyrics, view }: { track: Track; lyrics: Lyrics | null | 
       {body && <div className="pl-overlay">{body}</div>}
       {view === 'cover' && (
         <>
+          <div className="pl-speed">
+            <SpeedControl rate={rate} />
+          </div>
+          {!desktop && <VolumePill />}
           <Rail track={track} />
           <AnimatePresence>
             {panel && (
@@ -309,7 +386,7 @@ export function Player() {
   // Swipe down to close, but only from empty areas: seeking, the cover swipe and scrolling stay free.
   const dragControls = useDragControls();
   const startDrag = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest('.scrub, button, input, .pl-stage, .slider, .speed')) return;
+    if (desktop || (e.target as HTMLElement).closest('.scrub, button, input, .pl-stage, .slider, .speed')) return;
     dragControls.start(e);
   };
   const onDragEnd = (_: unknown, info: PanInfo) => {
@@ -335,7 +412,7 @@ export function Player() {
           animate={{ y: 0 }}
           exit={{ y: '100%' }}
           transition={{ type: 'spring', stiffness: 300, damping: 36 }}
-          drag="y"
+          drag={desktop ? false : 'y'}
           dragListener={false}
           dragControls={dragControls}
           onPointerDown={startDrag}
@@ -356,7 +433,7 @@ export function Player() {
             </button>
           </header>
 
-          <Stage track={track} lyrics={lyrics} view={view} />
+          <Stage track={track} lyrics={lyrics} view={view} onSwipeDown={desktop ? undefined : (e) => dragControls.start(e)} />
 
           <div className="pl-meta">
             {desktop && (
@@ -394,7 +471,6 @@ export function Player() {
                 </button>
               </div>
             </div>
-            {!desktop && <Volume />}
           </footer>
         </motion.div>
       )}
