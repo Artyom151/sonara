@@ -25,9 +25,8 @@ export function Profile() {
   return (
     <div className="screen profile-page">
       <div className="profile-bg" aria-hidden style={bg ? { backgroundImage: bg } : { background: `linear-gradient(180deg, ${(bgGradient ?? LOOK_GRADIENTS[0]).from}, ${(bgGradient ?? LOOK_GRADIENTS[0]).to})` }} />
-      <div className="profile-banner" aria-hidden style={{ background: `linear-gradient(120deg, ${bannerGradient.from}, ${bannerGradient.to})` }} />
-      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 16px' }}>
-        <button className="glass glass-icon glass-press" aria-label={t('settings')} onClick={() => push({ name: 'settings' })}>
+      <div className="profile-banner" style={{ background: `linear-gradient(120deg, ${bannerGradient.from}, ${bannerGradient.to})` }}>
+        <button className="profile-gear glass glass-icon glass-press" aria-label={t('settings')} onClick={() => push({ name: 'settings' })}>
           <IconGear size={20} />
         </button>
       </div>
