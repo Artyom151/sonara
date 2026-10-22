@@ -5,6 +5,26 @@ Russian version: [CHANGELOG_ru.md](CHANGELOG_ru.md).
 
 ## [Unreleased]
 
+## [1.2.4] - 2026-10-22
+
+### Added
+- **Android home screen widgets**: three sizes. The 4×1 bar (cover, title, artist, previous / play-pause / next), the 2×2 cover with a play / pause button, and the 4×2 large widget with the transport buttons.
+- **Cover shapes for the widgets**: every Material 3 shape (cookie, clover, arch, circle, pill, burst, flower and more). Each widget gets its own shape from a picker when it is added.
+- **Daylist**: a playlist built from your listening by time of day, with its own screen.
+- **Playback speed** in the full-screen player: a glass chip with presets from 0.5× to 1.5×, a dial for 0.05 steps, and a counting animation of the value.
+- **Fallback sources**: when a track cannot play, the same recording is looked up on another enabled source.
+
+### Changed
+- **Equalizer** bands are drawn in the app's slider style, and the Adaptive preset applies to the track that is already playing (titles are used when a source has no genres, e.g. YouTube and Deezer).
+- **Discord Rich Presence** logs why it is not connected (usually Discord is not running).
+- **Local API server**: browsers can call it only from the dev server and from origins listed in `SONARA_ORIGINS`. The Yandex CDN proxy accepts only https.
+- **Settings**: the fields for the Yandex Music token, YouTube key, proxy and Discord App ID were removed. Those values come from the build (`.env`) instead.
+
+### Fixed
+- **Widget covers** are sharp at every size and keep their shape inside the widget.
+- **Playback speed on Linux** works through Web Audio and no longer stops or crashes the player.
+- **Home screen widget** no longer shows a black background in the corners of the cover size.
+
 ## [1.2.3] - 2026-10-15
 
 ### Added
