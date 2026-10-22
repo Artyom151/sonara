@@ -4,6 +4,7 @@
 @import './home.css';
 @import './daylist.css';
 @import './player.css';
+@import './library.css';
 
 :root {
   color-scheme: dark;

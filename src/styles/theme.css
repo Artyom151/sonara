@@ -24,8 +24,11 @@
 .fullplayer,
 .island,
 .splash,
-.wave {
+.wave,
+.lib-hero {
   color-scheme: dark;
+  --bg: #050505;
+  --bg-rgb: 5 5 5;
   --fg-rgb: 255 255 255;
   --elevated-rgb: 28 28 30;
   --text: #fff;
