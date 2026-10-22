@@ -329,13 +329,21 @@ export function flush() {
   if (!uid || !dirty.size) return;
   const out: SyncRow = {};
   for (const s of dirty) {
-    if (s === 'playlists') out.playlists = { items: useLibrary.getState().playlists.map(slimPlaylist), deleted: meta.deleted } satisfies PlaylistsSection;
-    else if (s === 'likes') out.likes_at = Date.now();
-    else if (s === 'now') {
-      const np = nowPlaying();
-      if (np) out.now_playing = np;
+    switch (s) {
+      case 'playlists':
+        out.playlists = { items: useLibrary.getState().playlists.map(slimPlaylist), deleted: meta.deleted } satisfies PlaylistsSection;
+        break;
+      case 'likes':
+        out.likes_at = Date.now();
+        break;
+      case 'now': {
+        const np = nowPlaying();
+        if (np) out.now_playing = np;
+        break;
+      }
+      default:
+        out[s] = { v: localSection(s), at: meta.at[s] };
     }
-    else out[s] = { v: localSection(s), at: meta.at[s] };
   }
   dirty.clear();
   if (Object.keys(out).length) void push(out);

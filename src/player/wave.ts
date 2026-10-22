@@ -125,6 +125,45 @@ function setProfile(profile: Profile) {
 
 /* ───────── Public API ───────── */
 
+interface Seeds {
+  seeds: Track[];
+  profile: Profile;
+  title?: string;
+}
+
+/** The tracks a wave grows from, and the taste words the seed adds. */
+async function seedsFor(s: WaveSeed | undefined): Promise<Seeds> {
+  const profile: Profile = {};
+  if (!s) {
+    const home = await api.home();
+    return { seeds: (home.picks.length ? home.picks : home.youtube).slice(0, 6), profile };
+  }
+  switch (s.kind) {
+    case 'query': {
+      const q = s.query.trim();
+      const [found, tagged] = await Promise.all([
+        api.search(q, 'all').catch(() => ({ tracks: [] as Track[], playlists: [] })),
+        api.tagTracks(q.toLowerCase()).catch(() => [] as Track[]),
+      ]);
+      for (const w of words(q)) {
+        profile[`g:${w}`] = (profile[`g:${w}`] ?? 0) + 2.5;
+        profile[`w:${w}`] = (profile[`w:${w}`] ?? 0) + 1;
+      }
+      if (words(q).length > 1) profile[`g:${words(q).join(' ')}`] = 2.5;
+      // Best text matches first, then the tag chart (moods and genres like "phonk", "lofi").
+      return { seeds: [...found.tracks.slice(0, 5), ...tagged.slice(0, 5)], profile, title: q };
+    }
+    case 'genre': {
+      for (const w of words(s.title)) profile[`g:${w}`] = 3;
+      return { seeds: ((await api.genre(s.urn)).tracks ?? []).slice(0, 10), profile, title: s.title };
+    }
+    case 'track':
+      return { seeds: [s.track], profile, title: s.track.title };
+    case 'tracks':
+      return { seeds: s.tracks.slice(0, 10), profile, title: s.title };
+  }
+}
+
 export async function startWave(seed?: WaveSeed, label?: string) {
   const ru = navigator.language.toLowerCase().startsWith('ru');
   useSettings.getState().set({ autoplay: true });
@@ -133,38 +172,9 @@ export async function startWave(seed?: WaveSeed, label?: string) {
   useWave.setState({ active: true, status: 'loading', seen: [], reasons: {}, label: label ?? 'Wave', seedArt: [] });
 
   try {
-    let seeds: Track[] = [];
-    const profile: Profile = {};
-    let title = label ?? (ru ? 'Волна' : 'Wave');
-
-    if (!s) {
-      const home = await api.home();
-      seeds = (home.picks.length ? home.picks : home.youtube).slice(0, 6);
-    } else if (s.kind === 'query') {
-      const q = s.query.trim();
-      title = q;
-      const [found, tagged] = await Promise.all([
-        api.search(q, 'all').catch(() => ({ tracks: [] as Track[], playlists: [] })),
-        api.tagTracks(q.toLowerCase()).catch(() => [] as Track[]),
-      ]);
-      // Seeds: best text matches first, then the tag chart (moods / genres like "phonk", "lofi").
-      seeds = [...found.tracks.slice(0, 5), ...tagged.slice(0, 5)];
-      for (const w of words(q)) {
-        profile[`g:${w}`] = (profile[`g:${w}`] ?? 0) + 2.5;
-        profile[`w:${w}`] = (profile[`w:${w}`] ?? 0) + 1;
-      }
-      if (words(q).length > 1) profile[`g:${words(q).join(' ')}`] = 2.5;
-    } else if (s.kind === 'genre') {
-      title = s.title;
-      seeds = ((await api.genre(s.urn)).tracks ?? []).slice(0, 10);
-      for (const w of words(s.title)) profile[`g:${w}`] = 3;
-    } else if (s.kind === 'track') {
-      title = s.track.title;
-      seeds = [s.track];
-    } else {
-      title = s.title;
-      seeds = s.tracks.slice(0, 10);
-    }
+    const found = await seedsFor(s);
+    const { seeds, profile } = found;
+    const title = found.title ?? label ?? (ru ? 'Волна' : 'Wave');
 
     if (!seeds.length) throw new Error('empty');
     for (const t of seeds) mix(profile, features(t), 1);

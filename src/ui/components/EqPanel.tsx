@@ -43,8 +43,14 @@ function EqBand({ value, hz, onChange }: { value: number; hz: string; onChange: 
         onPointerUp={() => (drag.current = false)}
         onPointerCancel={() => (drag.current = false)}
         onKeyDown={(e) => {
-          if (e.key === 'ArrowUp' || e.key === 'ArrowRight') onChange(value + 0.5);
-          else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') onChange(value - 0.5);
+          switch (e.key) {
+            case 'ArrowUp':
+            case 'ArrowRight':
+              return onChange(value + 0.5);
+            case 'ArrowDown':
+            case 'ArrowLeft':
+              return onChange(value - 0.5);
+          }
         }}
       >
         <div className="eq-rail" />

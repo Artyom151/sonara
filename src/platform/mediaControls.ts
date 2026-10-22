@@ -36,14 +36,26 @@ if (isAndroid) {
 
   MediaControls.addListener('action', ({ action, position, arg }) => {
     const p = usePlayer.getState();
-    // Android Auto: a tapped entry ("liked/<key>") or a voice request.
-    if (action === 'playId' && arg) return void playFromBrowse(arg);
-    if (action === 'search' && arg !== undefined) return void playFromSearch(arg);
-    if (action === 'play') p.patch({ playing: true });
-    else if (action === 'pause') p.patch({ playing: false });
-    else if (action === 'next') p.next();
-    else if (action === 'prev') p.prev();
-    else if (action === 'seek' && position != null) seek(position);
+    switch (action) {
+      // Android Auto: a tapped entry ("liked/<key>") or a voice request.
+      case 'playId':
+        if (arg) void playFromBrowse(arg);
+        return;
+      case 'search':
+        if (arg !== undefined) void playFromSearch(arg);
+        return;
+      case 'play':
+        return p.patch({ playing: true });
+      case 'pause':
+        return p.patch({ playing: false });
+      case 'next':
+        return p.next();
+      case 'prev':
+        return p.prev();
+      case 'seek':
+        if (position != null) seek(position);
+        return;
+    }
   });
 
   let lastSent = 0;

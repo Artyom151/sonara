@@ -77,8 +77,14 @@ function Dial({ rate }: { rate: number }) {
       aria-valuenow={rate}
       aria-valuetext={label(rate)}
       onKeyDown={(e) => {
-        if (e.key === 'ArrowRight' || e.key === 'ArrowUp') setRate(rate + STEP);
-        else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') setRate(rate - STEP);
+        switch (e.key) {
+          case 'ArrowRight':
+          case 'ArrowUp':
+            return setRate(rate + STEP);
+          case 'ArrowLeft':
+          case 'ArrowDown':
+            return setRate(rate - STEP);
+        }
       }}
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);

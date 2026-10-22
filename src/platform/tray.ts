@@ -26,9 +26,14 @@ if (isTauri) {
 
     await listen<string>('tray-action', ({ payload }) => {
       const p = usePlayer.getState();
-      if (payload === 'play') p.patch({ playing: !p.playing });
-      else if (payload === 'next') p.next();
-      else if (payload === 'prev') p.prev();
+      switch (payload) {
+        case 'play':
+          return p.patch({ playing: !p.playing });
+        case 'next':
+          return p.next();
+        case 'prev':
+          return p.prev();
+      }
     });
 
     let sig = '';
