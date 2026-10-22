@@ -81,11 +81,48 @@ export function createCoreApi(
    * Stream links are reused while valid (googlevideo links carry `expire`): replaying a track or
    * the prefetched next track starts at once instead of re-resolving (and minting a token).
    */
+  const streamFor = (t: Track) => {
+    switch (t.source) {
+      case 'youtube':
+        return yt.stream(t.id);
+      case 'deezer':
+        return catalogueStream(t);
+      case 'yandex':
+        return yandexStream(t);
+      default:
+        return sc.stream(t);
+    }
+  };
+  const playlistFor = (source: Source, id: string) => {
+    switch (source) {
+      case 'youtube':
+        return yt.playlist(id);
+      case 'deezer':
+        return dz.playlist(id);
+      case 'yandex':
+        return ym.playlist(id);
+      default:
+        return sc.playlist(id);
+    }
+  };
+  const relatedFor = (t: Track) => {
+    switch (t.source) {
+      case 'youtube':
+        return yt.related(t.id);
+      case 'deezer':
+        return dz.related(t);
+      case 'yandex':
+        return ym.related(t.id);
+      default:
+        return sc.related(t.id);
+    }
+  };
+
   const streamCache = new LruMap<string, { s: StreamInfo; until: number }>(60);
   const cachedStream = async (t: Track): Promise<StreamInfo> => {
     const hit = streamCache.get(t.key);
     if (hit && hit.until > Date.now()) return hit.s;
-    const s = await (t.source === 'youtube' ? yt.stream(t.id) : t.source === 'deezer' ? catalogueStream(t) : t.source === 'yandex' ? yandexStream(t) : sc.stream(t));
+    const s = await streamFor(t);
     const expire = Number(s.url.match(/[?&]expire=(\d+)/)?.[1]) * 1000;
     // Without an expiry: 10 minutes (SoundCloud / Yandex links are short-lived too).
     streamCache.set(t.key, { s, until: expire ? expire - 10 * 60_000 : Date.now() + 10 * 60_000 });
@@ -141,8 +178,7 @@ export function createCoreApi(
 
     genre: (urn) => sc.systemPlaylist(urn),
 
-    playlist: (source: Source, id: string) =>
-      source === 'youtube' ? yt.playlist(id) : source === 'deezer' ? dz.playlist(id) : source === 'yandex' ? ym.playlist(id) : sc.playlist(id),
+    playlist: (source: Source, id: string) => playlistFor(source, id),
 
     importLink: (url) => importLink(url),
     forgetStream: (key) => void streamCache.delete(key),
@@ -166,8 +202,7 @@ export function createCoreApi(
 
     tagTracks: (tag) => settle(sc.tagTracks(tag), []),
 
-    related: (t) =>
-      t.source === 'youtube' ? yt.related(t.id) : t.source === 'deezer' ? dz.related(t) : t.source === 'yandex' ? ym.related(t.id) : sc.related(t.id),
+    related: (t) => relatedFor(t),
 
     stream: (t) => cachedStream(t),
 

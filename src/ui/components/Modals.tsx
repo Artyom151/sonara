@@ -5,10 +5,10 @@ import { download, removeDownload, useOffline } from '../../player/offline';
 import { useSleep } from '../../player/sleep';
 import { sourceName } from '../sources';
 import { useEffect, useRef, useState } from 'react';
-import { usePlayer } from '../../store/player';
+import { usePlayer, type Repeat } from '../../store/player';
 import { useLibrary } from '../../store/library';
 import { useUi, type Modal } from '../../store/ui';
-import { useT } from '../i18n';
+import { useT, type StrKey } from '../i18n';
 import {
   IconBan,
   IconCheck,
@@ -40,6 +40,8 @@ import { openExternal, shareTrack } from './actions';
 import { openArtistPage, splitArtists } from '../artists';
 import { toast } from './Toast';
 
+const REPEAT_LABEL: Record<Repeat, StrKey> = { off: 'repeatOff', all: 'repeatAll', one: 'repeatOne' };
+
 function TrackMenu({ m }: { m: Extract<Modal, { type: 'track' }> }) {
   const t = useT();
   const close = useUi((s) => s.close);
@@ -57,7 +59,7 @@ function TrackMenu({ m }: { m: Extract<Modal, { type: 'track' }> }) {
         {
           label: t('repeat'),
           icon: <IconRepeat size={18} one={repeat === 'one'} />,
-          detail: repeat === 'off' ? t('repeatOff') : repeat === 'all' ? t('repeatAll') : t('repeatOne'),
+          detail: t(REPEAT_LABEL[repeat]),
           children: [
             { label: t('repeatOff'), checked: repeat === 'off', onSelect: () => setRepeat('off') },
             { label: t('repeatAll'), icon: <IconRepeat size={18} />, checked: repeat === 'all', onSelect: () => setRepeat('all') },

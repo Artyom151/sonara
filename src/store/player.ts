@@ -5,6 +5,8 @@ import type { Track } from '../core/types';
 
 export type Repeat = 'off' | 'all' | 'one';
 
+const NEXT_REPEAT: Record<Repeat, Repeat> = { off: 'all', all: 'one', one: 'off' };
+
 export interface QueueContext {
   title: string;
   /** e.g. `genre:techno`, `playlist:<id>`, `likes` */
@@ -148,7 +150,7 @@ export const usePlayer = create<PlayerState>()(
           const queue = s.baseQueue.length ? s.baseQueue : s.queue;
           return { shuffle: false, queue, index: Math.max(0, queue.findIndex((t) => t.key === cur?.key)) };
         }),
-      cycleRepeat: () => set((s) => ({ repeat: s.repeat === 'off' ? 'all' : s.repeat === 'all' ? 'one' : 'off' })),
+      cycleRepeat: () => set((s) => ({ repeat: NEXT_REPEAT[s.repeat] })),
       setExpanded: (expanded) => set({ expanded }),
       patch: (p) => set(p),
     }),

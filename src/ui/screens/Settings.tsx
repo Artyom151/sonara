@@ -119,8 +119,20 @@ function TrayCell() {
 function UpdateCells() {
   const t = useT();
   const u = useUpdates();
-  const status =
-    u.status === 'checking' ? t('checkingUpdates') : u.status === 'available' ? `${t('updateAvailable')} · ${u.info?.version}` : u.status === 'latest' ? t('upToDate') : u.status === 'error' ? t('updateError') : '';
+  const status = (() => {
+    switch (u.status) {
+      case 'checking':
+        return t('checkingUpdates');
+      case 'available':
+        return `${t('updateAvailable')} · ${u.info?.version}`;
+      case 'latest':
+        return t('upToDate');
+      case 'error':
+        return t('updateError');
+      default:
+        return '';
+    }
+  })();
   return (
     <>
       <button className="cell noicon" onClick={() => void u.check(true)} disabled={u.status === 'checking'}>

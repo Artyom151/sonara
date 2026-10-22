@@ -107,7 +107,16 @@ export function IslandPlayer({ desktop = false }: { desktop?: boolean }) {
         layout
         transition={spring}
         style={{ borderRadius: radius }}
-        onClick={() => (mode === 'device' ? useAudioDevice.getState().dismiss() : mode === 'notice' ? useIslandNotice.getState().clear() : !open && setOpen(true))}
+        onClick={() => {
+          switch (mode) {
+            case 'device':
+              return useAudioDevice.getState().dismiss();
+            case 'notice':
+              return useIslandNotice.getState().clear();
+            default:
+              if (!open) setOpen(true);
+          }
+        }}
         onPointerDown={mode === 'player' ? touch : undefined}
         onPointerEnter={() => mode === 'player' && ((hover.current = true), idle.current && clearTimeout(idle.current))}
         onPointerLeave={() => mode === 'player' && ((hover.current = false), open && touch())}

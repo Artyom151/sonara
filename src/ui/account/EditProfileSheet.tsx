@@ -5,9 +5,11 @@ import { normalizeUsername } from '../../account/types';
 import { Avatar, AVATAR_PRESETS, presetIndex } from '../components/Avatar';
 import { Field, Sheet } from '../components/controls';
 import { toast } from '../components/Toast';
-import { useT } from '../i18n';
+import { useT, type StrKey } from '../i18n';
 import { IconCamera, IconCheck, IconPlus } from '../icons';
 import { UsernameHint, useUsernameCheck } from './AuthSheet';
+
+const SAVE_ERRORS: Record<string, StrKey> = { username_taken: 'errUsernameTaken', username_invalid: 'errUsernameInvalid' };
 
 export function EditProfileSheet({ onClose }: { onClose: () => void }) {
   const t = useT();
@@ -32,7 +34,7 @@ export function EditProfileSheet({ onClose }: { onClose: () => void }) {
       onClose();
     } catch (e) {
       const code = (e as Error).message;
-      toast(code === 'username_taken' ? t('errUsernameTaken') : code === 'username_invalid' ? t('errUsernameInvalid') : t('errNetwork'));
+      toast(t(SAVE_ERRORS[code] ?? 'errNetwork'));
     } finally {
       setBusy(false);
     }
