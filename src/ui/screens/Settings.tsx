@@ -174,6 +174,29 @@ export function Settings() {
 
       <div className="group-label">{t('appearance')}</div>
       <div className="group">
+        <Cell noicon label={t('theme')}>
+          <Select
+            value={s.theme}
+            options={[
+              { value: 'system', label: t('themeSystem') },
+              { value: 'light', label: t('themeLight') },
+              { value: 'dark', label: t('themeDark') },
+            ]}
+            onChange={(v) => s.set({ theme: v })}
+          />
+        </Cell>
+        {desktop && (
+          <Cell noicon label={t('railSide')}>
+            <Select
+              value={s.railSide}
+              options={[
+                { value: 'left', label: t('railLeft') },
+                { value: 'right', label: t('railRight') },
+              ]}
+              onChange={(v) => s.set({ railSide: v })}
+            />
+          </Cell>
+        )}
         <Cell noicon label={t('accent')} hint={s.accentMode === 'system' && dynamicOk === false ? t('dynamicUnsupported') : undefined}>
           <Select value={!isAndroid && s.accentMode === 'system' ? 'artwork' : s.accentMode} options={accentOptions} onChange={(v) => s.set({ accentMode: v })} />
         </Cell>

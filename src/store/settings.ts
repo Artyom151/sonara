@@ -3,9 +3,12 @@ import { persist } from 'zustand/middleware';
 
 export type AccentMode = 'system' | 'artwork' | 'sonara' | 'custom';
 export type Lang = 'auto' | 'en' | 'ru';
+export type ThemeMode = 'system' | 'dark' | 'light';
+export type RailSide = 'left' | 'right';
 
 export interface Settings {
   lang: Lang;
+  theme: ThemeMode;
   accentMode: AccentMode;
   customAccent: string;
   /** Tint the whole interface (backgrounds, glass) with the accent palette. */
@@ -46,6 +49,8 @@ export interface Settings {
   discordAppId: string;
   /** Now playing as a Dynamic Island-style pill (phone: top of the screen, desktop: title bar). */
   islandPlayer: boolean;
+  /** Desktop: the side of the window the icon rail sits on. */
+  railSide: RailSide;
   set: (patch: Partial<Settings>) => void;
 }
 
@@ -53,6 +58,7 @@ export const useSettings = create<Settings>()(
   persist(
     (set) => ({
       lang: 'auto',
+      theme: 'system',
       accentMode: 'system',
       customAccent: '#8b5cf6',
       tintInterface: true,
@@ -88,6 +94,7 @@ export const useSettings = create<Settings>()(
       closeToTray: false,
       discordAppId: (import.meta.env.VITE_DISCORD_APP_ID as string | undefined) ?? '',
       islandPlayer: false,
+      railSide: 'left',
       set: (patch) => set(patch),
     }),
     { name: 'sonara.settings', partialize: ({ set: _, ...rest }) => rest },

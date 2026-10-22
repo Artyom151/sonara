@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { isCapacitor } from '../platform';
 import { usePlayer } from '../store/player';
 import { useSettings } from '../store/settings';
-import { useUi, type Tab } from '../store/ui';
+import { useUi, type Route, type Tab } from '../store/ui';
 import { ThemeController } from '../theme/ThemeController';
 import { useAccount } from '../account/store';
 import { Splash } from './components/Brand';
@@ -38,6 +38,21 @@ const ROOTS: Record<Tab, () => React.ReactNode> = {
   profile: () => <Profile />,
 };
 
+function RouteScreen({ r }: { r: Route }) {
+  switch (r.name) {
+    case 'settings':
+      return <Settings />;
+    case 'wave':
+      return <WaveScreen />;
+    case 'daylist':
+      return <DaylistScreen />;
+    case 'stats':
+      return <StatsScreen />;
+    default:
+      return <RouteView r={r} />;
+  }
+}
+
 /** Each tab keeps its own navigation stack; screens slide in like a UINavigationController. */
 function TabStack({ tab }: { tab: Tab }) {
   const stack = useUi((s) => s.stacks[tab]);
@@ -56,7 +71,7 @@ function TabStack({ tab }: { tab: Tab }) {
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 380, damping: 40 }}
           >
-            {r.name === 'settings' ? <Settings /> : r.name === 'wave' ? <WaveScreen /> : r.name === 'daylist' ? <DaylistScreen /> : r.name === 'stats' ? <StatsScreen /> : <RouteView r={r} />}
+            <RouteScreen r={r} />
           </motion.div>
         ))}
       </AnimatePresence>
@@ -68,6 +83,7 @@ export function App() {
   const desktop = useDesktop();
   const showSplash = useSettings((s) => s.showSplash);
   const island = useSettings((s) => s.islandPlayer);
+  const railSide = useSettings((s) => s.railSide);
   useEffect(() => {
     document.documentElement.dataset.island = island ? (desktop ? 'desk' : '1') : '0';
   }, [island, desktop]);
@@ -102,7 +118,7 @@ export function App() {
   }, []);
 
   return (
-    <div className={`app ${desktop ? 'desk' : ''} ${desktop && island ? 'island-mode' : ''} ${isTauri && isMac ? 'mac' : ''}`}>
+    <div className={`app ${desktop ? `desk rail-${railSide}` : ''} ${desktop && island ? 'island-mode' : ''} ${isTauri && isMac ? 'mac' : ''}`}>
       <ThemeController />
       {desktop && <TitleBar />}
       {desktop && <Rail />}

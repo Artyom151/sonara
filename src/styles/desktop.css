@@ -465,3 +465,23 @@
 .app.desk.mac .rail {
   padding-top: 44px;
 }
+
+/* Rail on the right: the content and the player bar take the first column. */
+.app.desk.rail-right {
+  grid-template-columns: minmax(0, 1fr) 76px;
+}
+.app.desk.rail-right .rail {
+  grid-column: 2;
+}
+.app.desk.rail-right .titlebar,
+.app.desk.rail-right .main,
+.app.desk.rail-right .pbar {
+  grid-column: 1;
+}
+.app.desk.rail-right .main {
+  margin-right: 0;
+  margin-left: 12px;
+}
+.app.desk.rail-right .pbar {
+  margin: 0 12px 22px 24px;
+}

@@ -44,27 +44,58 @@ export function imageColors(url: string | undefined): Promise<number[]> {
 const tone = (p: TonalPalette, t: number) => hexFromArgb(p.tone(t));
 const rgbTriplet = (argb: number) => `${(argb >> 16) & 255} ${(argb >> 8) & 255} ${argb & 255}`;
 
-/** Interface palette (Material You tonal spot, dark) as CSS custom properties. */
-export function accentVars(seed: number, tint: boolean): Record<string, string> {
+export type Scheme = 'dark' | 'light';
+
+/** Interface palette (Material You tonal spot) as CSS custom properties, for the dark or the light scheme. */
+export function accentVars(seed: number, tint: boolean, scheme: Scheme): Record<string, string> {
   const hct = Hct.fromInt(seed);
   const primary = TonalPalette.fromHueAndChroma(hct.hue, Math.max(48, hct.chroma));
   const secondary = TonalPalette.fromHueAndChroma(hct.hue, 16);
   const tertiary = TonalPalette.fromHueAndChroma((hct.hue + 60) % 360, 24);
   const neutral = TonalPalette.fromHueAndChroma(hct.hue, tint ? 8 : 0);
-  return {
-    '--accent': tone(primary, 80),
-    '--accent-rgb': rgbTriplet(primary.tone(80)),
-    '--accent-strong': tone(primary, 60),
-    '--accent-container': tone(primary, 30),
-    '--on-accent': tone(primary, 15),
-    '--accent-secondary': tone(secondary, 80),
-    '--accent-tertiary': tone(tertiary, 80),
-    '--bg': tint ? tone(neutral, 4) : '#050505',
-    '--bg-rgb': rgbTriplet(tint ? neutral.tone(4) : 0xff050505),
-    '--surface': tone(neutral, 10),
-    '--surface-2': tone(neutral, 17),
-    '--glass-tint-rgb': rgbTriplet(tint ? TonalPalette.fromHueAndChroma(hct.hue, 14).tone(30) : 0xff3a3a3c),
-  };
+  const glass = TonalPalette.fromHueAndChroma(hct.hue, 14);
+  switch (scheme) {
+    case 'light':
+      return {
+        '--accent': tone(primary, 40),
+        '--accent-rgb': rgbTriplet(primary.tone(40)),
+        '--accent-strong': tone(primary, 50),
+        '--accent-container': tone(primary, 90),
+        '--on-accent': '#ffffff',
+        '--accent-secondary': tone(secondary, 40),
+        '--accent-tertiary': tone(tertiary, 40),
+        '--bg': tint ? tone(neutral, 97) : '#f5f5f7',
+        '--bg-rgb': rgbTriplet(tint ? neutral.tone(97) : 0xfff5f5f7),
+        '--surface': tint ? tone(neutral, 99) : '#ffffff',
+        '--surface-2': tone(neutral, 92),
+        '--glass-tint-rgb': rgbTriplet(tint ? glass.tone(92) : 0xffe5e5ea),
+        '--fg-rgb': '0 0 0',
+        '--text': '#0b0b0f',
+        '--text-2': 'rgb(60 60 67 / 0.7)',
+        '--text-3': 'rgb(60 60 67 / 0.42)',
+        '--sep': 'rgb(60 60 67 / 0.2)',
+      };
+    case 'dark':
+      return {
+        '--accent': tone(primary, 80),
+        '--accent-rgb': rgbTriplet(primary.tone(80)),
+        '--accent-strong': tone(primary, 60),
+        '--accent-container': tone(primary, 30),
+        '--on-accent': tone(primary, 15),
+        '--accent-secondary': tone(secondary, 80),
+        '--accent-tertiary': tone(tertiary, 80),
+        '--bg': tint ? tone(neutral, 4) : '#050505',
+        '--bg-rgb': rgbTriplet(tint ? neutral.tone(4) : 0xff050505),
+        '--surface': tone(neutral, 10),
+        '--surface-2': tone(neutral, 17),
+        '--glass-tint-rgb': rgbTriplet(tint ? glass.tone(30) : 0xff3a3a3c),
+        '--fg-rgb': '255 255 255',
+        '--text': '#ffffff',
+        '--text-2': 'rgb(235 235 245 / 0.62)',
+        '--text-3': 'rgb(235 235 245 / 0.34)',
+        '--sep': 'rgb(84 84 88 / 0.5)',
+      };
+  }
 }
 
 /** Two colors for the full-screen player backdrop, like the concept's purple / amber screens. */
