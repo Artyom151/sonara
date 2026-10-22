@@ -1,6 +1,7 @@
 @import '@fontsource-variable/inter';
 @import './glass.css';
 @import './theme.css';
+@import './home.css';
 
 :root {
   color-scheme: dark;

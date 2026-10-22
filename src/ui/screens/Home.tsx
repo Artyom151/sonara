@@ -1,5 +1,6 @@
 import { api } from '../../core';
-import type { HomeData, Playlist, TrendingGenre } from '../../core/types';
+import type { HomeData, Playlist, Track, TrendingGenre } from '../../core/types';
+import { useLibrary } from '../../store/library';
 import { usePlayer } from '../../store/player';
 import { useSettings } from '../../store/settings';
 import { useUi } from '../../store/ui';
@@ -11,8 +12,8 @@ import { IconHeart, IconPlay } from '../icons';
 import { useAsync } from '../useAsync';
 import { usePersonalPicks } from '../../player/recommend';
 import { useDesktop } from '../useMedia';
-import { WaveCard, WaveHero } from '../desktop/WaveHero';
-import { DaylistCard } from './Daylist';
+import { WaveHero } from '../desktop/WaveHero';
+import { Featured, Greeting, RecentTiles, playPlaylist } from '../components/Featured';
 
 export function TrendTile({ g }: { g: TrendingGenre }) {
   const push = useUi((s) => s.push);
@@ -33,10 +34,9 @@ export function TrendTile({ g }: { g: TrendingGenre }) {
 export function MixCard({ p }: { p: Playlist }) {
   const t = useT();
   const push = useUi((s) => s.push);
-  const playMix = async (e: React.MouseEvent) => {
+  const playMix = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const full = p.tracks?.length ? p : await api.playlist(p.source as 'soundcloud', p.id);
-    if (full.tracks?.length) usePlayer.getState().playQueue(full.tracks, 0, { title: p.title, id: p.key });
+    void playPlaylist(p);
   };
   return (
     <button className="mix-card" onClick={() => push({ name: 'playlist', source: p.source as 'soundcloud', id: p.id, title: p.title, artwork: p.artwork, preview: p })}>
@@ -114,19 +114,36 @@ function Skeleton({ rows }: { rows?: boolean }) {
   );
 }
 
+const unique = (tracks: Track[]) => tracks.filter((x, i) => tracks.findIndex((y) => y.key === x.key) === i);
+
+function RecentTilesSection() {
+  const t = useT();
+  const push = useUi((s) => s.push);
+  const any = useLibrary((s) => s.recent.length > 0);
+  if (!any) return null;
+  return (
+    <>
+      <SectionHead title={t('recentlyPlayed')} onAll={() => push({ name: 'recent' })} />
+      <RecentTiles title={t('recentlyPlayed')} />
+    </>
+  );
+}
+
 export function Home() {
   const t = useT();
   const push = useUi((s) => s.push);
   const { data, loading, error, reload } = useHome();
   const desktop = useDesktop();
   const personal = usePersonalPicks();
-  // Personal picks from Likes when there are any; otherwise the trending chart picks.
-  const picks = personal.personal ? personal.tracks : (data?.picks ?? []);
+  const picks = unique(personal.personal ? personal.tracks : (data?.picks ?? []));
 
   return (
     <div className="screen">
-      {desktop ? <WaveHero data={data} /> : <WaveCard />}
-      <DaylistCard />
+      {desktop ? <WaveHero data={data} /> : <Greeting />}
+      <Featured mixes={data?.mixes ?? []} wave={!desktop} />
+      <section className="section">
+        <RecentTilesSection />
+      </section>
       {loading && !data && (
         <>
           <div className="section-head" style={{ marginTop: 8 }}>
