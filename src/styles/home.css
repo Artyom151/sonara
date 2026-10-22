@@ -204,3 +204,19 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.feature-blurred {
+  position: absolute;
+  inset: 0;
+}
+.feature-blurred > * {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.feature-blurred::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 30%, rgb(0 0 0 / 0.75));
+}

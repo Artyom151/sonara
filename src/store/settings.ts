@@ -38,6 +38,8 @@ export interface Settings {
   /** Wave never picks these (taste corrections from "Why this?"). */
   waveBlocked: { genres: string[]; artists: string[] };
   showLyricsLine: boolean;
+  /** Phones: light rays from the top of the full-screen player, in the accent colour. */
+  playerRays: boolean;
   /** Desktop: lyrics column in the full-screen player. */
   lyricsPanel: boolean;
   crossfade: number;
@@ -87,6 +89,7 @@ export const useSettings = create<Settings>()(
       waveDiscovery: false,
       waveBlocked: { genres: [], artists: [] },
       showLyricsLine: true,
+      playerRays: true,
       lyricsPanel: true,
       crossfade: 0,
       displayName: 'Listener',

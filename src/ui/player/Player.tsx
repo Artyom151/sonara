@@ -7,6 +7,7 @@ import { setVolume, togglePlay } from '../../player/engine';
 import { likePulse } from '../../player/likePulse';
 import { useLibrary } from '../../store/library';
 import { usePlayer } from '../../store/player';
+import { useSettings } from '../../store/settings';
 import { useUi } from '../../store/ui';
 import { imageColors, playerBackdrop } from '../../theme/color';
 import { shareTrack } from '../components/actions';
@@ -408,6 +409,7 @@ export function Player() {
   const context = usePlayer((s) => s.context);
   const desktop = useDesktop();
   const open = useUi((s) => s.open);
+  const playerRays = useSettings((s) => s.playerRays);
   const [view, setView] = useState<View>('cover');
   const [panel, setPanel] = useState<Panel | null>(null);
   const togglePanel = (p: Panel) => setPanel((cur) => (cur === p ? null : p));
@@ -440,6 +442,7 @@ export function Player() {
       {expanded && track && (
         <motion.div
           className="fullplayer"
+          data-rays={!desktop && playerRays ? '1' : '0'}
           style={{ '--p-accent': colors.accent, '--p-deep': colors.deep } as React.CSSProperties}
           initial={{ y: '100%' }}
           animate={{ y: 0 }}

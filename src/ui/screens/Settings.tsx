@@ -185,6 +185,11 @@ export function Settings() {
 
       <div className="group-label">{t('appearance')}</div>
       <div className="group">
+        {!desktop && (
+          <Cell noicon label={t('playerRays')} hint={t('playerRaysHint')}>
+            <Toggle checked={s.playerRays} onChange={(v) => s.set({ playerRays: v })} />
+          </Cell>
+        )}
         <Cell noicon label={t('theme')}>
           <Select
             value={s.theme}

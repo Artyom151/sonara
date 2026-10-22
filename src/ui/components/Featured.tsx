@@ -101,14 +101,24 @@ function WaveFeature() {
   const t = useT();
   const push = useUi((s) => s.push);
   const colors = useWaveColors();
+  const recent = useLibrary((s) => s.recent);
   const { playing } = useWavePlaying();
   const [a, b, c] = colors;
+  const art = recent[0]?.artworkLarge ?? recent[0]?.artwork;
   return (
     <FeatureCard
       label={t('forYou')}
       title={t('wave')}
       sub={t('waveHint')}
-      cover={<div className="feature-gradient" style={{ background: `radial-gradient(circle at 30% 30%, ${a}, transparent 60%), radial-gradient(circle at 70% 70%, ${b ?? a}, transparent 55%), ${c ?? b ?? a}` }} />}
+      cover={
+        art ? (
+          <div className="feature-blurred">
+            <Art src={art} seed={recent[0].key} />
+          </div>
+        ) : (
+          <div className="feature-gradient" style={{ background: `radial-gradient(circle at 30% 30%, ${a}, transparent 60%), radial-gradient(circle at 70% 70%, ${b ?? a}, transparent 55%), ${c ?? b ?? a}` }} />
+        )
+      }
       footer={t('tune')}
       playing={playing}
       onOpen={() => push({ name: 'wave' })}
@@ -123,15 +133,17 @@ function DaylistFeature() {
   const { slot, data } = useDaylist();
   const title = useDaylistTitle(slot.part, data?.tags ?? []);
   const tracks = data?.tracks ?? [];
+  const recent = useLibrary((s) => s.recent);
+  const covers = tracks.length ? tracks : recent;
   return (
     <FeatureCard
       label={t('daylist')}
       title={title}
       sub={t('daylistPitch')}
       cover={
-        tracks.length ? (
+        covers.length ? (
           <div className="feature-collage">
-            {tracks.slice(0, 4).map((x) => (
+            {covers.slice(0, 4).map((x) => (
               <Art key={x.key} src={x.artworkLarge ?? x.artwork} seed={x.key} />
             ))}
           </div>
@@ -141,7 +153,7 @@ function DaylistFeature() {
           </div>
         )
       }
-      footer={`${tracks.length} ${t('tracks')}`}
+      footer={tracks.length ? `${tracks.length} ${t('tracks')}` : t('daylistNoTracks')}
       onOpen={() => push({ name: 'daylist' })}
       onPlay={() => tracks.length && usePlayer.getState().playQueue(tracks, 0, { title, id: `daylist:${slot.start}` })}
     />
