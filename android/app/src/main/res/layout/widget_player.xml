@@ -13,7 +13,6 @@
         android:id="@+id/widget_art"
         android:layout_width="64dp"
         android:layout_height="64dp"
-        android:background="#26FFFFFF"
         android:contentDescription="@null"
         android:scaleType="centerCrop" />
 
@@ -55,11 +54,12 @@
 
     <ImageButton
         android:id="@+id/widget_play"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="@null"
         android:contentDescription="Play"
-        android:src="@drawable/ic_media_play" />
+        android:padding="0dp"
+        android:scaleType="fitCenter" />
 
     <ImageButton
         android:id="@+id/widget_next"

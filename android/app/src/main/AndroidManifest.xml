@@ -56,6 +56,16 @@
             android:resource="@xml/automotive_app_desc" />
 
         <!-- Home screen widget -->
+        <!-- Shown when the widget is added: the cover shape. -->
+        <activity
+            android:name=".WidgetConfigActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
         <receiver
             android:name=".PlayerWidgetProvider"
             android:exported="false">
@@ -65,6 +75,28 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/player_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".CoverWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/cover_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".LargeWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/large_widget_info" />
         </receiver>
     </application>
 

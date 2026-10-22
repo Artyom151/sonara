@@ -56,6 +56,15 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation "androidx.media:media:1.7.1"
+    // Material 3 shapes (MaterialShapes) for the home screen widget. Only the shape presets are used:
+    // their Compose geometry types are pulled in without their transitive dependencies, which are not cached.
+    implementation("androidx.compose.material3:material3:1.5.0-alpha29") { transitive = false }
+    implementation("androidx.compose.ui:ui-graphics-android:1.13.0-alpha01") { transitive = false }
+    implementation("androidx.compose.ui:ui-geometry-android:1.13.0-alpha01") { transitive = false }
+    implementation("androidx.compose.ui:ui-unit-android:1.13.0-alpha01") { transitive = false }
+    implementation("androidx.compose.ui:ui-util-android:1.13.0-alpha01") { transitive = false }
+    implementation "androidx.graphics:graphics-shapes-android:1.0.1"
+    implementation "androidx.graphics:graphics-path:1.0.1"
     // Chromecast sender (CastPlugin): the device picker and the remote media client.
     implementation "com.google.android.gms:play-services-cast-framework:22.0.0"
     implementation "androidx.mediarouter:mediarouter:1.7.0"
@@ -77,3 +86,7 @@ try {
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
 }
+
+// Material 3 alpha29 asks for AGP 9.1 and compileSdk 37 (this project uses 8.13). Only its shape
+// presets are used, plain Java, so the AAR metadata check is skipped instead of upgrading the build.
+tasks.matching { it.name == 'checkReleaseAarMetadata' || it.name == 'checkDebugAarMetadata' }.configureEach { enabled = false }
