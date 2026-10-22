@@ -8,8 +8,9 @@ import { useMedia } from '../ui/useMedia';
 import { accentVars, argbFromHex, imageColors, SONARA_SEED, type Scheme } from './color';
 import { getSystemPalette } from './dynamic';
 
-function useScheme(theme: ThemeMode): Scheme {
-  const prefersLight = useMedia('(prefers-color-scheme: light)');
+const LIGHT_QUERY = '(prefers-color-scheme: light)';
+
+export function schemeFor(theme: ThemeMode, prefersLight = window.matchMedia(LIGHT_QUERY).matches): Scheme {
   switch (theme) {
     case 'light':
       return 'light';
@@ -19,6 +20,8 @@ function useScheme(theme: ThemeMode): Scheme {
       return prefersLight ? 'light' : 'dark';
   }
 }
+
+const useScheme = (theme: ThemeMode) => schemeFor(theme, useMedia(LIGHT_QUERY));
 
 async function seedFor(mode: AccentMode, custom: string, artwork: string | undefined): Promise<number> {
   switch (mode) {

@@ -26,7 +26,7 @@
 /* ───────── Skeleton ───────── */
 .sk {
   flex: none;
-  background: linear-gradient(100deg, rgb(255 255 255 / 0.05) 30%, rgb(255 255 255 / 0.11) 50%, rgb(255 255 255 / 0.05) 70%);
+  background: linear-gradient(100deg, rgb(var(--fg-rgb) / 0.05) 30%, rgb(var(--fg-rgb) / 0.11) 50%, rgb(var(--fg-rgb) / 0.05) 70%);
   background-size: 300% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
 }
@@ -120,7 +120,7 @@ button:disabled {
 :root[data-perf='low'] .sheet.glass,
 :root[data-perf='low'] .alert.glass,
 :root[data-perf='low'] .menu.glass {
-  background: rgb(26 26 28 / 0.94);
+  background: rgb(var(--elevated-rgb) / 0.94);
 }
 /* Long lists: skip layout/paint for off-screen rows. */
 .track-row {
@@ -137,7 +137,7 @@ button:disabled {
   translate: -50% 0;
   background: #000;
   color: #fff;
-  box-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.08), 0 12px 30px -8px rgb(0 0 0 / 0.7);
+  box-shadow: 0 0 0 0.5px rgb(var(--fg-rgb) / 0.08), 0 12px 30px -8px rgb(0 0 0 / 0.7);
   overflow: hidden;
   cursor: pointer;
 }
@@ -208,7 +208,7 @@ button:disabled {
 }
 .island-artist {
   font-size: 12.5px;
-  color: rgb(255 255 255 / 0.55);
+  color: rgb(var(--fg-rgb) / 0.55);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -217,7 +217,7 @@ button:disabled {
   margin-top: 10px;
 }
 .island .times {
-  color: rgb(255 255 255 / 0.45);
+  color: rgb(var(--fg-rgb) / 0.45);
 }
 .island-controls {
   display: flex;
@@ -236,7 +236,7 @@ button:disabled {
 }
 .island-controls button:active {
   transform: scale(0.88);
-  background: rgb(255 255 255 / 0.1);
+  background: rgb(var(--fg-rgb) / 0.1);
 }
 /* Room for the island above screen titles. */
 :root[data-island='1'] .screen {
@@ -249,7 +249,7 @@ button:disabled {
   padding-top: calc(var(--sat) + 54px);
 }
 .island-play {
-  background: rgb(255 255 255 / 0.08);
+  background: rgb(var(--fg-rgb) / 0.08);
 }
 
 /* Desktop: the island lives in the title bar and replaces the player bar. */
@@ -282,7 +282,7 @@ button:disabled {
   min-width: 0;
   font-size: 12.5px;
   font-weight: 600;
-  color: rgb(255 255 255 / 0.85);
+  color: rgb(var(--fg-rgb) / 0.85);
 }
 .island.desk .island-expanded {
   padding: 16px 18px 12px;
@@ -301,12 +301,12 @@ button:disabled {
   display: grid;
   place-items: center;
   border-radius: 50%;
-  color: rgb(255 255 255 / 0.6);
+  color: rgb(var(--fg-rgb) / 0.6);
   transition: color 0.2s, background-color 0.2s, transform 0.3s var(--ease-spring);
 }
 .island-small:hover {
   color: #fff;
-  background: rgb(255 255 255 / 0.08);
+  background: rgb(var(--fg-rgb) / 0.08);
 }
 .island-small:active {
   transform: scale(0.88);
@@ -321,7 +321,7 @@ button:disabled {
   gap: 18px;
 }
 .island.desk .island-controls button:not(.island-small):hover {
-  background: rgb(255 255 255 / 0.08);
+  background: rgb(var(--fg-rgb) / 0.08);
 }
 .island-volume {
   margin-top: 6px;
@@ -416,8 +416,8 @@ button:disabled {
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: #fff;
-  color: #000;
+  background: var(--text);
+  color: var(--bg);
   transition: transform 0.3s var(--ease-spring);
 }
 .handoff-go:active {
@@ -531,7 +531,7 @@ button.link:hover {
   max-width: min(420px, calc(100vw - 24px));
   padding: 10px 12px;
   --g-radius: 26px;
-  --lg-tint: rgb(24 24 27 / 0.78);
+  --lg-tint: rgb(var(--elevated-rgb) / 0.78);
   --lg-blur: 24px;
 }
 .update-row {
@@ -611,14 +611,14 @@ button.link:hover {
   padding: 16px 16px 12px;
 }
 .island-update-open .update-text small {
-  color: rgb(255 255 255 / 0.6);
+  color: rgb(var(--fg-rgb) / 0.6);
 }
 .island-update-later {
   display: block;
   margin: 10px auto 0;
   padding: 4px 12px;
   font-size: 13px;
-  color: rgb(255 255 255 / 0.6);
+  color: rgb(var(--fg-rgb) / 0.6);
 }
 
 /* Volume in the full-screen player (phones and desktop) */
@@ -687,7 +687,7 @@ button.link:hover {
 }
 .island-device-text small {
   font-size: 12.5px;
-  color: rgb(255 255 255 / 0.55);
+  color: rgb(var(--fg-rgb) / 0.55);
 }
 .island-device-text b {
   font-size: 15.5px;
@@ -774,7 +774,7 @@ button.link:hover {
 }
 .island-notice-text small {
   font-size: 11px;
-  color: rgb(255 255 255 / 0.55);
+  color: rgb(var(--fg-rgb) / 0.55);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -792,7 +792,7 @@ button.link:hover {
   gap: 3px;
   font-size: 11.5px;
   font-weight: 600;
-  color: rgb(255 255 255 / 0.85);
+  color: rgb(var(--fg-rgb) / 0.85);
   font-variant-numeric: tabular-nums;
 }
 .island-chip i {
@@ -809,7 +809,7 @@ button.link:hover {
 .speed-preset { position: relative; display: grid; place-items: center; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; opacity: 0.7; transition: opacity 0.2s; }
 .speed-preset.on { opacity: 1; }
 .speed-preset > span { position: relative; z-index: 1; }
-.speed-thumb { position: absolute; inset: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.24); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3), 0 2px 10px rgba(0, 0, 0, 0.2); backdrop-filter: blur(10px); }
+.speed-thumb { position: absolute; inset: 3px; border-radius: 999px; background: rgb(var(--fg-rgb) / 0.24); box-shadow: inset 0 0 0 1px rgb(var(--fg-rgb) / 0.3), 0 2px 10px rgba(0, 0, 0, 0.2); backdrop-filter: blur(10px); }
 .speed-dial { position: relative; height: 34px; overflow: hidden; touch-action: none; user-select: none; cursor: grab; outline: none; -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); }
 .speed-dial:active { cursor: grabbing; }
 .speed-ticks { position: absolute; left: 50%; top: 0; height: 100%; }
@@ -989,11 +989,11 @@ button.link:hover {
   border-radius: 999px;
 }
 .btn.tonal {
-  background: rgb(255 255 255 / 0.12);
-  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.18), 0 6px 18px -10px rgb(0 0 0 / 0.5);
+  background: rgb(var(--fg-rgb) / 0.12);
+  box-shadow: inset 0 0.5px 0 rgb(var(--fg-rgb) / 0.18), 0 6px 18px -10px rgb(0 0 0 / 0.5);
 }
 .btn.primary {
-  box-shadow: inset 0 0.5px 0 rgb(255 255 255 / 0.3), 0 10px 24px -12px var(--accent);
+  box-shadow: inset 0 0.5px 0 rgb(var(--fg-rgb) / 0.3), 0 10px 24px -12px var(--accent);
 }
 .btn.small {
   height: 42px;
@@ -1027,7 +1027,7 @@ button.link:hover {
   user-select: none;
 }
 .queue-grip:active { cursor: grabbing; }
-.queue-dragging { background: rgb(255 255 255 / 0.1); }
+.queue-dragging { background: rgb(var(--fg-rgb) / 0.1); }
 .queue-undo {
   display: flex;
   align-items: center;

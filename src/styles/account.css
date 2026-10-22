@@ -10,7 +10,7 @@
   right: 14px;
   width: 34px;
   height: 34px;
-  --lg-tint: rgb(255 255 255 / 0.08);
+  --lg-tint: rgb(var(--fg-rgb) / 0.08);
 }
 .auth-logo {
   display: grid;
@@ -19,7 +19,7 @@
 }
 .auth-logo svg {
   border-radius: 18px;
-  box-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.12);
+  box-shadow: 0 0 0 0.5px rgb(var(--fg-rgb) / 0.12);
 }
 .auth-title,
 .auth-confirm h2 {
@@ -153,7 +153,7 @@
 .profile-avatar {
   box-shadow:
     0 0 0 3px var(--bg),
-    0 0 0 4.5px rgb(255 255 255 / 0.18);
+    0 0 0 4.5px rgb(var(--fg-rgb) / 0.18);
 }
 .profile-name {
   margin: 4px 0 0;
@@ -174,7 +174,7 @@
   border-radius: 8px;
   font-size: 11px;
   font-weight: 600;
-  background: rgb(255 255 255 / 0.08);
+  background: rgb(var(--fg-rgb) / 0.08);
 }
 .mode-pill.supabase {
   color: var(--accent);
@@ -188,7 +188,7 @@
   padding: 26px 22px 22px;
   text-align: center;
   --g-radius: 28px;
-  --lg-tint: rgb(255 255 255 / 0.05);
+  --lg-tint: rgb(var(--fg-rgb) / 0.05);
 }
 .signin-icon {
   display: inline-grid;
@@ -253,9 +253,9 @@
   box-shadow: 0 0 0 2.5px var(--accent);
 }
 .avatar-pick.upload {
-  background: rgb(255 255 255 / 0.08);
+  background: rgb(var(--fg-rgb) / 0.08);
   color: var(--text-2);
-  border: 1.5px dashed rgb(255 255 255 / 0.25);
+  border: 1.5px dashed rgb(var(--fg-rgb) / 0.25);
 }
 .avatar-check {
   position: absolute;
@@ -309,7 +309,7 @@
   border-radius: 16px;
 }
 .comment:hover {
-  background: rgb(255 255 255 / 0.04);
+  background: rgb(var(--fg-rgb) / 0.04);
 }
 .comment-main {
   flex: 1;
@@ -346,7 +346,7 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--p-accent, var(--accent));
-  background: rgb(255 255 255 / 0.08);
+  background: rgb(var(--fg-rgb) / 0.08);
 }
 .composer {
   display: flex;
@@ -356,7 +356,7 @@
   margin: 8px 6px 4px;
   padding: 6px 6px 6px 8px;
   --g-radius: 26px;
-  --lg-tint: rgb(255 255 255 / 0.07);
+  --lg-tint: rgb(var(--fg-rgb) / 0.07);
 }
 .composer input {
   flex: 1;
@@ -399,7 +399,7 @@
   font-style: normal;
   font-weight: 700;
   line-height: 16px;
-  color: #000;
+  color: var(--on-accent);
   background: var(--p-accent, var(--accent));
 }
 .player-side .comments {

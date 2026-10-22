@@ -1,5 +1,6 @@
 @import '@fontsource-variable/inter';
 @import './glass.css';
+@import './theme.css';
 
 :root {
   color-scheme: dark;
@@ -17,6 +18,12 @@
   --text-2: rgb(235 235 245 / 0.62);
   --text-3: rgb(235 235 245 / 0.34);
   --sep: rgb(84 84 88 / 0.5);
+  --fg-rgb: 255 255 255;
+  --elevated-rgb: 28 28 30;
+  --panel: #0c0c0c;
+  --accent-dark: #c4b5fd;
+  --accent-dark-rgb: 196 181 253;
+  --on-accent-dark: #1e0b4b;
   --red: #ff453a;
   --green: #30d158;
   --ease-spring: cubic-bezier(0.2, 1.3, 0.35, 1);
@@ -325,7 +332,7 @@ img {
   transition: background-color 0.2s;
 }
 .track-row:active {
-  background: rgb(255 255 255 / 0.05);
+  background: rgb(var(--fg-rgb) / 0.05);
 }
 .track-row.playing .track-title {
   color: var(--accent);
@@ -399,7 +406,7 @@ img {
   border-radius: 50%;
 }
 .row-btn:active {
-  background: rgb(255 255 255 / 0.1);
+  background: rgb(var(--fg-rgb) / 0.1);
 }
 
 /* Equalizer bars for the playing row. */
@@ -490,7 +497,7 @@ img {
   height: 6px;
   border-radius: 50%;
   background: var(--red);
-  box-shadow: 0 0 0 1.5px rgb(30 30 32);
+  box-shadow: 0 0 0 1.5px rgb(var(--elevated-rgb));
 }
 
 /* The sliding lens behind the active tab. */
@@ -500,10 +507,10 @@ img {
   bottom: 4px;
   border-radius: 28px;
   z-index: 2 !important;
-  background: rgb(255 255 255 / 0.1);
+  background: rgb(var(--fg-rgb) / 0.1);
   box-shadow:
-    inset 0 0.5px 0 rgb(255 255 255 / 0.3),
-    inset 0 0 0 0.5px rgb(255 255 255 / 0.08);
+    inset 0 0.5px 0 rgb(var(--fg-rgb) / 0.3),
+    inset 0 0 0 0.5px rgb(var(--fg-rgb) / 0.08);
 }
 
 /* ─────────── Mini player ─────────── */
@@ -557,7 +564,7 @@ img {
   flex: none;
 }
 .mini-btn:active {
-  background: rgb(255 255 255 / 0.1);
+  background: rgb(var(--fg-rgb) / 0.1);
 }
 .mini-progress {
   position: absolute !important;
@@ -566,13 +573,13 @@ img {
   bottom: 3px;
   height: 2px;
   border-radius: 2px;
-  background: rgb(255 255 255 / 0.12);
+  background: rgb(var(--fg-rgb) / 0.12);
   overflow: hidden;
 }
 .mini-progress i {
   display: block;
   height: 100%;
-  background: rgb(255 255 255 / 0.85);
+  background: rgb(var(--fg-rgb) / 0.85);
   transform-origin: left;
 }
 
@@ -662,8 +669,8 @@ img {
   overflow: hidden;
   box-shadow:
     0 30px 60px -20px rgb(0 0 0 / 0.6),
-    0 0 0 0.5px rgb(255 255 255 / 0.1);
-  background: rgb(255 255 255 / 0.06);
+    0 0 0 0.5px rgb(var(--fg-rgb) / 0.1);
+  background: rgb(var(--fg-rgb) / 0.06);
   transition: transform 0.6s var(--ease-spring);
 }
 .player-art.paused {
@@ -734,7 +741,7 @@ img {
   border-radius: 50%;
   overflow: hidden;
   flex: none;
-  background: rgb(255 255 255 / 0.1);
+  background: rgb(var(--fg-rgb) / 0.1);
 }
 .np-art img {
   width: 100%;
@@ -815,7 +822,7 @@ img {
   height: 4px;
   margin-top: -2px;
   border-radius: 4px;
-  background: rgb(255 255 255 / 0.18);
+  background: rgb(var(--fg-rgb) / 0.18);
   overflow: hidden;
   transition:
     height 0.3s var(--ease-spring),
@@ -832,7 +839,7 @@ img {
   border-radius: inherit;
 }
 .scrub-buffer {
-  background: rgb(255 255 255 / 0.14);
+  background: rgb(var(--fg-rgb) / 0.14);
 }
 .scrub-fill {
   background: #fff;
@@ -859,7 +866,7 @@ img {
   display: grid;
   place-items: center;
   border-radius: 50%;
-  color: rgb(255 255 255 / 0.92);
+  color: rgb(var(--fg-rgb) / 0.92);
   transition:
     transform 0.35s var(--ease-spring),
     color 0.2s;
@@ -868,7 +875,7 @@ img {
   transform: scale(0.85);
 }
 .ctl.dim {
-  color: rgb(255 255 255 / 0.6);
+  color: rgb(var(--fg-rgb) / 0.6);
 }
 .ctl.on {
   color: var(--p-accent, var(--accent));
@@ -898,7 +905,7 @@ img {
   justify-content: center;
   padding: 0 16px;
   font-size: 12px;
-  color: rgb(255 255 255 / 0.75);
+  color: rgb(var(--fg-rgb) / 0.75);
   --g-alpha: 0.1;
   --g-blur: 14px;
   overflow: hidden;
@@ -915,7 +922,7 @@ img {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  border: 2.5px solid rgb(255 255 255 / 0.25);
+  border: 2.5px solid rgb(var(--fg-rgb) / 0.25);
   border-top-color: #fff;
   animation: spin 0.8s linear infinite;
 }
@@ -943,7 +950,7 @@ img {
   font-weight: 750;
   letter-spacing: -0.02em;
   line-height: 1.2;
-  color: rgb(255 255 255 / 0.32);
+  color: rgb(var(--fg-rgb) / 0.32);
   transition:
     color 0.4s,
     transform 0.5s var(--ease-spring),
@@ -958,12 +965,12 @@ img {
   filter: none;
 }
 .lyrics p.past {
-  color: rgb(255 255 255 / 0.5);
+  color: rgb(var(--fg-rgb) / 0.5);
   filter: none;
 }
 .lyrics.plain p {
   font-size: 19px;
-  color: rgb(255 255 255 / 0.85);
+  color: rgb(var(--fg-rgb) / 0.85);
   filter: none;
   white-space: pre-wrap;
 }
@@ -1000,7 +1007,7 @@ img {
   padding: 0 12px;
   border-radius: 16px;
   font-size: 13px;
-  background: rgb(255 255 255 / 0.08);
+  background: rgb(var(--fg-rgb) / 0.08);
 }
 
 .genre-grid {
@@ -1128,7 +1135,7 @@ img {
 }
 /* Tonal: secondary actions next to a primary button. */
 .btn.tonal {
-  background: rgb(255 255 255 / 0.1);
+  background: rgb(var(--fg-rgb) / 0.1);
   color: var(--text);
   border-radius: 23px;
   transition:
@@ -1136,7 +1143,7 @@ img {
     transform 0.3s var(--ease-spring);
 }
 .btn.tonal:hover {
-  background: rgb(255 255 255 / 0.16);
+  background: rgb(var(--fg-rgb) / 0.16);
 }
 .btn.tonal:active {
   transform: scale(0.96);
@@ -1181,7 +1188,7 @@ img {
   text-align: left;
 }
 .lib-tile:active {
-  background: rgb(255 255 255 / 0.05);
+  background: rgb(var(--fg-rgb) / 0.05);
 }
 .lib-cover {
   width: 56px;
@@ -1261,7 +1268,7 @@ img {
 .group {
   margin: 0 var(--gutter);
   border-radius: 22px;
-  background: rgb(255 255 255 / 0.065);
+  background: rgb(var(--fg-rgb) / 0.065);
   overflow: hidden;
 }
 .group-foot {
@@ -1294,7 +1301,7 @@ img {
   left: 16px;
 }
 button.cell:active {
-  background: rgb(255 255 255 / 0.06);
+  background: rgb(var(--fg-rgb) / 0.06);
 }
 .cell-icon {
   width: 30px;
@@ -1358,7 +1365,7 @@ button.cell:active {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.3);
+  box-shadow: inset 0 0 0 0.5px rgb(var(--fg-rgb) / 0.3);
   transition: transform 0.3s var(--ease-spring);
 }
 .swatch.on {
@@ -1415,11 +1422,11 @@ button.cell:active {
     transition: background-color 0.2s, color 0.2s;
   }
   .side-item:hover {
-    background: rgb(255 255 255 / 0.06);
+    background: rgb(var(--fg-rgb) / 0.06);
     color: var(--text);
   }
   .side-item.active {
-    background: rgb(255 255 255 / 0.12);
+    background: rgb(var(--fg-rgb) / 0.12);
     color: var(--text);
   }
   .side-label {
@@ -1526,7 +1533,7 @@ button.cell:active {
     grid-template-columns: repeat(2, 1fr);
   }
   .track-row:hover {
-    background: rgb(255 255 255 / 0.05);
+    background: rgb(var(--fg-rgb) / 0.05);
   }
   .group,
   .group-label,

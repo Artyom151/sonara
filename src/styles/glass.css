@@ -9,7 +9,7 @@
 .glass {
   --g-radius: 999px;
   --lg-blur: 3px;
-  --lg-tint: rgb(255 255 255 / 0.04);
+  --lg-tint: rgb(var(--fg-rgb) / 0.04);
   --lg-strength: 10;
   --lg-wave: 8;
   --lg-edge: 1.5;
@@ -115,7 +115,7 @@
   --lg-tint: rgb(12 12 14 / 0.38);
 }
 .glass.clear {
-  --lg-tint: rgb(255 255 255 / 0.015);
+  --lg-tint: rgb(var(--fg-rgb) / 0.015);
   --lg-blur: 2px;
 }
 :root[data-glass='tinted'] .glass {

@@ -41,7 +41,7 @@
     color 0.15s;
 }
 .win-btn:hover {
-  background: rgb(255 255 255 / 0.08);
+  background: rgb(var(--fg-rgb) / 0.08);
   color: var(--text);
 }
 .win-btn.close:hover {
@@ -100,7 +100,7 @@
   position: absolute !important;
   inset: 0;
   --g-radius: 16px;
-  --lg-tint: rgb(255 255 255 / 0.08);
+  --lg-tint: rgb(var(--fg-rgb) / 0.08);
   --lg-strength: 6;
   z-index: 1;
 }
@@ -134,9 +134,8 @@
   margin-right: 12px;
   border-radius: 24px;
   overflow: hidden;
-  --panel: color-mix(in srgb, var(--bg), #fff 2.8%);
   background: var(--panel);
-  box-shadow: inset 0 0 0 0.5px rgb(255 255 255 / 0.06);
+  box-shadow: inset 0 0 0 0.5px rgb(var(--fg-rgb) / 0.06);
 }
 .app.desk .screen {
   /* Opaque: pushed screens slide over the previous one. */
@@ -173,7 +172,7 @@
   margin: 0 24px 22px 12px;
   --g-radius: 24px;
   /* Frosted enough that the page text under the bar never competes with its own labels. */
-  --lg-tint: color-mix(in srgb, var(--accent-container) 20%, rgb(18 18 22 / 0.58));
+  --lg-tint: color-mix(in srgb, var(--accent-container) 20%, rgb(var(--elevated-rgb) / 0.58));
   --lg-blur: 14px;
   --lg-strength: 14;
   --lg-depth: 1.6;
@@ -242,7 +241,7 @@
 }
 .pbar-icon:hover:not(:disabled) {
   color: var(--text);
-  background: rgb(255 255 255 / 0.07);
+  background: rgb(var(--fg-rgb) / 0.07);
 }
 .pbar-icon:active:not(:disabled) {
   transform: scale(0.88);
@@ -278,8 +277,8 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: #fff;
-  color: #000;
+  background: var(--text);
+  color: var(--bg);
   transition: transform 0.3s var(--ease-spring);
 }
 .pbar-play:hover:not(:disabled) {
@@ -295,7 +294,7 @@
   width: 18px;
   height: 18px;
   border-color: rgb(0 0 0 / 0.2);
-  border-top-color: #000;
+  border-top-color: var(--bg);
 }
 .pbar-progress {
   display: grid;
@@ -394,7 +393,7 @@
   font-size: 15px;
   font-weight: 600;
   --g-radius: 23px;
-  --lg-tint: rgb(255 255 255 / 0.16);
+  --lg-tint: rgb(var(--fg-rgb) / 0.16);
   --lg-blur: 6px;
 }
 .wave-chips {
@@ -413,7 +412,7 @@
   padding: 8px 20px 8px 8px;
   text-align: left;
   --g-radius: 32px;
-  --lg-tint: rgb(255 255 255 / 0.06);
+  --lg-tint: rgb(var(--fg-rgb) / 0.06);
 }
 .wave-chip-arts {
   display: flex;

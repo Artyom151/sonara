@@ -25,6 +25,7 @@ import './account/cloud';
 import { isAndroid, isCapacitor } from './platform';
 import { resolveTier } from './platform/perf';
 import { useSettings } from './store/settings';
+import { schemeFor } from './theme/ThemeController';
 import { App } from './ui/App';
 import { startLiquidGlass, warmGlass } from './ui/glass/liquid';
 
@@ -68,6 +69,8 @@ class RootBoundary extends Component<{ children: ReactNode }, { error: Error | n
     );
   }
 }
+
+document.documentElement.dataset.theme = schemeFor(useSettings.getState().theme);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -54,6 +54,12 @@ export function accentVars(seed: number, tint: boolean, scheme: Scheme): Record<
   const tertiary = TonalPalette.fromHueAndChroma((hct.hue + 60) % 360, 24);
   const neutral = TonalPalette.fromHueAndChroma(hct.hue, tint ? 8 : 0);
   const glass = TonalPalette.fromHueAndChroma(hct.hue, 14);
+  // Surfaces over artwork (the full-screen player, the island) stay dark in both schemes.
+  const onDark = {
+    '--accent-dark': tone(primary, 80),
+    '--accent-dark-rgb': rgbTriplet(primary.tone(80)),
+    '--on-accent-dark': tone(primary, 15),
+  };
   switch (scheme) {
     case 'light':
       return {
@@ -74,6 +80,9 @@ export function accentVars(seed: number, tint: boolean, scheme: Scheme): Record<
         '--text-2': 'rgb(60 60 67 / 0.7)',
         '--text-3': 'rgb(60 60 67 / 0.42)',
         '--sep': 'rgb(60 60 67 / 0.2)',
+        '--elevated-rgb': '250 250 252',
+        '--panel': tint ? tone(neutral, 99) : '#ffffff',
+        ...onDark,
       };
     case 'dark':
       return {
@@ -94,6 +103,9 @@ export function accentVars(seed: number, tint: boolean, scheme: Scheme): Record<
         '--text-2': 'rgb(235 235 245 / 0.62)',
         '--text-3': 'rgb(235 235 245 / 0.34)',
         '--sep': 'rgb(84 84 88 / 0.5)',
+        '--elevated-rgb': '28 28 30',
+        '--panel': tint ? tone(neutral, 6) : '#0c0c0c',
+        ...onDark,
       };
   }
 }
