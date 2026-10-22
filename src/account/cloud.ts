@@ -108,6 +108,7 @@ interface Meta {
   joined: boolean;
 }
 const META = 'sonara.sync.meta.';
+const PENDING = 'sonara.sync.pending.';
 const freshMeta = (): Meta => ({ at: { saved: 0, recent: 0, dislikes: 0, prefs: 0 }, deleted: {}, likesAt: 0, joined: false });
 const loadMeta = (uid: string): Meta => {
   try {
@@ -116,12 +117,30 @@ const loadMeta = (uid: string): Meta => {
     return freshMeta();
   }
 };
+const loadPending = (id: string): SyncRow => {
+  try {
+    return JSON.parse(localStorage.getItem(PENDING + id) ?? '{}') as SyncRow;
+  } catch {
+    return {};
+  }
+};
 
 let uid: string | null = null;
 let meta = freshMeta();
 let unsubscribe: (() => void) | null = null;
 /** True while remote data is written into the local stores (so it is not echoed back). */
 let applying = false;
+let pending: SyncRow = {};
+let sending: Promise<boolean> | null = null;
+let session = 0;
+const savePending = (id: string) => {
+  try {
+    if (Object.keys(pending).length) localStorage.setItem(PENDING + id, JSON.stringify(pending));
+    else localStorage.removeItem(PENDING + id);
+  } catch {
+    /* retry while this session remains open */
+  }
+};
 
 const saveMeta = () => {
   if (!uid) return;
@@ -211,6 +230,12 @@ export function pull(): Promise<void> {
 async function doPull() {
   const id = uid;
   if (!id) return;
+  // A failed local write must reach the server before an older remote section is applied.
+  while (Object.keys(pending).length) {
+    if (!(await sendPending())) return;
+    if (uid !== id) return;
+  }
+  if (uid !== id) return;
   useCloud.setState({ status: 'syncing' });
   let row: SyncRow | null;
   try {
@@ -313,23 +338,54 @@ export function flush() {
     else out[s] = { v: localSection(s), at: meta.at[s] };
   }
   dirty.clear();
-  if (Object.keys(out).length) push(out);
+  if (Object.keys(out).length) void push(out);
 }
 
-async function push(out: SyncRow) {
+function push(out: SyncRow): Promise<boolean> {
   const id = uid;
-  if (!id) return;
+  if (!id) return Promise.resolve(false);
+  pending = { ...pending, ...out };
+  savePending(id);
+  return sendPending();
+}
+
+function sendPending(): Promise<boolean> {
+  if (sending) return sending;
+  const id = uid;
+  if (!id || !Object.keys(pending).length) return Promise.resolve(true);
+  const currentSession = session;
+  const p = provider();
+  const batch = { ...pending };
   useCloud.setState({ status: 'syncing' });
-  try {
-    await provider().sync.save(id, out);
-    if (out.likes_at) {
-      meta.likesAt = out.likes_at;
-      saveMeta();
+  const task = (async () => {
+    try {
+      await p.sync.save(id, batch);
+      if (uid === id && session === currentSession) {
+        for (const key of Object.keys(batch) as (keyof SyncRow)[]) {
+          if (pending[key] === batch[key]) delete pending[key];
+        }
+        savePending(id);
+        if (batch.likes_at) {
+          meta.likesAt = batch.likes_at;
+          saveMeta();
+        }
+        useCloud.setState({ status: 'ok', lastSync: Date.now() });
+      }
+      return true;
+    } catch (e) {
+      if (uid === id && session === currentSession) {
+        useCloud.setState({ status: (e as Error).message === 'sync_not_setup' ? 'not_setup' : 'error' });
+      }
+      return false;
     }
-    if (uid === id) useCloud.setState({ status: 'ok', lastSync: Date.now() });
-  } catch (e) {
-    if (uid === id) useCloud.setState({ status: (e as Error).message === 'sync_not_setup' ? 'not_setup' : 'error' });
-  }
+  })();
+  sending = task;
+  void task.then((ok) => {
+    if (sending !== task) return;
+    sending = null;
+    if (ok && uid === id && session === currentSession && Object.keys(pending).length) void sendPending();
+  });
+  return task;
 }
 
 const touch = (s: Stampable) => {
@@ -393,17 +449,22 @@ function start(id: string) {
   stop();
   uid = id;
   meta = loadMeta(id);
+  pending = loadPending(id);
   unsubscribe = provider().sync.subscribe(id, () => pull());
   pull();
 }
 
 function stop() {
+  flush();
+  session++;
   if (timer) clearTimeout(timer);
   timer = null;
   dirty.clear();
   unsubscribe?.();
   unsubscribe = null;
   uid = null;
+  pending = {};
+  sending = null;
   useCloud.setState({ status: 'off', remoteNow: null });
 }
 

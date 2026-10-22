@@ -12,6 +12,7 @@ export type Route =
   | { name: 'recent' }
   | { name: 'settings' }
   | { name: 'wave' }
+  | { name: 'daylist' }
   | { name: 'artist'; source: Source; id?: string; artistName: string }
   | { name: 'all'; kind: 'trending' | 'mixes' | 'picks' | 'youtube' };
 

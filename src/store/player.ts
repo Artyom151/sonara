@@ -29,11 +29,14 @@ interface PlayerState {
   rate: number;
   error: string | null;
   expanded: boolean;
+  lastRemoved: { track: Track; index: number } | null;
   current: () => Track | undefined;
   playQueue: (tracks: Track[], index?: number, context?: QueueContext) => void;
   playNext: (t: Track) => void;
   addToQueue: (t: Track[]) => void;
   removeAt: (i: number) => void;
+  moveAt: (from: number, to: number) => void;
+  undoRemove: () => void;
   jump: (i: number) => void;
   next: (auto?: boolean) => void;
   prev: () => void;
@@ -70,6 +73,7 @@ export const usePlayer = create<PlayerState>()(
       rate: 1,
       error: null,
       expanded: false,
+      lastRemoved: null,
       current: () => get().queue[get().index],
       playQueue: (tracks, index = 0, context) => {
         const { shuffle } = get();
@@ -83,6 +87,7 @@ export const usePlayer = create<PlayerState>()(
           playing: true,
           position: 0,
           error: null,
+          lastRemoved: null,
         });
       },
       playNext: (t) =>
@@ -100,8 +105,24 @@ export const usePlayer = create<PlayerState>()(
         ),
       removeAt: (i) =>
         set((s) => {
+          if (i <= s.index || i >= s.queue.length) return s;
           const queue = s.queue.filter((_, j) => j !== i);
-          return { queue, index: i < s.index ? s.index - 1 : s.index };
+          return { queue, baseQueue: queue, lastRemoved: { track: s.queue[i], index: i } };
+        }),
+      moveAt: (from, to) =>
+        set((s) => {
+          if (from <= s.index || to <= s.index || from >= s.queue.length || to >= s.queue.length || from === to) return s;
+          const queue = [...s.queue];
+          const [track] = queue.splice(from, 1);
+          queue.splice(to, 0, track);
+          return { queue, baseQueue: queue };
+        }),
+      undoRemove: () =>
+        set((s) => {
+          if (!s.lastRemoved) return s;
+          const queue = [...s.queue];
+          queue.splice(Math.min(Math.max(s.index + 1, s.lastRemoved.index), queue.length), 0, s.lastRemoved.track);
+          return { queue, baseQueue: queue, lastRemoved: null };
         }),
       jump: (i) => set({ index: i, playing: true, position: 0, error: null }),
       next: (auto = false) => {

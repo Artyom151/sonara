@@ -28,6 +28,7 @@ import { Profile } from './screens/Profile';
 import { Search } from './screens/Search';
 import { Settings } from './screens/Settings';
 import { WaveScreen } from './screens/Wave';
+import { DaylistScreen } from './screens/Daylist';
 
 const ROOTS: Record<Tab, () => React.ReactNode> = {
   home: () => <Home />,
@@ -54,7 +55,7 @@ function TabStack({ tab }: { tab: Tab }) {
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 380, damping: 40 }}
           >
-            {r.name === 'settings' ? <Settings /> : r.name === 'wave' ? <WaveScreen /> : <RouteView r={r} />}
+            {r.name === 'settings' ? <Settings /> : r.name === 'wave' ? <WaveScreen /> : r.name === 'daylist' ? <DaylistScreen /> : <RouteView r={r} />}
           </motion.div>
         ))}
       </AnimatePresence>

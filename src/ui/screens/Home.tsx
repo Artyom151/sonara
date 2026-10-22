@@ -12,6 +12,7 @@ import { useAsync } from '../useAsync';
 import { usePersonalPicks } from '../../player/recommend';
 import { useDesktop } from '../useMedia';
 import { WaveCard, WaveHero } from '../desktop/WaveHero';
+import { DaylistCard } from './Daylist';
 
 export function TrendTile({ g }: { g: TrendingGenre }) {
   const push = useUi((s) => s.push);
@@ -120,11 +121,12 @@ export function Home() {
   const desktop = useDesktop();
   const personal = usePersonalPicks();
   // Personal picks from Likes when there are any; otherwise the trending chart picks.
-  const picks = personal.tracks.length ? personal.tracks : (data?.picks ?? []);
+  const picks = personal.personal ? personal.tracks : (data?.picks ?? []);
 
   return (
     <div className="screen">
       {desktop ? <WaveHero data={data} /> : <WaveCard />}
+      <DaylistCard />
       {loading && !data && (
         <>
           <div className="section-head" style={{ marginTop: 8 }}>
@@ -163,16 +165,18 @@ export function Home() {
               </div>
             </section>
           )}
-          {(picks.length > 0 || personal.loading) && (
+          {(picks.length > 0 || personal.loading || personal.personal) && (
             <section className="section">
               <SectionHead title={t('picksForYou')} onAll={() => push({ name: 'all', kind: 'picks' })} />
               {personal.personal && <p className="section-sub">{t('basedOnLikes')}</p>}
               {personal.loading && !personal.tracks.length ? (
                 <Skeleton rows />
-              ) : (
+              ) : picks.length ? (
                 <div className="picks-grid">
                   <TrackList tracks={picks.slice(0, 8)} context={{ title: t('picksForYou'), id: 'picks' }} />
                 </div>
+              ) : (
+                <p className="section-sub">{navigator.language.toLowerCase().startsWith('ru') ? 'Пока не нашлось достаточно похожих треков. Добавьте ещё любимых исполнителей.' : 'No close matches yet. Like more artists to improve your picks.'}</p>
               )}
             </section>
           )}

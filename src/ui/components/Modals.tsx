@@ -2,7 +2,7 @@ import { ImportSheet } from './Downloads';
 import { download, removeDownload, useOffline } from '../../player/offline';
 import { useSleep } from '../../player/sleep';
 import { sourceName } from '../sources';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePlayer } from '../../store/player';
 import { useLibrary } from '../../store/library';
 import { useUi, type Modal } from '../../store/ui';
@@ -242,11 +242,40 @@ function Queue() {
   const close = useUi((s) => s.close);
   const queue = usePlayer((s) => s.queue);
   const index = usePlayer((s) => s.index);
+  const lastRemoved = usePlayer((s) => s.lastRemoved);
+  const dragIndex = useRef<number | null>(null);
+  const dragCleanup = useRef<(() => void) | null>(null);
+  const suppressClick = useRef(false);
+  const [dragging, setDragging] = useState(false);
   const upcoming = queue.slice(index);
+  const stopDrag = () => {
+    dragIndex.current = null;
+    setDragging(false);
+    setTimeout(() => { suppressClick.current = false; }, 0);
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', stopDrag);
+    window.removeEventListener('pointercancel', stopDrag);
+    dragCleanup.current = null;
+  };
+  const onMove = (e: PointerEvent) => {
+    if (dragIndex.current === null) return;
+    const row = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>('[data-queue-index]');
+    const to = Number(row?.dataset.queueIndex);
+    if (!row || !Number.isInteger(to) || to === dragIndex.current) return;
+    usePlayer.getState().moveAt(dragIndex.current, to);
+    dragIndex.current = to;
+  };
+  useEffect(() => () => dragCleanup.current?.(), []);
   return (
     <Sheet open onClose={close} title={t('queue')} full>
+      {lastRemoved && (
+        <div className="queue-undo">
+          <span>{t('removedFromQueue')}: {lastRemoved.track.title}</span>
+          <button onClick={() => usePlayer.getState().undoRemove()}>{t('undo')}</button>
+        </div>
+      )}
       {upcoming.map((tr, i) => (
-        <div key={`${tr.key}-${i}`} className={`track-row ${i === 0 ? 'playing' : ''}`} onClick={() => usePlayer.getState().jump(index + i)}>
+        <div key={`${tr.key}-${i}`} data-queue-index={index + i} className={`track-row queue-row ${i === 0 ? 'playing' : ''} ${dragging && dragIndex.current === index + i ? 'queue-dragging' : ''}`} onClick={() => { if (!dragging && !suppressClick.current) usePlayer.getState().jump(index + i); }}>
           <div className="track-art">
             <Art src={tr.artwork} seed={tr.key} />
           </div>
@@ -257,15 +286,41 @@ function Queue() {
             </div>
           </div>
           {i > 0 && (
-            <button
+            <><button
+              className="queue-grip"
+              aria-label={t('moveInQueue')}
+              title={t('moveInQueue')}
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                dragIndex.current = index + i;
+                suppressClick.current = true;
+                setDragging(true);
+                dragCleanup.current = stopDrag;
+                window.addEventListener('pointermove', onMove);
+                window.addEventListener('pointerup', stopDrag);
+                window.addEventListener('pointercancel', stopDrag);
+              }}
+              onKeyDown={(e) => {
+                if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+                e.preventDefault();
+                e.stopPropagation();
+                const to = index + i + (e.key === 'ArrowUp' ? -1 : 1);
+                if (to <= index || to >= queue.length) return;
+                usePlayer.getState().moveAt(index + i, to);
+                requestAnimationFrame(() => document.querySelectorAll<HTMLButtonElement>('.queue-grip')[to - index - 1]?.focus());
+              }}
+            >⠿</button><button
               className="row-btn"
+              aria-label={t('removeFromQueue')}
               onClick={(e) => {
                 e.stopPropagation();
                 usePlayer.getState().removeAt(index + i);
               }}
             >
               <IconClose size={16} />
-            </button>
+            </button></>
           )}
         </div>
       ))}

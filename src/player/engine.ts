@@ -15,6 +15,7 @@ import { initOffline, isDownloaded, offlineBlob, offlinePlayback } from './offli
 import { useStats } from '../store/stats';
 import { useEq } from './equalizer';
 import { useSleep } from './sleep';
+import { findFallbacks } from './fallback';
 
 void initOffline();
 
@@ -103,7 +104,9 @@ window.addEventListener('sonara-cast-end', () => {
   if (st.playing) void load(cur, true, st.position);
 });
 
-async function load(track: Track, autoplay: boolean, startAt = 0) {
+const alternates = new Map<string, Track>();
+
+async function load(track: Track, autoplay: boolean, startAt = 0, sourceTrack = alternates.get(track.key) ?? track) {
   // A Chromecast is connected: the device plays, this element stays quiet (player/cast.ts).
   if (isCasting()) {
     quiet();
@@ -122,16 +125,16 @@ async function load(track: Track, autoplay: boolean, startAt = 0) {
   updateMediaSession(track);
   try {
     // Downloaded: play the stored file, no network needed.
-    const local = streamOnly.has(track.key) ? null : await offlinePlayback(track.key);
+    const local = sourceTrack.key === track.key && !streamOnly.has(track.key) ? await offlinePlayback(track.key) : null;
     if (token !== loadToken) return;
-    const s = local ? { url: local.url, kind: local.kind } : await api.stream(track);
+    const s = local ? { url: local.url, kind: local.kind } : await api.stream(sourceTrack);
     if (token !== loadToken) return;
     localKey = local ? track.key : null;
     // offline.ts keeps the object URLs alive while the track plays and revokes them afterwards.
     if (local) await attach(local.url, local.kind);
     // Desktop (Tauri): always through the native fetch, see viaNativeBlob. Android plays the
     // URL directly and falls back to it in playSafe.
-    else if (isYouTubeAudio(track) && isTauri && PROXIED.test(s.url)) {
+    else if (isYouTubeAudio(sourceTrack) && isTauri && PROXIED.test(s.url)) {
       // Desktop: through the app's local media proxy (src-tauri/src/media_proxy.rs): streams,
       // seeks with Range, and keeps megabytes of audio out of the IPC bridge.
       const base = await mediaProxyBase();
@@ -144,13 +147,13 @@ async function load(track: Track, autoplay: boolean, startAt = 0) {
       await playBuffered(track, startAt, autoplay);
     } else {
       if (startAt > 1) seekElement(startAt);
-      if (autoplay) await playSafe(track, s.url);
+      if (autoplay) await playSafe(sourceTrack, s.url);
     }
     useLibrary.getState().pushRecent(track);
   } catch (e) {
     if (token !== loadToken) return;
     if (localKey === track.key) return brokenDownload(track, autoplay, startAt, e as Error);
-    onUnavailable(track, e as Error);
+    void onUnavailable(track, e as Error, sourceTrack);
   }
 }
 
@@ -196,14 +199,47 @@ async function playSafe(track: Track, url: string) {
 
 /** Tracks already retried with a fresh link (a cached one may have expired early). */
 const retried = new Set<string>();
+const fallbackSearch = new Map<string, Promise<Track[]>>();
+const triedFallbacks = new Map<string, Set<string>>();
+const findingFallback = new Set<string>();
 
-function onUnavailable(track: Track, e: Error) {
-  if (!retried.has(track.key)) {
-    retried.add(track.key);
+async function onUnavailable(track: Track, e: Error, sourceTrack = alternates.get(track.key) ?? track) {
+  const token = loadToken;
+  if (usePlayer.getState().current()?.key !== track.key || findingFallback.has(track.key)) return;
+  if (!retried.has(sourceTrack.key)) {
+    retried.add(sourceTrack.key);
     console.warn('[player] retrying with a fresh link:', track.title, e);
-    api.forgetStream(track.key);
-    void load(track, true, audio.currentTime || 0);
+    api.forgetStream(sourceTrack.key);
+    void load(track, true, audio.currentTime || 0, sourceTrack);
     return;
+  }
+  findingFallback.add(track.key);
+  usePlayer.getState().patch({ loading: true });
+  const tried = triedFallbacks.get(track.key) ?? new Set<string>();
+  tried.add(sourceTrack.key);
+  triedFallbacks.set(track.key, tried);
+  try {
+    if (!fallbackSearch.has(track.key)) {
+      const { sources } = useSettings.getState();
+      fallbackSearch.set(track.key, findFallbacks(track, (q, source) => api.search(q, source), {
+        soundcloud: sources.soundcloud,
+        youtube: sources.youtube,
+      }));
+    }
+    const next = (await fallbackSearch.get(track.key)!).find((candidate) => !tried.has(candidate.key));
+    if (token !== loadToken || usePlayer.getState().current()?.key !== track.key) return;
+    if (next) {
+      tried.add(next.key);
+      alternates.set(track.key, next);
+      console.info(`[player] ${track.title}: trying ${next.source} copy ${next.id}`);
+      pushNotice({ kind: 'queue', text: tr('Trying another source', 'Пробуем другой источник'), detail: `${track.title} · ${next.source === 'youtube' ? 'YouTube' : 'SoundCloud'}` });
+      void load(track, true, audio.currentTime || 0, next);
+      return;
+    }
+  } catch (searchError) {
+    console.warn('[player] alternative search failed:', track.title, searchError);
+  } finally {
+    findingFallback.delete(track.key);
   }
   console.warn('[player]', track.title, e);
   const st = usePlayer.getState();
@@ -240,7 +276,7 @@ function trackListening() {
   statSum += d;
   if (!statCounted && statSum >= 30) {
     statCounted = true;
-    useStats.getState().countPlay(cur.artist);
+    useStats.getState().countPlay(cur.artist, cur);
   }
 }
 audio.addEventListener('durationchange', () => {
@@ -265,20 +301,21 @@ audio.addEventListener('pause', () => {
 audio.addEventListener('error', () => {
   const t = usePlayer.getState().current();
   if (!t || t.key !== loadedKey || !audio.src) return;
+  const sourceTrack = alternates.get(t.key) ?? t;
   console.warn(`[player] element error on ${audio.src.slice(0, 24)}…: code ${audio.error?.code}, ${audio.error?.message}, readyState ${audio.readyState}, networkState ${audio.networkState}, blobUrl ${blobUrl ? blobUrl.slice(-8) : 'none'}, localKey ${localKey ? 'yes' : 'no'}`);
   if (localKey === t.key) return brokenDownload(t, usePlayer.getState().playing, audio.currentTime, new Error(audio.error?.message || 'Playback error'));
   // Android: retry through the native fetch. Desktop never does (megabytes over IPC freeze the page).
-  if (isYouTubeAudio(t) && nativeFetch && !isTauri && !blobUrl) {
+  if (isYouTubeAudio(sourceTrack) && nativeFetch && !isTauri && !blobUrl) {
     const src = audio.src;
     viaNativeBlob(src, loadToken)
       .then((u) => {
         audio.src = u;
         return audio.play();
       })
-      .catch((e) => onUnavailable(t, e));
+      .catch((e) => void onUnavailable(t, e, sourceTrack));
     return;
   }
-  onUnavailable(t, new Error(audio.error?.message || 'Playback error'));
+  void onUnavailable(t, new Error(audio.error?.message || 'Playback error'), sourceTrack);
 });
 audio.addEventListener('ended', async () => {
   console.info(`[player] ended at ${audio.currentTime.toFixed(1)} s of ${audio.duration} s, readyState ${audio.readyState}, src ${audio.src.slice(0, 40)}`);

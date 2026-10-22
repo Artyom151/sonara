@@ -3,14 +3,14 @@ import { api } from '../core';
 import type { Track } from '../core/types';
 import { useLibrary } from '../store/library';
 import { collect } from './similar';
-import { features, makeCtx, mix, pick, topTokens, type Profile } from './taste';
+import { features, makeCtx, mix, pick, strongTasteMatch, type Profile } from './taste';
 
 /**
  * "Picks for you" from the user's own taste: a style profile built from liked
  * tracks (recent likes weigh more) and recent listening, matched against related
  * tracks of the latest likes and the charts of their dominant genres.
  */
-const CACHE_KEY = 'sonara.picks';
+const CACHE_KEY = 'sonara.picks.v2';
 const TTL = 6 * 60 * 60 * 1000;
 
 const signature = (likes: Track[]) => likes.slice(0, 12).map((t) => t.key).join('|');
@@ -34,8 +34,8 @@ export async function recommendFromLikes(likes: Track[], recent: Track[], dislik
   const candidates = await collect(anchors, profile);
 
   const exclude = new Set([...likes.map((t) => t.key), ...dislikes, ...recent.slice(0, 30).map((t) => t.key)]);
-  const pool = candidates.filter((c) => !exclude.has(c.track.key));
   const ctx = makeCtx(likes.slice(0, 12), profile);
+  const pool = candidates.filter((c) => !exclude.has(c.track.key) && strongTasteMatch(c, ctx));
   return pick(pool, ctx, count).map((c) => c.track);
 }
 

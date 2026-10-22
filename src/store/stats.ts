@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { Track } from '../core/types';
 
 /**
  * Local listening statistics: seconds of audio heard per day and per artist, and how many tracks
@@ -12,13 +13,14 @@ export interface ArtistStat {
 }
 
 interface StatsState {
+  timedPlays: { track: Track; at: number }[];
   /** 'YYYY-MM-DD' -> seconds heard that day. */
   days: Record<string, number>;
   /** Lower-case artist -> totals. */
   artists: Record<string, ArtistStat>;
   plays: number;
   add: (artist: string, seconds: number) => void;
-  countPlay: (artist: string) => void;
+  countPlay: (artist: string, track?: Track) => void;
 }
 
 const MAX_ARTISTS = 300;
@@ -34,6 +36,7 @@ export const useStats = create<StatsState>()(
       days: {},
       artists: {},
       plays: 0,
+      timedPlays: [],
       add: (artist, seconds) =>
         set((s) => {
           const key = artistKey(artist);
@@ -46,11 +49,12 @@ export const useStats = create<StatsState>()(
           const day = dayKey();
           return { days: { ...s.days, [day]: (s.days[day] ?? 0) + seconds }, artists };
         }),
-      countPlay: (artist) =>
+      countPlay: (artist, track) =>
         set((s) => {
           const key = artistKey(artist);
           const prev = s.artists[key] ?? { name: artist, seconds: 0, plays: 0 };
-          return { plays: s.plays + 1, artists: { ...s.artists, [key]: { ...prev, plays: prev.plays + 1 } } };
+          return { plays: s.plays + 1, artists: { ...s.artists, [key]: { ...prev, plays: prev.plays + 1 } },
+            timedPlays: track ? [{ track: { ...track, sc: undefined }, at: Date.now() }, ...(s.timedPlays ?? [])].slice(0, 300) : (s.timedPlays ?? []) };
         }),
     }),
     { name: 'sonara.stats' },

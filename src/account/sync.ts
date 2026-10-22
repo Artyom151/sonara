@@ -55,21 +55,66 @@ export const setOnLikesChanged = (f: () => void) => void (onLikesChanged = f);
  * reconcileLikes() before they reach the server.
  */
 type LikeOp = { track: Track; liked: boolean };
-const PENDING = 'sonara.likes.pending';
-const pending: Record<string, LikeOp> = (() => {
+const PENDING = 'sonara.likes.pending.';
+const ACCOUNT_LIKES = 'sonara.likes.account.';
+const ANONYMOUS_LIKES = 'sonara.likes.anonymous';
+const LAST_ACCOUNT = 'sonara.likes.lastAccount';
+const read = <T>(key: string, fallback: T): T => {
   try {
-    return JSON.parse(localStorage.getItem(PENDING) ?? '{}') as Record<string, LikeOp>;
+    const value = localStorage.getItem(key);
+    return value === null ? fallback : JSON.parse(value) as T;
   } catch {
-    return {};
+    return fallback;
   }
-})();
-const savePending = () => {
+};
+const write = (key: string, value: unknown) => {
   try {
-    localStorage.setItem(PENDING, JSON.stringify(pending));
+    localStorage.setItem(key, JSON.stringify(value));
   } catch {
     /* ignore */
   }
 };
+// The old queue has no owner. Never send it to whichever account signs in next.
+try { localStorage.removeItem('sonara.likes.pending'); } catch { /* ignore */ }
+let accountId: string | null = null;
+let pending: Record<string, LikeOp> = {};
+let anonymousLikes = read<Track[] | null>(ANONYMOUS_LIKES, null);
+let switching = false;
+const savePending = () => accountId && write(PENDING + accountId, pending);
+
+function switchAccount(nextId: string | null, restoring = false) {
+  if (accountId === nextId) {
+    if (!nextId && anonymousLikes === null) {
+      anonymousLikes = useLibrary.getState().likes;
+      write(ANONYMOUS_LIKES, anonymousLikes);
+    }
+    return;
+  }
+  const current = useLibrary.getState().likes;
+  if (accountId) write(ACCOUNT_LIKES + accountId, current);
+  else if (anonymousLikes === null) anonymousLikes = restoring ? [] : current;
+  if (accountId === null && anonymousLikes !== null) write(ANONYMOUS_LIKES, anonymousLikes);
+  accountId = nextId;
+  pending = nextId ? read<Record<string, LikeOp>>(PENDING + nextId, {}) : {};
+  const saved = nextId ? read<Track[] | null>(ACCOUNT_LIKES + nextId, null) : null;
+  const lastAccount = read<string | null>(LAST_ACCOUNT, null);
+  const next = nextId
+    ? saved ?? (restoring ? (lastAccount === null || lastAccount === nextId ? current : []) : anonymousLikes ?? [])
+    : (anonymousLikes ?? []);
+  // Anonymous likes are imported once, into the first account used on this device.
+  if (nextId && !restoring && saved === null && anonymousLikes?.length) {
+    anonymousLikes = [];
+    write(ANONYMOUS_LIKES, anonymousLikes);
+  }
+  switching = true;
+  useLibrary.setState({ likes: next });
+  switching = false;
+  prevLikes = new Map(next.map((t) => [t.key, t]));
+  if (nextId) {
+    write(ACCOUNT_LIKES + nextId, next);
+    write(LAST_ACCOUNT, nextId);
+  }
+}
 
 async function mirror(userId: string, ops: LikeOp[]) {
   for (const op of ops) pending[op.track.key] = op;
@@ -78,20 +123,22 @@ async function mirror(userId: string, ops: LikeOp[]) {
   const results = await Promise.allSettled(
     ops.map((op) =>
       p.likes.set(userId, op.track, op.liked).then(() => {
-        if (pending[op.track.key] === op) delete pending[op.track.key];
+        if (accountId === userId && pending[op.track.key] === op) delete pending[op.track.key];
       }),
     ),
   );
-  savePending();
-  bump();
-  if (results.some((r) => r.status === 'fulfilled')) onLikesChanged();
+  if (accountId === userId) {
+    savePending();
+    bump();
+    if (results.some((r) => r.status === 'fulfilled')) onLikesChanged();
+  }
 }
 
 /** Retry likes that could not be sent earlier. */
 export function flushPendingLikes() {
   const { profile, status } = useAccount.getState();
   const ops = Object.values(pending);
-  if (status === 'signedIn' && profile && ops.length) return mirror(profile.id, ops);
+  if (status === 'signedIn' && profile && accountId === profile.id && ops.length) return mirror(profile.id, ops);
 }
 
 /**
@@ -119,6 +166,7 @@ async function mergeOnSignIn() {
   const p = provider();
   try {
     const remote = await p.likes.list(profile.id);
+    if (accountId !== profile.id) return;
     const local = useLibrary.getState().likes;
     const localKeys = new Set(local.map((t) => t.key));
     const remoteKeys = new Set(remote.map((t) => t.key));
@@ -130,6 +178,7 @@ async function mergeOnSignIn() {
     }
     const upload = local.filter((t) => !remoteKeys.has(t.key) && pending[t.key]?.liked !== false);
     await p.likes.upsert(profile.id, upload);
+    if (accountId !== profile.id) return;
     bump();
     if (upload.length) onLikesChanged();
     flushPendingLikes();
@@ -140,8 +189,14 @@ async function mergeOnSignIn() {
 }
 
 useAccount.subscribe((s, prev) => {
-  if (s.status === 'signedIn' && (prev.status !== 'signedIn' || s.profile?.id !== prev.profile?.id)) mergeOnSignIn();
-  if (s.status === 'signedOut') syncedFor = null;
+  if (s.status === 'signedIn' && s.profile && (prev.status !== 'signedIn' || s.profile.id !== prev.profile?.id || s.mode !== prev.mode)) {
+    switchAccount(s.profile.id, prev.status === 'loading');
+    void mergeOnSignIn();
+  }
+  if (s.status === 'signedOut') {
+    switchAccount(null);
+    syncedFor = null;
+  }
 });
 
 let prevLikes = new Map(useLibrary.getState().likes.map((t) => [t.key, t]));
@@ -152,6 +207,12 @@ useLibrary.subscribe((s) => {
   for (const [k, t] of next) if (!prevLikes.has(k)) added.push(t);
   for (const [k, t] of prevLikes) if (!next.has(k)) removed.push(t);
   prevLikes = next;
+  if (switching) return;
+  if (accountId) write(ACCOUNT_LIKES + accountId, s.likes);
+  else {
+    anonymousLikes = s.likes;
+    write(ANONYMOUS_LIKES, anonymousLikes);
+  }
   const { profile, status } = useAccount.getState();
   if (merging || status !== 'signedIn' || !profile || (!added.length && !removed.length)) return;
   mirror(profile.id, [...added.map((track) => ({ track, liked: true })), ...removed.map((track) => ({ track, liked: false }))]);

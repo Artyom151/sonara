@@ -221,6 +221,21 @@ export function scoreCandidate(c: Candidate, ctx: RankCtx): number | null {
   return s;
 }
 
+/** A related graph alone is too broad for a personal playlist: require a taste signal. */
+export function strongTasteMatch(c: Candidate, ctx: RankCtx): boolean {
+  if (!usable(c, ctx)) return false;
+  const artist = c.track.artist.toLowerCase().trim();
+  if (ctx.seedArtists.has(artist)) return true;
+  const f = features(c.track);
+  const genreOverlap = Object.keys(f).some((key) => key.startsWith('g:') && (ctx.profile[key] ?? 0) > 0);
+  const similarity = cosine(ctx.profile, f);
+  if (ctx.script) {
+    const script = scriptOf(`${c.track.title} ${c.track.artist}`);
+    if (script && script !== ctx.script) return false;
+  }
+  return (genreOverlap && similarity >= 0.2) || (c.votes >= 2 && similarity >= 0.2) || similarity >= 0.34;
+}
+
 /** Collapse "Title" / "Title (Official Video)" / "Title - Remastered" of one artist into one entry. */
 export const dedupeKey = (t: Track) =>
   `${t.artist.toLowerCase().trim()}|${words(t.title).slice(0, 5).join(' ')}`;
