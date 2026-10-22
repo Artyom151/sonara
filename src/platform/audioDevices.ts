@@ -68,7 +68,7 @@ export const useAudioDevice = create<DeviceState>((set, get) => ({
   dismiss: () => set({ current: null }),
 }));
 
-// ───────────── Platform hookups ─────────────
+// Platform hookups
 
 interface AudioDevicesPlugin {
   start(): Promise<{ battery: boolean }>;

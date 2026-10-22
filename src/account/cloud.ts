@@ -96,7 +96,7 @@ export const useCloud = create<{
   playedHere: number;
 }>(() => ({ status: 'off', lastSync: 0, remoteNow: null, playedHere: 0 }));
 
-// ───────────── Per-account bookkeeping (this device) ─────────────
+// Per-account bookkeeping (this device)
 
 interface Meta {
   /** Last local change of each stamped section. */
@@ -206,7 +206,7 @@ function nowPlaying(): NowPlaying | null {
   };
 }
 
-// ───────────── Pull ─────────────
+// Pull
 
 let pulling: Promise<void> | null = null;
 let pullAgain = false;
@@ -310,7 +310,7 @@ async function doPull() {
   else useCloud.setState({ status: 'ok', lastSync: Date.now() });
 }
 
-// ───────────── Push ─────────────
+// Push
 
 const dirty = new Set<Section>();
 let timer: ReturnType<typeof setTimeout> | null = null;
@@ -402,7 +402,7 @@ const touch = (s: Stampable) => {
   schedule(s);
 };
 
-// ───────────── Local changes ─────────────
+// Local changes
 
 useLibrary.subscribe((s, p) => {
   if (applying || !uid) return;
@@ -451,7 +451,7 @@ export function resumeHere(np: NowPlaying) {
   usePlayer.getState().patch({ playing: true });
 }
 
-// ───────────── Lifecycle ─────────────
+// Lifecycle
 
 function start(id: string) {
   stop();

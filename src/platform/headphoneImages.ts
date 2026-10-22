@@ -16,7 +16,7 @@ const samsung = (path: string) => `https://images.samsung.com/is/image/samsung/$
 
 /** Most specific first: "Buds3 Pro" before "Buds3", "AirPods Pro 3" before "AirPods Pro". */
 const CATALOG: [RegExp, string][] = [
-  // ── Apple ──
+  // Apple
   [/airpods\s*max/, apple('airpods-max-hero-select-202011')],
   [/airpods\s*pro\s*\(?\s*3/, apple('airpods-pro-3-hero-select-202509')],
   [/airpods\s*pro\s*\(?\s*(1|1st|first)\b/, apple('MWP22_AV1')],
@@ -24,7 +24,7 @@ const CATALOG: [RegExp, string][] = [
   [/airpods\s*\(?\s*4/, apple('MXP93')],
   [/airpods\s*\(?\s*(1|2|1st|2nd)\b/, apple('MV7N2_AV1')],
   [/airpods/, apple('MME73_AV1')], // AirPods 3 / 4 earbuds look
-  // ── Samsung Galaxy Buds ──
+  // Samsung Galaxy Buds
   [/\bbuds\s*4\s*pro/, samsung('p6pim/uk/s2602/gallery/uk-galaxy-buds4-r640-579822-sm-r640nzwaeub-551034391')],
   [/\bbuds\s*4/, samsung('p6pim/uk/s2602/gallery/uk-galaxy-buds4-r540-sm-r540nzwaeub-551006028')],
   [/\bbuds\s*3\s*fe/, samsung('p6pim/uk/sm-r420nzaaeua/gallery/uk-galaxy-buds3-fe-sm-r420nzaaeua-548603658')],

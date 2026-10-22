@@ -1,5 +1,4 @@
-import type { ArtistPage, Fetcher, Playlist, StreamInfo, Track } from './types';
-import type { YouTube } from './youtube';
+import type { ArtistPage, Fetcher, Playlist, Track } from './types';
 
 /**
  * Deezer's public catalogue API (https://api.deezer.com, no key): search, charts, playlists.
@@ -7,13 +6,6 @@ import type { YouTube } from './youtube';
  * the same recording on YouTube or SoundCloud (core/match.ts); the preview is the last resort.
  */
 const API = 'https://api.deezer.com';
-
-const norm = (s: string) =>
-  s
-    .toLowerCase()
-    .replace(/\(.*?\)|\[.*?\]/g, ' ')
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim();
 
 /**
  * Optional Deezer client library. The Node server plugs in `deezer-api-ts`; in the apps (Android,
@@ -33,10 +25,7 @@ const norm2 = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 export class Deezer {
   lib: DeezerLib | null = null;
 
-  constructor(
-    private fetcher: Fetcher,
-    private yt: YouTube,
-  ) {}
+  constructor(private fetcher: Fetcher) {}
 
   private async get(path: string): Promise<any> {
     const r = await this.fetcher(`${API}${path}`);

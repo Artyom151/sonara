@@ -30,7 +30,7 @@ import {
 import { startWave } from '../../player/wave';
 import { openWhy } from './WhySheet';
 import { Alert, Art, Field, Menu, Sheet, type MenuItem } from './controls';
-import { MixCover, PlaylistCover } from './MixCover';
+import { PlaylistCover } from './MixCover';
 import { LyricsView, useLyrics } from './Player';
 import { AuthSheet } from '../account/AuthSheet';
 import { EditProfileSheet } from '../account/EditProfileSheet';

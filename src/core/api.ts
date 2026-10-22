@@ -48,7 +48,7 @@ export function createCoreApi(
   // Warm up in the background: the public client_id is ready before the first search.
   void sc.clientId().catch(() => {});
   const yt = new YouTube(fetcher);
-  const dz = new Deezer(fetcher, yt);
+  const dz = new Deezer(fetcher);
   // .env ships placeholders ("your_…"): those count as unset.
   const real = (get?: () => string | undefined) => () => {
     const v = get?.()?.trim();

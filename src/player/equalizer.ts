@@ -92,7 +92,6 @@ export function applyEq() {
   const g = getGraph();
   if (!g) return;
   const t = g.ctx.currentTime;
-  // The preamp drops with boosted bands so a bass boost does not clip.
   const gains = s.enabled ? s.gains : s.gains.map(() => 0);
   const pre = s.enabled ? s.preamp : 0;
   g.preamp.gain.setTargetAtTime(10 ** (pre / 20), t, 0.03);
@@ -122,6 +121,5 @@ useAudioDevice.subscribe((s) => {
   if (curve) useEq.setState({ ...curve, enabled: true });
 });
 
-// Apply the saved curve as soon as the graph appears.
 if (useEq.getState().enabled) ensureGraph();
 setTimeout(applyEq, 0);

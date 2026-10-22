@@ -71,7 +71,7 @@ export const topTokens = (p: Profile, prefix: string, n: number) =>
     .slice(0, n)
     .map(([k]) => k.slice(prefix.length));
 
-/* ───────── Kinds of release ───────── */
+/* Kinds of release */
 
 export interface Flags {
   sped: boolean; // sped up / nightcore / slowed / reverb / 8D / bass boosted
@@ -98,7 +98,7 @@ export function flagsOf(t: Track): Flags {
   };
 }
 
-/* ───────── Script ───────── */
+/* Script */
 
 export type Script = 'cyr' | 'lat' | 'cjk' | 'ar' | 'other';
 
@@ -132,7 +132,7 @@ export function seedScript(seeds: Track[]): Script | null {
   return null;
 }
 
-/* ───────── Candidates ───────── */
+/* Candidates */
 
 export interface Candidate {
   track: Track;

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { api } from '../core';
 import type { Track } from '../core/types';
 import { useLibrary } from '../store/library';
 import { collect } from './similar';

@@ -1,4 +1,4 @@
-/* ───────── Toggle (iOS 26) ───────── */
+/* Toggle (iOS 26) */
 .toggle {
   position: relative;
   width: 63px;
@@ -48,7 +48,7 @@
     0 6px 16px rgb(0 0 0 / 0.25);
 }
 
-/* ───────── Segmented ───────── */
+/* Segmented */
 .segmented {
   position: relative;
   display: flex;
@@ -87,7 +87,7 @@
     0 2px 8px rgb(0 0 0 / 0.2);
 }
 
-/* ───────── Menu ───────── */
+/* Menu */
 .menu-scrim {
   position: fixed;
   inset: 0;
@@ -166,7 +166,7 @@
   white-space: nowrap;
 }
 
-/* ───────── Slider ───────── */
+/* Slider */
 .slider {
   display: flex;
   align-items: center;
@@ -217,7 +217,7 @@
     0 6px 16px rgb(0 0 0 / 0.25);
 }
 
-/* ───────── Sheet ───────── */
+/* Sheet */
 .sheet-scrim,
 .alert-scrim {
   position: fixed;
@@ -280,7 +280,7 @@
   }
 }
 
-/* ───────── Alert ───────── */
+/* Alert */
 .alert-scrim {
   display: grid;
   place-items: center;
@@ -350,7 +350,7 @@
   box-shadow: inset 0 0 0 1.5px var(--accent);
 }
 
-/* ───────── Toast ───────── */
+/* Toast */
 .toasts {
   position: fixed;
   left: 0;

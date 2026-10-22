@@ -7,7 +7,7 @@ import { usePlayer } from '../../store/player';
 import { useUi, type Route } from '../../store/ui';
 import { imageColors, playerBackdrop } from '../../theme/color';
 import { Art, Menu } from '../components/controls';
-import { MixCover, PlaylistCover, coverPalette } from '../components/MixCover';
+import { PlaylistCover, coverPalette } from '../components/MixCover';
 import { blobToDataUrl, squareImage } from '../../account/image';
 import { toast } from '../components/Toast';
 import { ArtistScreen } from './Artist';

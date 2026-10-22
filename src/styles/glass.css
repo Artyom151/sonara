@@ -1,4 +1,4 @@
-/* ───────────────────────── Liquid Glass ─────────────────────────
+/* Liquid Glass
    Optics come from the ported GLSL shader (src/ui/glass/shaders.ts), rendered
    per element by src/ui/glass/liquid.ts:
      .lg-layer        backdrop-filter: blur(B) url(#lg-N) — refraction, tint mix,

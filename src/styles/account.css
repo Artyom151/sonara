@@ -1,4 +1,4 @@
-/* ───────── Auth sheet ───────── */
+/* Auth sheet */
 .auth {
   position: relative;
   padding: 6px 20px 18px;
@@ -149,7 +149,7 @@
   padding: 8px;
 }
 
-/* ───────── Profile ───────── */
+/* Profile */
 .profile-avatar {
   box-shadow:
     0 0 0 3px var(--bg),
@@ -221,7 +221,7 @@
   flex: 0 1 160px;
 }
 
-/* ───────── Edit profile ───────── */
+/* Edit profile */
 .edit-profile {
   padding: 4px 20px 20px;
 }
@@ -282,7 +282,7 @@
   margin-top: 18px;
 }
 
-/* ───────── Comments ───────── */
+/* Comments */
 .comments {
   display: flex;
   flex-direction: column;

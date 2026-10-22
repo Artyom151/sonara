@@ -7,7 +7,7 @@ import { IconCheck, IconChevronDown, IconChevronLeft, IconChevronRight } from '.
 const spring = { type: 'spring', stiffness: 520, damping: 34, mass: 0.8 } as const;
 const softSpring = { type: 'spring', stiffness: 380, damping: 32 } as const;
 
-/* ───────────── Toggle (iOS 26) ─────────────
+/* Toggle (iOS 26)
    A wide capsule; while pressed the white knob turns into a clear glass lens
    that magnifies, then settles back to a solid knob. Draggable. */
 export function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
@@ -66,7 +66,7 @@ export function Toggle({ checked, onChange, disabled }: { checked: boolean; onCh
   );
 }
 
-/* ───────────── Segmented control ───────────── */
+/* Segmented control */
 export function Segmented<T extends string>({
   value,
   options,
@@ -97,7 +97,7 @@ export function Segmented<T extends string>({
   );
 }
 
-/* ───────────── Pull-down menu (iOS 26 glass) ───────────── */
+/* Pull-down menu (iOS 26 glass) */
 export interface MenuItem {
   label: string;
   icon?: ReactNode;
@@ -233,7 +233,7 @@ export function Select<T extends string>({ value, options, onChange }: { value: 
   );
 }
 
-/* ───────────── Slider (iOS 26: knob turns into a lens while dragging) ───────────── */
+/* Slider (iOS 26: knob turns into a lens while dragging) */
 export function Slider({
   value,
   min = 0,
@@ -285,7 +285,7 @@ export function Slider({
   );
 }
 
-/* ───────────── Sheet ───────────── */
+/* Sheet */
 export function Sheet({ open, onClose, children, title, full }: { open: boolean; onClose: () => void; children: ReactNode; title?: ReactNode; full?: boolean }) {
   const sheetDrag = useDragControls();
   const onDragEnd = (_: unknown, info: PanInfo) => {
@@ -331,7 +331,7 @@ export function Sheet({ open, onClose, children, title, full }: { open: boolean;
   );
 }
 
-/* ───────────── Alert (iOS 26) ───────────── */
+/* Alert (iOS 26) */
 export function Alert({
   open,
   title,
@@ -385,12 +385,12 @@ export function Alert({
   );
 }
 
-/* ───────────── Text field ───────────── */
+/* Text field */
 export function Field(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`field ${props.className ?? ''}`} />;
 }
 
-/* ───────────── Marquee for long titles ───────────── */
+/* Marquee for long titles */
 export function Marquee({ text, className }: { text: string; className?: string }) {
   const box = useRef<HTMLDivElement>(null);
   const inner = useRef<HTMLSpanElement>(null);
@@ -424,7 +424,7 @@ export function Marquee({ text, className }: { text: string; className?: string 
   );
 }
 
-/* ───────────── Artwork with graceful fallback ───────────── */
+/* Artwork with graceful fallback */
 export function Art({ src, alt = '', className, seed }: { src?: string; alt?: string; className?: string; seed?: string }) {
   const [failed, setFailed] = useState(false);
   const [local, setLocal] = useState<string | null>(null);

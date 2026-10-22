@@ -1,7 +1,6 @@
 import { api } from '../../core';
 import type { HomeData, Playlist, Track, TrendingGenre } from '../../core/types';
 import { useLibrary } from '../../store/library';
-import { usePlayer } from '../../store/player';
 import { useSettings } from '../../store/settings';
 import { useUi } from '../../store/ui';
 import { Art } from '../components/controls';

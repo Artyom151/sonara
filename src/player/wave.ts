@@ -8,9 +8,9 @@ import { toast } from '../ui/components/Toast';
 import { collect } from './similar';
 import { useStats } from '../store/stats';
 import { isBlocked, knownArtists, moodBias } from './waveMood';
-import { cosine, features, makeCtx, mix, pick, topTokens, words, type Candidate, type Profile } from './taste';
+import { features, makeCtx, mix, pick, topTokens, words, type Candidate, type Profile } from './taste';
 
-/* ───────────────────────────── Sonara Wave ─────────────────────────────
+/* Sonara Wave
    A live, endless playlist. A style profile (weighted tokens: genres, tags,
    artists, title words) is built from the seed — a search query, a track, a
    set of tracks or a genre. Candidates are gathered from "related" graphs,
@@ -52,12 +52,12 @@ export const useWave = create<WaveState>(() => ({
 const WAVE_ID = 'wave';
 const isWaveContext = () => usePlayer.getState().context.id === WAVE_ID;
 
-/* ───────── Taste model (taste.ts) ───────── */
+/* Taste model (taste.ts) */
 
 export { cosine, features, mix, topTokens, words, type Profile } from './taste';
 export { relatedCache, tagCache } from './similar';
 
-/* ───────── Candidates ───────── */
+/* Candidates */
 
 /** Anchors: the tracks the wave currently "likes" most (seeds, liked, fully played). */
 let anchors: Track[] = [];
@@ -123,7 +123,7 @@ function setProfile(profile: Profile) {
   useWave.setState({ profile, topTags: topTokens(profile, 'g:', 6) });
 }
 
-/* ───────── Public API ───────── */
+/* Public API */
 
 interface Seeds {
   seeds: Track[];
@@ -228,7 +228,7 @@ export function waveFeedback(track: Track, kind: 'like' | 'complete' | 'skip' | 
   }
 }
 
-/* ───────── Live behaviour ───────── */
+/* Live behaviour */
 
 let lastKey: string | undefined;
 let lastPos = 0;

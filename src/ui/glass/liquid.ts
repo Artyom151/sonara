@@ -506,7 +506,7 @@ function detach(el: HTMLElement) {
   state.delete(el);
 }
 
-// ───────────── Content refraction (desktop WebKit) ─────────────
+// Content refraction (desktop WebKit)
 
 const content = { src: null as HTMLElement | null, filterId: '', sig: '', paused: false, offUntil: 0 };
 let contentRaf = 0;

@@ -54,7 +54,7 @@ interface StatusEvent {
   idleReason?: string | null;
 }
 
-/* ───────── Backends ───────── */
+/* Backends */
 
 interface CastPlugin {
   /** Shows the system device picker; resolves with the chosen device, or null when dismissed. */
@@ -75,7 +75,7 @@ async function invoke<T = void>(cmd: string, args?: Record<string, unknown>): Pr
   return invoke<T>(cmd, args);
 }
 
-/* ───────── Public API ───────── */
+/* Public API */
 
 /** Desktop: look for Chromecasts on the network (a few seconds). */
 export async function scan(): Promise<CastDevice[]> {
@@ -176,7 +176,7 @@ export const castSetVolume = (volume: number) => {
   void (android ? android.volume({ volume }) : invoke('cast_volume', { volume })).catch(() => {});
 };
 
-/* ───────── Receiver events ───────── */
+/* Receiver events */
 
 function onStatus(e: StatusEvent) {
   const state = (e.state === 'playing' || e.state === 'paused' || e.state === 'buffering' ? e.state : 'idle') as CastState;

@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useDragControls, type PanInfo } from 'motion/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { goToArtist } from '../artists';
 import { api } from '../../core';
 import type { Lyrics, Track } from '../../core/types';

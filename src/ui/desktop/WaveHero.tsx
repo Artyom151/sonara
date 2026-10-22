@@ -106,28 +106,3 @@ export function WaveHero({ data }: { data?: HomeData }) {
     </section>
   );
 }
-
-/** Compact Wave card for the phone home screen. */
-export function WaveCard() {
-  const t = useT();
-  const colors = useWaveColors();
-  const { playing } = useWavePlaying();
-  const label = useWave((s) => (s.active ? s.label : ''));
-  const push = useUi((s) => s.push);
-  return (
-    <section className="wave-card">
-      <WaveOrb colors={colors} active={playing} size={0.34} className="wave-card-orb" />
-      <div className="wave-card-body">
-        <button className="wave-card-title" onClick={() => toggleWave(t('wave'))}>
-          {playing ? <IconPause size={20} /> : <IconPlay size={20} />}
-          <span>{t('wave')}</span>
-        </button>
-        <small>{label || t('waveHint')}</small>
-      </div>
-      <button className="wave-tune glass glass-press small" onClick={() => push({ name: 'wave' })}>
-        <IconGrab size={14} />
-        <span>{t('tune')}</span>
-      </button>
-    </section>
-  );
-}

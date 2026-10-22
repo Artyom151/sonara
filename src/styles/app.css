@@ -117,7 +117,7 @@ img {
   display: none;
 }
 
-/* ─────────── Shell ─────────── */
+/* Shell */
 
 .app {
   position: relative;
@@ -204,7 +204,7 @@ img {
   flex: none;
 }
 
-/* ─────────── Trending tiles ─────────── */
+/* Trending tiles */
 
 .trend-tile {
   width: 60px;
@@ -258,7 +258,7 @@ img {
   text-overflow: ellipsis;
 }
 
-/* ─────────── Mix cards ─────────── */
+/* Mix cards */
 
 .mix-card {
   position: relative;
@@ -322,7 +322,7 @@ img {
   box-shadow: 0 6px 16px rgb(0 0 0 / 0.35);
 }
 
-/* ─────────── Track rows ─────────── */
+/* Track rows */
 
 .track-row {
   display: flex;
@@ -442,7 +442,7 @@ img {
   }
 }
 
-/* ─────────── Tab bar (iOS 26 floating glass) ─────────── */
+/* Tab bar (iOS 26 floating glass) */
 
 .dock {
   position: absolute;
@@ -515,7 +515,7 @@ img {
     inset 0 0 0 0.5px rgb(var(--fg-rgb) / 0.08);
 }
 
-/* ─────────── Mini player ─────────── */
+/* Mini player */
 
 .mini {
   display: flex;
@@ -585,7 +585,7 @@ img {
   transform-origin: left;
 }
 
-/* ─────────── Full player ─────────── */
+/* Full player */
 
 .player {
   position: fixed;
@@ -934,7 +934,7 @@ img {
   }
 }
 
-/* ─────────── Lyrics view ─────────── */
+/* Lyrics view */
 
 .lyrics {
   position: relative; /* offsetParent for line positions */
@@ -977,7 +977,7 @@ img {
   white-space: pre-wrap;
 }
 
-/* ─────────── Search ─────────── */
+/* Search */
 
 .search-bar {
   display: flex;
@@ -1043,7 +1043,7 @@ img {
   box-shadow: 0 6px 16px rgb(0 0 0 / 0.4);
 }
 
-/* ─────────── Detail header ─────────── */
+/* Detail header */
 
 .nav-bar {
   position: sticky;
@@ -1179,7 +1179,7 @@ img {
   color: var(--text-2);
 }
 
-/* ─────────── Library ─────────── */
+/* Library */
 
 .lib-tile {
   display: flex;
@@ -1258,7 +1258,7 @@ img {
   font-size: 11.5px;
 }
 
-/* ─────────── iOS grouped settings ─────────── */
+/* iOS grouped settings */
 
 .group-label {
   margin: 22px calc(var(--gutter) + 16px) 7px;
@@ -1377,7 +1377,7 @@ button.cell:active {
   transform: scale(1.05);
 }
 
-/* ─────────── Desktop ─────────── */
+/* Desktop */
 
 .sidebar {
   display: none;

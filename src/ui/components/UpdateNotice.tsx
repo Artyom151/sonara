@@ -16,7 +16,6 @@ export function UpdateNotice() {
 }
 
 function UpdateCard({ info }: { info: UpdateInfo }) {
-  const t = useT();
   return (
     <motion.div
       className="update-notice glass"
