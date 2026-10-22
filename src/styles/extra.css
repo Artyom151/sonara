@@ -727,16 +727,6 @@ button.link:hover {
   gap: 6px;
   min-width: 0;
 }
-.eq-range {
-  -webkit-appearance: slider-vertical;
-  appearance: slider-vertical;
-  writing-mode: vertical-lr;
-  direction: rtl;
-  width: 28px;
-  height: 128px;
-  accent-color: var(--accent);
-  margin: 0;
-}
 .eq-db,
 .eq-hz {
   font-size: 10.5px;
@@ -810,10 +800,22 @@ button.link:hover {
 }
 
 /* Playback speed in the full-screen player (ui/components/Player.tsx). */
-.np-rate { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 10px; }
-.np-rate button:disabled { opacity: 0.3; }
-.np-rate-sign { font-size: 22px; line-height: 1; }
-.np-rate-value { font: inherit; font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 600; min-width: 64px; padding: 4px 10px; border-radius: 12px; background: rgba(127, 127, 127, 0.16); color: inherit; border: 0; cursor: pointer; }
+.np-rate { display: flex; justify-content: center; margin-top: 10px; }
+/* After iOS 26 Podcasts (ui/components/SpeedControl.tsx): a glass chip opens presets and a dial. */
+.speed { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
+.speed-chip { height: 36px; min-width: 84px; padding: 0 20px; border: 0; color: inherit; cursor: pointer; font: inherit; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.speed-panel { width: min(100%, 320px); padding: 8px; border-radius: 28px; display: flex; flex-direction: column; gap: 8px; }
+.speed-presets { position: relative; display: grid; grid-template-columns: repeat(5, 1fr); height: 40px; border-radius: 999px; background: rgba(127, 127, 127, 0.16); touch-action: none; user-select: none; cursor: pointer; }
+.speed-preset { position: relative; display: grid; place-items: center; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; opacity: 0.7; transition: opacity 0.2s; }
+.speed-preset.on { opacity: 1; }
+.speed-preset > span { position: relative; z-index: 1; }
+.speed-thumb { position: absolute; inset: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.24); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3), 0 2px 10px rgba(0, 0, 0, 0.2); backdrop-filter: blur(10px); }
+.speed-dial { position: relative; height: 34px; overflow: hidden; touch-action: none; user-select: none; cursor: grab; outline: none; -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent); }
+.speed-dial:active { cursor: grabbing; }
+.speed-ticks { position: absolute; left: 50%; top: 0; height: 100%; }
+.speed-ticks i { position: absolute; top: 50%; width: 2px; height: 10px; margin: -5px 0 0 -1px; border-radius: 1px; background: currentColor; opacity: 0.3; }
+.speed-ticks i.major { height: 18px; margin-top: -9px; opacity: 0.55; }
+.speed-needle { position: absolute; left: 50%; top: 4px; bottom: 4px; width: 3px; margin-left: -1.5px; border-radius: 2px; background: var(--accent); }
 
 /* Listening statistics on the profile (ui/components/ListeningStats.tsx). */
 .stats-empty { opacity: 0.6; margin: 4px 0 0; }
@@ -833,8 +835,7 @@ button.link:hover {
 
 /* Full-screen player footer: the buttons shrink with the window instead of being cut off at the edges. */
 .player-foot { gap: clamp(4px, 2vw, 10px); min-width: 0; }
-.player-foot .ctl,
-.np-rate .ctl { width: clamp(32px, 10.5vw, 44px); height: clamp(32px, 10.5vw, 44px); flex-shrink: 0; }
+.player-foot .ctl { width: clamp(32px, 10.5vw, 44px); height: clamp(32px, 10.5vw, 44px); flex-shrink: 0; }
 .player-foot-group { flex: 1; min-width: 0; display: flex; justify-content: center; gap: clamp(2px, 1.5vw, 8px); }
 
 /* Replies to comments (ui/account/Comments.tsx). */
@@ -906,9 +907,54 @@ button.link:hover {
   background: rgb(127 127 127 / 0.09);
   gap: 0;
 }
-.eq-range {
+/* Bands drawn in the app's slider style: a rail, an accent fill from the zero line and a white knob. */
+.eq-track {
+  position: relative;
+  width: 36px;
   height: 150px;
+  touch-action: none;
+  cursor: pointer;
+  outline: none;
+  border-radius: 18px;
+}
+.eq-track:focus-visible .eq-knob {
+  box-shadow: 0 0 0 3px rgb(var(--accent-rgb) / 0.6), 0 2px 8px rgb(0 0 0 / 0.25);
+}
+.eq-rail,
+.eq-fill {
+  position: absolute;
+  left: 50%;
+  width: 6px;
+  margin-left: -3px;
+  border-radius: 3px;
+}
+.eq-rail {
+  top: 0;
+  bottom: 0;
+  background: rgb(120 120 128 / 0.32);
+}
+.eq-fill {
+  background: var(--accent);
+}
+.eq-zero {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 1px;
+  margin-left: -7px;
+  background: var(--text-2);
+  opacity: 0.6;
+}
+.eq-knob {
+  position: absolute;
+  left: 50%;
   width: 30px;
+  height: 18px;
+  margin: -9px 0 0 -15px;
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
 }
 .eq-db {
   min-height: 14px;
@@ -969,3 +1015,27 @@ button.link:hover {
 /* Wave mood sliders: the volume slider look, with the two ends labelled. */
 .wave-slider { margin: 2px 0; }
 .wave-end { font-size: 12px; opacity: 0.7; white-space: nowrap; }
+.queue-grip {
+  flex: none;
+  width: 32px;
+  height: 36px;
+  color: var(--text-2);
+  font-size: 22px;
+  line-height: 1;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.queue-grip:active { cursor: grabbing; }
+.queue-dragging { background: rgb(255 255 255 / 0.1); }
+.queue-undo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  color: var(--text-2);
+  font-size: 13px;
+}
+.queue-undo span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.queue-undo button { flex: none; color: var(--accent); font-weight: 600; }

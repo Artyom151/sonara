@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useAudioDevice } from '../platform/audioDevices';
+import { usePlayer } from '../store/player';
 import { ensureGraph, getGraph } from './audioGraph';
 import type { Track } from '../core/types';
 import { adaptivePreset, BANDS, deviceKey, EQ_PRESETS, EQ_RANGE, type EqPresetId, type FixedPresetId } from './eqCurves';
@@ -52,12 +53,20 @@ export const useEq = create<EqState>()(
       setEnabled: (enabled) => set({ enabled }),
       resolved: null,
       setPreset: (p) => {
-        if (p === 'adaptive') return set({ preset: 'adaptive', resolved: null });
+        if (p === 'adaptive') {
+          set({ preset: 'adaptive', resolved: null });
+          // Apply to the track that is already playing, not only to the next one.
+          const cur = usePlayer.getState().current();
+          if (cur) get().followTrack(cur);
+          return;
+        }
         set({ preset: p, resolved: null, gains: EQ_PRESETS[p].slice(), preamp: presetPreamp(p) });
       },
       followTrack: (t) => {
         if (get().preset !== 'adaptive') return;
-        const p = adaptivePreset([t.genre, ...(t.tags ?? [])]);
+        // Sources without genres and tags (YouTube, Deezer) fall back to the title.
+        const words = t.genre || t.tags?.length ? [t.genre, ...(t.tags ?? [])] : [t.title];
+        const p = adaptivePreset(words);
         set({ resolved: p, gains: EQ_PRESETS[p].slice(), preamp: presetPreamp(p) });
       },
       setBand: (i, db) =>
