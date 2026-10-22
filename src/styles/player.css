@@ -4,6 +4,7 @@
   inset: 0;
   z-index: 60;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr) auto auto;
   gap: 12px;
   padding: calc(var(--sat) + 8px) 16px calc(var(--sab) + 14px);
@@ -33,12 +34,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.pl-artist {
+.pl-top .pl-artist {
   display: none;
+  max-width: 30%;
   font-size: 13px;
   color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.app.desk .pl-artist {
+.app.desk .pl-top .pl-artist {
   display: block;
 }
 
@@ -510,4 +515,8 @@
 }
 .pl-overlay .pl-lyrics {
   padding: 30vh 24px 30vh;
+}
+.pl-panel .pl-lyrics p {
+  font-size: 20px;
+  line-height: 1.3;
 }
