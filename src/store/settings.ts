@@ -61,7 +61,7 @@ export const useSettings = create<Settings>()(
       theme: 'system',
       accentMode: 'system',
       customAccent: '#8b5cf6',
-      tintInterface: true,
+      tintInterface: false,
       glass: 'clear',
       reduceMotion: false,
       graphics: 'auto',
@@ -97,6 +97,16 @@ export const useSettings = create<Settings>()(
       railSide: 'left',
       set: (patch) => set(patch),
     }),
-    { name: 'sonara.settings', partialize: ({ set: _, ...rest }) => rest },
+    {
+      name: 'sonara.settings',
+      version: 1,
+      partialize: ({ set: _, ...rest }) => rest,
+      // 2.0: the interface is neutral by default (colour comes from the artwork); the tint can be turned back on.
+      migrate: (state, version) => {
+        const s = state as Partial<Settings>;
+        if (version < 1) s.tintInterface = false;
+        return s as Settings;
+      },
+    },
   ),
 );

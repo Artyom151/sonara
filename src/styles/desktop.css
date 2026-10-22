@@ -165,7 +165,7 @@
   margin: 0 24px 22px 12px;
   --g-radius: 24px;
   /* Frosted enough that the page text under the bar never competes with its own labels. */
-  --lg-tint: color-mix(in srgb, var(--accent-container) 20%, rgb(var(--elevated-rgb) / 0.58));
+  --lg-tint: rgb(var(--elevated-rgb) / 0.62);
   --lg-blur: 14px;
   --lg-strength: 14;
   --lg-depth: 1.6;
@@ -328,14 +328,16 @@
   border-radius: 7px;
 }
 
-/* Wave hero */
+/* Wave hero: a dark stage card with the orb; the title and actions sit at the bottom left. */
 .wave {
   position: relative;
-  height: clamp(440px, 66vh, 680px);
-  margin: -28px 0 10px;
-  display: grid;
-  place-items: center;
+  height: clamp(360px, 54vh, 560px);
+  margin: 0 var(--gutter) 12px;
+  border-radius: 26px;
   overflow: hidden;
+  background: radial-gradient(90% 90% at 50% 40%, #161618, #050506);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
+  isolation: isolate;
 }
 .wave-canvas {
   position: absolute;
@@ -344,26 +346,27 @@
   height: 100%;
 }
 .wave-center {
-  position: relative;
+  position: absolute;
   z-index: 2;
+  left: 28px;
+  bottom: 26px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 18px;
-  margin-top: -40px;
+  align-items: flex-start;
+  gap: 12px;
 }
 .wave-title {
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 46px;
+  gap: 10px;
+  font-size: 40px;
   font-weight: 800;
   letter-spacing: -0.035em;
   color: #fff;
   transition: transform 0.35s var(--ease-spring);
 }
 .wave-title:hover {
-  transform: scale(1.03);
+  transform: scale(1.02);
 }
 .wave-title:active {
   transform: scale(0.97);
@@ -372,18 +375,19 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 46px;
-  padding: 0 22px;
-  font-size: 15px;
+  height: 40px;
+  padding: 0 18px;
+  font-size: 14px;
   font-weight: 600;
-  --g-radius: 23px;
-  --lg-tint: rgb(var(--fg-rgb) / 0.16);
+  color: #fff;
+  --g-radius: 20px;
+  --lg-tint: rgb(255 255 255 / 0.14);
   --lg-blur: 6px;
 }
 .wave-chips {
   position: absolute;
   z-index: 2;
-  left: var(--gutter);
+  right: 22px;
   bottom: 22px;
   display: flex;
   gap: 10px;
@@ -395,8 +399,9 @@
   max-width: 360px;
   padding: 8px 20px 8px 8px;
   text-align: left;
+  color: #fff;
   --g-radius: 32px;
-  --lg-tint: rgb(var(--fg-rgb) / 0.06);
+  --lg-tint: rgb(255 255 255 / 0.08);
 }
 .wave-chip-arts {
   display: flex;
@@ -433,8 +438,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-
-/* Full-screen player keeps clear of the window controls. */
 
 /* macOS: room for the native traffic lights at the top-left of the rail. */
 .app.desk.mac .rail {

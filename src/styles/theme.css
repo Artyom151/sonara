@@ -23,7 +23,8 @@
 /* Over artwork the interface stays dark in both themes. */
 .fullplayer,
 .island,
-.splash {
+.splash,
+.wave {
   color-scheme: dark;
   --fg-rgb: 255 255 255;
   --elevated-rgb: 28 28 30;
