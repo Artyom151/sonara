@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Sonara',
   webDir: 'dist',
   backgroundColor: '#000000',
-  loggingBehavior: 'debug',
+  loggingBehavior: 'production',
   android: {
     backgroundColor: '#000000',
     allowMixedContent: false,

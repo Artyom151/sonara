@@ -272,6 +272,8 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
     }
 
     private void publish() {
+        // The plugin can call in between onCreate's `instance = this` and the session being created.
+        if (session == null) return;
         MediaMetadataCompat.Builder meta = new MediaMetadataCompat.Builder()
             .putString(MediaMetadataCompat.METADATA_KEY_TITLE, title)
             .putString(MediaMetadataCompat.METADATA_KEY_ARTIST, artist)

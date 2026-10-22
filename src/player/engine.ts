@@ -1,5 +1,6 @@
 import type Hls from 'hls.js';
 import { api } from '../core';
+import { audio } from './element';
 import type { Track } from '../core/types';
 import { isAndroid, isTauri, nativeFetch } from '../platform';
 import { useLibrary } from '../store/library';
@@ -23,9 +24,7 @@ void initOffline();
  * Single audio element driven by the player store. Subscribes to the store and
  * reacts to track/playing changes; pushes time updates back into the store.
  */
-const audio = new Audio();
 audio.preload = 'auto';
-audio.crossOrigin = 'anonymous';
 
 let hls: Hls | null = null;
 let loadedKey: string | null = null;
@@ -522,7 +521,6 @@ if ('mediaSession' in navigator) {
   ms.setActionHandler('seekto', (d) => d.seekTime != null && seek(d.seekTime));
 }
 
-export { audio };
 
 // Sleep timer: pause once the time is up.
 setInterval(() => {

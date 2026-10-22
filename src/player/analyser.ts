@@ -1,5 +1,5 @@
 import { getGraph } from './audioGraph';
-import { audio } from './engine';
+import { audio } from './element';
 
 /**
  * Audio levels for visuals. Reads the shared Web Audio graph (audioGraph.ts), which exists on the

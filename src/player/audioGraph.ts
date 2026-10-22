@@ -1,5 +1,5 @@
 import { isNative } from '../platform';
-import { audio } from './engine';
+import { audio } from './element';
 
 /**
  * One Web Audio graph for the single <audio> element: source → preamp → 10 EQ bands → analyser → output.
