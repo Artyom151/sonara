@@ -5,7 +5,7 @@ import { usePlayer } from '../../store/player';
 import { useSettings } from '../../store/settings';
 import { useUi } from '../../store/ui';
 import { Art, Marquee, Slider } from '../components/controls';
-import { Scrubber } from '../components/Player';
+import { Scrubber } from '../player/Scrubber';
 import { goToArtist } from '../artists';
 import { fmtTime, useT } from '../i18n';
 import {

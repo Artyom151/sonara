@@ -31,7 +31,7 @@ import { startWave } from '../../player/wave';
 import { openWhy } from './WhySheet';
 import { Alert, Art, Field, Menu, Sheet, type MenuItem } from './controls';
 import { PlaylistCover } from './MixCover';
-import { LyricsView, useLyrics } from './Player';
+import { LyricsView, useLyrics } from '../player/Lyrics';
 import { AuthSheet } from '../account/AuthSheet';
 import { EditProfileSheet } from '../account/EditProfileSheet';
 import { CommentsPanel } from '../account/Comments';

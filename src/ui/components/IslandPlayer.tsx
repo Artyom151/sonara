@@ -20,7 +20,7 @@ import {
   IconSpeakerLow,
 } from '../icons';
 import { Art, Marquee, Slider } from './controls';
-import { Scrubber } from './Player';
+import { Scrubber } from '../player/Scrubber';
 import { IslandUpdate } from './UpdateNotice';
 import { usePendingUpdate } from '../../platform/updates';
 import { useAudioDevice, type AudioDevice } from '../../platform/audioDevices';

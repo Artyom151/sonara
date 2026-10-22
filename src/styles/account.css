@@ -402,12 +402,6 @@
   color: var(--on-accent);
   background: var(--p-accent, var(--accent));
 }
-.player-side .comments {
-  flex: 1;
-}
-.player-side-head .segmented {
-  width: 260px;
-}
 
 /* Photo upload affordances */
 .edit-avatar {

@@ -435,14 +435,6 @@
 }
 
 /* Full-screen player keeps clear of the window controls. */
-@media (min-width: 960px) {
-  .player {
-    padding-top: 48px;
-  }
-  .player-head {
-    padding-right: 140px;
-  }
-}
 
 /* macOS: room for the native traffic lights at the top-left of the rail. */
 .app.desk.mac .rail {

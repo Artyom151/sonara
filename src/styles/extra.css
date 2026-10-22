@@ -96,14 +96,6 @@ button:disabled {
 /* Graphics tiers (platform/perf.ts) */
 /* Balanced / low: the full-screen player backdrop uses soft radial masks instead of
    very expensive 70–80px filter blurs. */
-:root:not([data-perf='high']) .player-bg .blob {
-  filter: none;
-  -webkit-mask-image: radial-gradient(closest-side, #000 20%, transparent);
-  mask-image: radial-gradient(closest-side, #000 20%, transparent);
-}
-:root:not([data-perf='high']) .player-bg .art-blur {
-  display: none;
-}
 :root:not([data-perf='high']) .splash-glow {
   filter: none;
 }
@@ -167,9 +159,6 @@ button:disabled {
   gap: 10px;
   height: 40px;
   padding: 0 14px 0 7px;
-}
-.island-gap {
-  flex: 1;
 }
 .island-art {
   width: 52px;
@@ -622,24 +611,6 @@ button.link:hover {
 }
 
 /* Volume in the full-screen player (phones and desktop) */
-.np-volume {
-  margin-top: 6px;
-  padding: 0 4px;
-}
-.np-volume .ctl {
-  width: 28px;
-  height: 28px;
-}
-.np-volume .slider-rail {
-  height: 4px;
-  margin-top: -2px;
-}
-.np-volume .slider-knob {
-  width: 20px;
-  height: 12px;
-  margin: -6px 0 0 -10px;
-  border-radius: 6px;
-}
 
 /* Island: headphones connected (IslandPlayer → IslandDevice), like the iOS live activity */
 .island.is-device {
@@ -800,7 +771,6 @@ button.link:hover {
 }
 
 /* Playback speed in the full-screen player (ui/components/Player.tsx). */
-.np-rate { display: flex; justify-content: center; margin-top: 10px; }
 /* After iOS 26 Podcasts (ui/components/SpeedControl.tsx): a glass chip opens presets and a dial. */
 .speed { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; }
 .speed-chip { height: 36px; min-width: 84px; padding: 0 20px; border: 0; color: inherit; cursor: pointer; font: inherit; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -834,9 +804,6 @@ button.link:hover {
 .stats-top li small { opacity: 0.6; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
 /* Full-screen player footer: the buttons shrink with the window instead of being cut off at the edges. */
-.player-foot { gap: clamp(4px, 2vw, 10px); min-width: 0; }
-.player-foot .ctl { width: clamp(32px, 10.5vw, 44px); height: clamp(32px, 10.5vw, 44px); flex-shrink: 0; }
-.player-foot-group { flex: 1; min-width: 0; display: flex; justify-content: center; gap: clamp(2px, 1.5vw, 8px); }
 
 /* Replies to comments (ui/account/Comments.tsx). */
 .comment.comment-reply { margin-left: 44px; }
@@ -970,7 +937,6 @@ button.link:hover {
   font-size: 12px;
   opacity: 0.7;
 }
-
 
 /* Buttons in the iOS 26 manner: tall capsules, a wide hit area, a soft glass fill, clear weight. */
 .btn {

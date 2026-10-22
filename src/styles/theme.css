@@ -21,7 +21,7 @@
 }
 
 /* Over artwork the interface stays dark in both themes. */
-.player,
+.fullplayer,
 .island,
 .splash {
   color-scheme: dark;

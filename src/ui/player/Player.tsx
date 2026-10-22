@@ -1,0 +1,403 @@
+import { AnimatePresence, motion, useDragControls, type PanInfo } from 'motion/react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { CommentsPanel, useComments } from '../account/Comments';
+import { goToArtist } from '../artists';
+import type { Lyrics, Track } from '../../core/types';
+import { setVolume, togglePlay } from '../../player/engine';
+import { likePulse } from '../../player/likePulse';
+import { useLibrary } from '../../store/library';
+import { usePlayer } from '../../store/player';
+import { useUi } from '../../store/ui';
+import { imageColors, playerBackdrop } from '../../theme/color';
+import { shareTrack } from '../components/actions';
+import { CastButton } from '../components/CastButton';
+import { Art, Marquee, Segmented, Slider } from '../components/controls';
+import { SpeedControl } from '../components/SpeedControl';
+import { SourceMark } from '../components/TrackRow';
+import { fmtTime, useT } from '../i18n';
+import {
+  IconBackward,
+  IconBan,
+  IconChevronDown,
+  IconComment,
+  IconForward,
+  IconHeart,
+  IconMore,
+  IconMusic,
+  IconPause,
+  IconPlay,
+  IconPlus,
+  IconQueue,
+  IconQuote,
+  IconRepeat,
+  IconShare,
+  IconShuffle,
+  IconSpeaker,
+  IconSpeakerLow,
+} from '../icons';
+import { useDesktop } from '../useMedia';
+import { LikedBy } from './LikedBy';
+import { LyricLine, LyricsView, useLyrics } from './Lyrics';
+import { Scrubber, TimeCode } from './Scrubber';
+
+type View = 'cover' | 'lyrics' | 'comments';
+type Panel = 'queue' | 'about' | 'lyrics';
+
+export function usePlayerColors(track?: Track) {
+  const [colors, setColors] = useState(() => playerBackdrop([]));
+  useEffect(() => {
+    let alive = true;
+    void imageColors(track?.artwork).then((c) => alive && setColors(playerBackdrop(c)));
+    return () => {
+      alive = false;
+    };
+  }, [track?.artwork]);
+  return colors;
+}
+
+/** The tracks after the current one; a tap jumps there. The full editor is the queue sheet. */
+function UpNext() {
+  const t = useT();
+  const queue = usePlayer((s) => s.queue);
+  const index = usePlayer((s) => s.index);
+  const open = useUi((s) => s.open);
+  const next = queue.slice(index + 1, index + 30);
+  return (
+    <div className="pl-upnext">
+      {next.length ? (
+        next.map((x, i) => (
+          <button key={`${x.key}-${i}`} className="pl-upnext-row" onClick={() => usePlayer.getState().jump(index + 1 + i)}>
+            <Art src={x.artwork} seed={x.key} />
+            <span>
+              <b>{x.title}</b>
+              <small>{x.artist}</small>
+            </span>
+            <em>{fmtTime(x.duration)}</em>
+          </button>
+        ))
+      ) : (
+        <p className="pl-empty">{t('queueEmpty')}</p>
+      )}
+      <button className="pl-link" onClick={() => open({ type: 'queue' })}>
+        {t('openQueue')}
+      </button>
+    </div>
+  );
+}
+
+function About({ track }: { track: Track }) {
+  const t = useT();
+  const context = usePlayer((s) => s.context);
+  const rate = usePlayer((s) => s.rate);
+  return (
+    <div className="pl-about">
+      <dl>
+        <dt>{t('playingFrom')}</dt>
+        <dd>{context.title || t('playlistOfTheDay')}</dd>
+        <dt>{t('source')}</dt>
+        <dd>
+          <SourceMark source={track.source} /> {track.source}
+        </dd>
+        <dt>{t('length')}</dt>
+        <dd>{fmtTime(track.duration)}</dd>
+      </dl>
+      <LikedBy track={track} />
+      <div className="pl-about-speed">
+        <span>{t('speed')}</span>
+        <SpeedControl rate={rate} />
+      </div>
+    </div>
+  );
+}
+
+function PanelBody({ panel, track, lyrics }: { panel: Panel; track: Track; lyrics: Lyrics | null | undefined }) {
+  switch (panel) {
+    case 'queue':
+      return <UpNext />;
+    case 'about':
+      return <About track={track} />;
+    case 'lyrics':
+      return <LyricsView lyrics={lyrics} className="pl-lyrics" />;
+  }
+}
+
+function PanelTab({ icon, label, active, onClick }: { icon: ReactNode; label: ReactNode; active: boolean; onClick: () => void }) {
+  return (
+    <button className={`pl-tab glass glass-press ${active ? 'on' : ''}`} onClick={onClick}>
+      {icon}
+      <span className="pl-tab-label">{label}</span>
+      <IconChevronDown size={13} className="pl-tab-chevron" />
+    </button>
+  );
+}
+
+/** Actions floating on the right of the cover. */
+function Rail({ track }: { track: Track }) {
+  const t = useT();
+  const open = useUi((s) => s.open);
+  const liked = useLibrary((s) => s.likes.some((x) => x.key === track.key));
+  const disliked = useLibrary((s) => s.dislikes.includes(track.key));
+  return (
+    <div className="pl-rail glass">
+      <button className={`pl-rail-btn ${liked ? 'liked' : ''}`} aria-label={t('like')} onClick={() => useLibrary.getState().toggleLike(track)}>
+        <IconHeart size={19} filled={liked} />
+      </button>
+      <button
+        className={`pl-rail-btn ${disliked ? 'on' : ''}`}
+        aria-label={t('dislike')}
+        onClick={() => {
+          useLibrary.getState().toggleDislike(track);
+          if (!disliked) usePlayer.getState().next();
+        }}
+      >
+        <IconBan size={18} />
+      </button>
+      <button className="pl-rail-btn" aria-label={t('addToPlaylist')} onClick={() => open({ type: 'addToPlaylist', tracks: [track] })}>
+        <IconPlus size={18} />
+      </button>
+      <CastButton className="pl-rail-btn" size={18} />
+    </div>
+  );
+}
+
+/** The cover card: artwork, the action rail, and the Up next / About / Lyrics panels over it. */
+function Stage({ track, lyrics, view }: { track: Track; lyrics: Lyrics | null | undefined; view: View }) {
+  const t = useT();
+  const playing = usePlayer((s) => s.playing);
+  const [panel, setPanel] = useState<Panel | null>(null);
+  const lastTap = useRef(0);
+  const toggle = (p: Panel) => setPanel((cur) => (cur === p ? null : p));
+  const art = track.artworkLarge ?? track.artwork;
+
+  const likeOnDoubleTap = () => {
+    const now = performance.now();
+    if (now - lastTap.current > 320) return void (lastTap.current = now);
+    lastTap.current = 0;
+    likePulse.at = now;
+    useLibrary.getState().toggleLike(track);
+  };
+
+  const body = (() => {
+    switch (view) {
+      case 'lyrics':
+        return <LyricsView lyrics={lyrics} className="pl-lyrics big" />;
+      case 'comments':
+        return (
+          <div className="pl-comments">
+            <CommentsPanel />
+          </div>
+        );
+      case 'cover':
+        return null;
+    }
+  })();
+
+  return (
+    <div className={`pl-stage ${playing ? '' : 'paused'} view-${view}`}>
+      <AnimatePresence mode="popLayout" initial={false}>
+        <motion.div
+          key={track.key}
+          className="pl-art"
+          initial={{ opacity: 0, scale: 1.04 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.35 }}
+          drag={view === 'cover' ? 'x' : false}
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.35}
+          onDragEnd={(_, info) => {
+            if (info.offset.x < -80) usePlayer.getState().next();
+            if (info.offset.x > 80) usePlayer.getState().prev();
+          }}
+          onTap={likeOnDoubleTap}
+        >
+          <Art src={art} seed={track.key} />
+        </motion.div>
+      </AnimatePresence>
+      {body && <div className="pl-overlay">{body}</div>}
+      {view === 'cover' && (
+        <>
+          <Rail track={track} />
+          <AnimatePresence>
+            {panel && (
+              <motion.div
+                className="pl-panel"
+                initial={{ y: 24, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 24, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 420, damping: 36 }}
+              >
+                <PanelBody panel={panel} track={track} lyrics={lyrics} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <div className="pl-tabs">
+            <PanelTab icon={<IconQueue size={15} />} label={t('queue')} active={panel === 'queue'} onClick={() => toggle('queue')} />
+            <PanelTab icon={<IconMusic size={15} />} label={t('aboutTrack')} active={panel === 'about'} onClick={() => toggle('about')} />
+            <PanelTab
+              icon={<IconQuote size={15} />}
+              label={lyrics?.synced ? <LyricLine lyrics={lyrics} fallback={t('lyrics')} /> : t('lyrics')}
+              active={panel === 'lyrics'}
+              onClick={() => toggle('lyrics')}
+            />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Transport() {
+  const t = useT();
+  const playing = usePlayer((s) => s.playing);
+  const loading = usePlayer((s) => s.loading);
+  const shuffle = usePlayer((s) => s.shuffle);
+  const repeat = usePlayer((s) => s.repeat);
+  return (
+    <div className="pl-transport">
+      <button className={`pl-btn ${shuffle ? 'on' : ''}`} aria-label={t('shuffle')} onClick={() => usePlayer.getState().toggleShuffle()}>
+        <IconShuffle size={19} />
+      </button>
+      <button className="pl-btn big" aria-label="Previous" onClick={() => usePlayer.getState().prev()}>
+        <IconBackward size={24} />
+      </button>
+      <button className="pl-play glass-press" aria-label={playing ? 'Pause' : 'Play'} onClick={togglePlay}>
+        {loading && playing ? <span className="spinner dark" /> : playing ? <IconPause size={24} /> : <IconPlay size={24} />}
+      </button>
+      <button className="pl-btn big" aria-label="Next" onClick={() => usePlayer.getState().next()}>
+        <IconForward size={24} />
+      </button>
+      <button className={`pl-btn ${repeat !== 'off' ? 'on' : ''}`} aria-label={t('repeat')} onClick={() => usePlayer.getState().cycleRepeat()}>
+        <IconRepeat size={19} one={repeat === 'one'} />
+      </button>
+    </div>
+  );
+}
+
+function Volume() {
+  const t = useT();
+  const volume = usePlayer((s) => s.volume);
+  return (
+    <div className="pl-volume">
+      <Slider
+        value={volume}
+        onChange={setVolume}
+        left={
+          <button className="pl-btn small" aria-label={t('volume')} onClick={() => setVolume(volume > 0 ? 0 : 1)}>
+            {volume < 0.4 ? <IconSpeakerLow size={16} /> : <IconSpeaker size={16} />}
+          </button>
+        }
+      />
+    </div>
+  );
+}
+
+/** The full-screen player: a cover-first layout after the desktop reference, adapted to phones. */
+export function Player() {
+  const t = useT();
+  const expanded = usePlayer((s) => s.expanded);
+  const track = usePlayer((s) => s.queue[s.index]);
+  const context = usePlayer((s) => s.context);
+  const desktop = useDesktop();
+  const open = useUi((s) => s.open);
+  const [view, setView] = useState<View>('cover');
+  const { items: comments } = useComments(expanded ? track?.key : undefined);
+  const lyrics = useLyrics(expanded ? track : undefined);
+  const colors = usePlayerColors(track);
+  const close = () => usePlayer.getState().setExpanded(false);
+
+  // Swipe down to close, but only from empty areas: seeking, the cover swipe and scrolling stay free.
+  const dragControls = useDragControls();
+  const startDrag = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('.scrub, button, input, .pl-stage, .slider, .speed')) return;
+    dragControls.start(e);
+  };
+  const onDragEnd = (_: unknown, info: PanInfo) => {
+    if (info.offset.y > 140 || info.velocity.y > 700) close();
+  };
+
+  const showComments = () => (desktop ? setView('comments') : open({ type: 'comments' }));
+  const commentsButton = (
+    <button className="pl-btn comment-btn" aria-label={t('comments')} onClick={showComments}>
+      <IconComment size={19} />
+      {comments.length > 0 && <i className="badge">{comments.length > 99 ? '99+' : comments.length}</i>}
+    </button>
+  );
+  const more = (e: React.MouseEvent<HTMLButtonElement>) => track && open({ type: 'track', track, anchor: e.currentTarget.getBoundingClientRect() });
+
+  return (
+    <AnimatePresence>
+      {expanded && track && (
+        <motion.div
+          className="fullplayer"
+          style={{ '--p-accent': colors.accent, '--p-deep': colors.deep } as React.CSSProperties}
+          initial={{ y: '100%' }}
+          animate={{ y: 0 }}
+          exit={{ y: '100%' }}
+          transition={{ type: 'spring', stiffness: 300, damping: 36 }}
+          drag="y"
+          dragListener={false}
+          dragControls={dragControls}
+          onPointerDown={startDrag}
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={{ top: 0, bottom: 0.7 }}
+          onDragEnd={onDragEnd}
+        >
+          <header className="pl-top" data-tauri-drag-region>
+            <button className="pl-btn" onClick={close} aria-label={t('close')}>
+              <IconChevronDown size={20} />
+            </button>
+            <div className="pl-context">{context.title || t('playlistOfTheDay')}</div>
+            <button className="pl-artist link" onClick={(e) => goToArtist(track, e.currentTarget.getBoundingClientRect())}>
+              {track.artist}
+            </button>
+            <button className="pl-btn" aria-label="More" onClick={more}>
+              <IconMore size={18} />
+            </button>
+          </header>
+
+          <Stage track={track} lyrics={lyrics} view={view} />
+
+          <div className="pl-meta">
+            {desktop && (
+              <Segmented
+                value={view}
+                onChange={setView}
+                options={[
+                  { value: 'cover', label: t('playerCover') },
+                  { value: 'lyrics', label: t('lyrics') },
+                  { value: 'comments', label: `${t('comments')}${comments.length ? ` · ${comments.length}` : ''}` },
+                ]}
+              />
+            )}
+            <div className="pl-title">
+              <Marquee text={track.title} />
+              <button className="pl-sub link" onClick={(e) => goToArtist(track, e.currentTarget.getBoundingClientRect())}>
+                {track.artist}
+              </button>
+            </div>
+            {desktop ? <Volume /> : commentsButton}
+          </div>
+
+          <footer className="pl-bar">
+            <Scrubber compact />
+            <div className="pl-bar-row">
+              <TimeCode />
+              <Transport />
+              <div className="pl-actions">
+                {desktop && commentsButton}
+                <button className="pl-btn" aria-label={t('queue')} onClick={() => open({ type: 'queue' })}>
+                  <IconQueue size={19} />
+                </button>
+                <button className="pl-btn" aria-label={t('share')} onClick={() => shareTrack(track, t('copied'))}>
+                  <IconShare size={18} />
+                </button>
+              </div>
+            </div>
+            {!desktop && <Volume />}
+          </footer>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}

@@ -10,7 +10,7 @@ import { useAccount } from '../account/store';
 import { Splash } from './components/Brand';
 import { Dock } from './components/Dock';
 import { Modals } from './components/Modals';
-import { Player } from './components/Player';
+import { Player } from './player/Player';
 import { PlayerBar } from './desktop/PlayerBar';
 import { Rail } from './desktop/Rail';
 import { TitleBar, isMac } from './desktop/TitleBar';
