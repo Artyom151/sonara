@@ -37,6 +37,11 @@ export function Scrubber({ compact }: { compact?: boolean }) {
           <div className="scrub-buffer" style={{ width: `${duration ? (buffered / duration) * 100 : 0}%` }} />
           <div className="scrub-fill" style={{ width: `${pct}%` }} />
         </div>
+        {drag != null && (
+          <span className="scrub-bubble" style={{ left: `${pct}%` }}>
+            {fmtTime(drag)}
+          </span>
+        )}
       </div>
       {!compact && (
         <div className="times">

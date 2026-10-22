@@ -1294,3 +1294,22 @@ button.cell:active {
   display: inline-block;
   font-variant-numeric: tabular-nums;
 }
+
+/* The time under the finger while scrubbing. */
+.scrub {
+  position: relative;
+}
+.scrub-bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  background: rgb(0 0 0 / 0.6);
+  pointer-events: none;
+  white-space: nowrap;
+}

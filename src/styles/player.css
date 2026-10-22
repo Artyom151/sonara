@@ -600,34 +600,3 @@
 .app:not(.desk) .pl-stage {
   align-self: end;
 }
-
-/* Light rays from the top centre of the phone player, in the accent colour (Settings → Appearance). */
-.fullplayer[data-rays='1']::before {
-  content: '';
-  position: absolute;
-  z-index: 0;
-  left: 50%;
-  top: -35%;
-  width: 220%;
-  aspect-ratio: 1;
-  transform: translateX(-50%);
-  pointer-events: none;
-  background: repeating-conic-gradient(from 0deg at 50% 50%, color-mix(in srgb, var(--p-accent) 22%, transparent) 0deg 6deg, transparent 6deg 18deg);
-  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 0%, transparent 62%);
-  mask-image: radial-gradient(circle at 50% 50%, #000 0%, transparent 62%);
-  animation: pl-rays 60s linear infinite;
-}
-.fullplayer[data-rays='1'] > * {
-  position: relative;
-  z-index: 1;
-}
-@keyframes pl-rays {
-  to {
-    transform: translateX(-50%) rotate(360deg);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .fullplayer[data-rays='1']::before {
-    animation: none;
-  }
-}
