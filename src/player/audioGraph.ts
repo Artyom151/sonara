@@ -23,6 +23,13 @@ export interface Graph {
 
 let graph: Graph | null = null;
 let failed = false;
+const readyListeners = new Set<(g: Graph) => void>();
+
+/** Runs `fn` with the graph now and whenever it gets built (the equalizer applies its curve this way). */
+export function onGraphReady(fn: (g: Graph) => void) {
+  readyListeners.add(fn);
+  if (graph) fn(graph);
+}
 
 export function getGraph(): Graph | null {
   return graph;
@@ -53,6 +60,7 @@ export function ensureGraph(): Graph | null {
     analyser.connect(norm);
     norm.connect(ctx.destination);
     graph = { ctx, preamp, bands, analyser, norm };
+    for (const fn of readyListeners) fn(graph);
     // Keep it running: the context starts suspended until a gesture and may be suspended by the OS.
     const resume = () => void ctx.resume().catch(() => {});
     audio.addEventListener('play', resume);

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { useAudioDevice } from '../platform/audioDevices';
 import { usePlayer } from '../store/player';
-import { ensureGraph, getGraph } from './audioGraph';
+import { ensureGraph, getGraph, onGraphReady } from './audioGraph';
 import type { Track } from '../core/types';
 import { adaptivePreset, BANDS, deviceKey, EQ_PRESETS, EQ_RANGE, type EqPresetId, type FixedPresetId } from './eqCurves';
 
@@ -122,4 +122,4 @@ useAudioDevice.subscribe((s) => {
 });
 
 if (useEq.getState().enabled) ensureGraph();
-setTimeout(applyEq, 0);
+onGraphReady(() => applyEq());
