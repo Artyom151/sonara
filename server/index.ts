@@ -80,7 +80,12 @@ async function ytMusicPlaylist(id: string): Promise<Playlist | null> {
 }
 const app = new Hono();
 
-app.use('/api/*', cors());
+// Browsers may call the API only from the dev server and the origins listed in SONARA_ORIGINS
+// (comma-separated, e.g. a separately hosted web build). Same-origin requests need no CORS.
+const allowedOrigins = new Set(
+  ['http://localhost:5173', 'http://127.0.0.1:5173', ...(process.env.SONARA_ORIGINS ?? '').split(',').map((o) => o.trim())].filter(Boolean),
+);
+app.use('/api/*', cors({ origin: (origin) => (allowedOrigins.has(origin) ? origin : '') }));
 
 const opts = (c: Context): ApiOptions => ({
   youtubeApiKey: c.req.header('x-yt-key') || undefined,
@@ -161,7 +166,7 @@ app.get('/api/ym/stream', async (c) => {
   } catch {
     /* invalid */
   }
-  if (!host.endsWith('.yandex.net')) return c.text('not allowed', 403);
+  if (!host.endsWith('.yandex.net') || new URL(u).protocol !== 'https:') return c.text('not allowed', 403);
   const range = c.req.header('range');
   const upstream = await fetch(u, { headers: range ? { Range: range } : {} });
   const out = new Headers({ 'content-type': 'audio/mpeg', 'accept-ranges': 'bytes' });
@@ -181,6 +186,8 @@ app.get('/api/yt/stream/:id', async (c) => {
       const s = await api.stream({ key: `youtube:${id}`, id, source: 'youtube', title: '', artist: '', duration: 0 });
       entry = { url: s.url, mime: s.mime, at: Date.now() };
       ytUrls.set(id, entry);
+      // Bound the cache: drop the oldest entry (Map keeps insertion order).
+      if (ytUrls.size > 500) ytUrls.delete(ytUrls.keys().next().value!);
     } catch (e) {
       return c.text((e as Error).message, 502);
     }
