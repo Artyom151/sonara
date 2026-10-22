@@ -1,6 +1,6 @@
 // Tells what the build will (not) contain, so a missing .env never goes unnoticed:
 // without VITE_SUPABASE_* the app falls back to device-only accounts (no sign-in on a second
-// device). Yandex Music tokens are entered in Settings, never built into the app.
+// device), without VITE_YANDEX_MUSIC_TOKEN Yandex Music needs a token entered in Settings.
 // Never prints values. Warns, does not fail.
 import { existsSync, readFileSync } from 'node:fs';
 
@@ -17,6 +17,7 @@ const get = (k) => process.env[k] || fromFile[k] || '';
 const checks = [
   ['VITE_SUPABASE_URL', 'cloud accounts (sign in on several devices); the build will use device-only accounts'],
   ['VITE_SUPABASE_PUBLISHABLE_KEY', 'cloud accounts; the build will use device-only accounts'],
+  ['VITE_YANDEX_MUSIC_TOKEN', 'Yandex Music full tracks; enter a token in Settings → Sources instead'],
   ['VITE_DISCORD_APP_ID', 'Discord Rich Presence'],
 ];
 const missing = checks.filter(([k]) => !get(k));
