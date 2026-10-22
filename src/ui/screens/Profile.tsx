@@ -1,12 +1,12 @@
 import { motion } from 'motion/react';
 import { useAccount } from '../../account/store';
 import { useLibrary } from '../../store/library';
+import { LOOK_GRADIENTS, useLook } from '../../store/look';
 import { useUi } from '../../store/ui';
 import { Avatar } from '../components/Avatar';
-import { ListeningStats } from '../components/ListeningStats';
 import { TrackList } from '../components/TrackRow';
 import { useT } from '../i18n';
-import { IconGear, IconPencil, IconPerson } from '../icons';
+import { IconChevronRight, IconGear, IconPencil, IconPerson } from '../icons';
 
 export function Profile() {
   const t = useT();
@@ -16,9 +16,16 @@ export function Profile() {
   const recent = useLibrary((s) => s.recent);
   const push = useUi((s) => s.push);
   const open = useUi((s) => s.open);
+  const { banner, background, frame } = useLook();
+  const artwork = recent[0]?.artworkLarge ?? recent[0]?.artwork;
+  const bannerGradient = LOOK_GRADIENTS[banner % LOOK_GRADIENTS.length];
+  const bg = background === 'artwork' ? (artwork ? `url("${artwork}")` : null) : null;
+  const bgGradient = background === 'artwork' ? null : LOOK_GRADIENTS[background % LOOK_GRADIENTS.length];
 
   return (
-    <div className="screen">
+    <div className="screen profile-page">
+      <div className="profile-bg" aria-hidden style={bg ? { backgroundImage: bg } : { background: `linear-gradient(180deg, ${(bgGradient ?? LOOK_GRADIENTS[0]).from}, ${(bgGradient ?? LOOK_GRADIENTS[0]).to})` }} />
+      <div className="profile-banner" aria-hidden style={{ background: `linear-gradient(120deg, ${bannerGradient.from}, ${bannerGradient.to})` }} />
       <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 16px' }}>
         <button className="glass glass-icon glass-press" aria-label={t('settings')} onClick={() => push({ name: 'settings' })}>
           <IconGear size={20} />
@@ -28,17 +35,24 @@ export function Profile() {
       {status === 'signedIn' && profile ? (
         <div className="profile-head">
           <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 320, damping: 22 }}>
-            <Avatar avatar={profile.avatar} name={profile.displayName} size={104} className="profile-avatar" />
+            <div className={`profile-frame frame-${frame}`}>
+              <Avatar avatar={profile.avatar} name={profile.displayName} size={104} className="profile-avatar" />
+            </div>
           </motion.div>
           <h1 className="profile-name">{profile.displayName}</h1>
           <div className="profile-username">
             @{profile.username}
             <span className={`mode-pill ${mode}`}>{mode === 'supabase' ? t('modeCloud') : t('modeLocal')}</span>
           </div>
-          <button className="btn tonal small" onClick={() => open({ type: 'editProfile' })}>
-            <IconPencil size={15} />
-            <span>{t('editProfile')}</span>
-          </button>
+          <div className="profile-actions">
+            <button className="btn tonal small" onClick={() => open({ type: 'editProfile' })}>
+              <IconPencil size={15} />
+              <span>{t('editProfile')}</span>
+            </button>
+            <button className="btn tonal small" onClick={() => open({ type: 'look' })}>
+              <span>{t('appearance')}</span>
+            </button>
+          </div>
         </div>
       ) : (
         <motion.div className="signin-card glass" initial={{ scale: 0.96, y: 14 }} animate={{ scale: 1, y: 0 }}>
@@ -80,7 +94,10 @@ export function Profile() {
           </div>
         </div>
       </div>
-      <ListeningStats />
+      <button className="stats-entry glass glass-press" onClick={() => push({ name: 'stats' })}>
+        <span>{t('statsTitle')}</span>
+        <IconChevronRight size={18} />
+      </button>
       {recent.length > 0 && (
         <section className="section">
           <div className="section-head">

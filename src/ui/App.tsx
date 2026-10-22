@@ -22,6 +22,7 @@ import { IslandPlayer } from './components/IslandPlayer';
 import { UpdateNotice } from './components/UpdateNotice';
 import { Handoff } from './components/Handoff';
 import { RouteView } from './screens/Detail';
+import { StatsScreen } from './screens/Stats';
 import { Home } from './screens/Home';
 import { Likes } from './screens/Likes';
 import { Profile } from './screens/Profile';
@@ -55,7 +56,7 @@ function TabStack({ tab }: { tab: Tab }) {
             exit={{ x: '100%' }}
             transition={{ type: 'spring', stiffness: 380, damping: 40 }}
           >
-            {r.name === 'settings' ? <Settings /> : r.name === 'wave' ? <WaveScreen /> : r.name === 'daylist' ? <DaylistScreen /> : <RouteView r={r} />}
+            {r.name === 'settings' ? <Settings /> : r.name === 'wave' ? <WaveScreen /> : r.name === 'daylist' ? <DaylistScreen /> : r.name === 'stats' ? <StatsScreen /> : <RouteView r={r} />}
           </motion.div>
         ))}
       </AnimatePresence>

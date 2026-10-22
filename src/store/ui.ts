@@ -13,6 +13,7 @@ export type Route =
   | { name: 'settings' }
   | { name: 'wave' }
   | { name: 'daylist' }
+  | { name: 'stats' }
   | { name: 'artist'; source: Source; id?: string; artistName: string }
   | { name: 'all'; kind: 'trending' | 'mixes' | 'picks' | 'youtube' };
 
@@ -26,6 +27,7 @@ export type Modal =
   | { type: 'import' }
   | { type: 'auth'; tab?: 'signIn' | 'signUp' }
   | { type: 'editProfile' }
+  | { type: 'look' }
   | { type: 'comments' }
   | { type: 'confirm'; title: string; message?: string; action: string; destructive?: boolean; onConfirm: () => void };
 

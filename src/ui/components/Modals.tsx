@@ -1,4 +1,5 @@
 import { ImportSheet } from './Downloads';
+import { LookSheet } from './LookSheet';
 import { download, removeDownload, useOffline } from '../../player/offline';
 import { useSleep } from '../../player/sleep';
 import { sourceName } from '../sources';
@@ -412,6 +413,8 @@ export function Modals() {
             return <AuthSheet key={i} initialTab={m.tab} onClose={() => useUi.getState().close()} />;
           case 'editProfile':
             return <EditProfileSheet key={i} onClose={() => useUi.getState().close()} />;
+          case 'look':
+            return <LookSheet key={i} onClose={() => useUi.getState().close()} />;
           case 'comments':
             return <CommentsSheet key={i} />;
           case 'artists':

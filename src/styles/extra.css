@@ -1039,3 +1039,27 @@ button.link:hover {
 }
 .queue-undo span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .queue-undo button { flex: none; color: var(--accent); font-weight: 600; }
+
+/* Profile: banner and page background (Steam-style), avatar frames, the look sheet, the stats entry. */
+.profile-page { position: relative; isolation: isolate; }
+.profile-bg { position: absolute; inset: 0 0 auto 0; height: 340px; z-index: -1; background-size: cover; background-position: center; filter: blur(34px) saturate(1.2); opacity: 0.55; mask-image: linear-gradient(#000 40%, transparent); -webkit-mask-image: linear-gradient(#000 40%, transparent); pointer-events: none; }
+.profile-banner { height: 120px; margin: 0 16px; border-radius: 22px; }
+.profile-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.profile-frame { display: inline-block; border-radius: 50%; padding: 4px; }
+.profile-frame.frame-1 { background: linear-gradient(135deg, #c4b5fd, #f0abfc); }
+.profile-frame.frame-2 { background: conic-gradient(#f43f5e, #f59e0b, #84cc16, #06b6d4, #6366f1, #f43f5e); }
+.profile-frame.frame-3 { background: linear-gradient(135deg, #facc15, #b45309); }
+.profile-frame.frame-4 { background: linear-gradient(135deg, #34d399, #0d9488); }
+.profile-frame.frame-5 { background: linear-gradient(135deg, #fb923c, #dc2626); }
+.look { display: flex; flex-direction: column; gap: 10px; padding: 4px 4px 16px; }
+.look-label { font-size: 13px; font-weight: 600; opacity: 0.7; margin-top: 6px; }
+.look-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.look-swatch { width: 44px; height: 44px; border-radius: 50%; border: 2px solid transparent; display: grid; place-items: center; color: #fff; cursor: pointer; }
+.look-swatch.on { border-color: var(--accent); }
+.look-swatch:disabled { opacity: 0.35; cursor: default; }
+.look-art { background: repeating-linear-gradient(45deg, rgb(127 127 127 / 0.25) 0 6px, rgb(127 127 127 / 0.1) 6px 12px); }
+.look-hint { font-size: 12px; opacity: 0.6; }
+.look-frames { gap: 12px; }
+.look-frame-pick { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: 0; color: inherit; font-size: 12px; cursor: pointer; padding: 6px; border-radius: 14px; }
+.look-frame-pick.on { background: rgb(127 127 127 / 0.16); }
+.stats-entry { width: calc(100% - 32px); margin: 12px 16px 0; padding: 14px 16px; border-radius: 18px; display: flex; align-items: center; justify-content: space-between; color: inherit; font: inherit; font-weight: 600; border: 0; cursor: pointer; }
