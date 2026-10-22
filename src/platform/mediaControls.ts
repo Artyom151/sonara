@@ -1,5 +1,6 @@
 import { registerPlugin } from '@capacitor/core';
 import { seek } from '../player/engine';
+import { startLyricLine } from '../player/lyricLine';
 import { api } from '../core';
 import type { Track } from '../core/types';
 import { useLibrary } from '../store/library';
@@ -13,6 +14,8 @@ import { isAndroid } from '.';
 interface MediaControlsPlugin {
   update(o: { title: string; artist: string; artwork?: string; playing: boolean; position: number; duration: number }): Promise<void>;
   stop(): Promise<void>;
+  /** The current lyric line, shown in the notification and the widget ('' clears it). */
+  lyric(o: { text: string }): Promise<void>;
   /** The lists Android Auto browses (MediaPlaybackService). */
   setLibrary(o: { queue?: LibItem[]; liked?: LibItem[]; recent?: LibItem[]; titles: Record<string, string> }): Promise<void>;
   addListener(
@@ -69,6 +72,8 @@ if (isAndroid) {
       duration: s.duration || t.duration,
     }).catch(() => {});
   };
+
+  startLyricLine((text) => MediaControls.lyric({ text }).catch(() => {}));
 
   const item = (t: Track): LibItem => ({ id: t.key, title: t.title, artist: t.artist, artwork: t.artwork });
   const lists = () => {

@@ -24,6 +24,7 @@ public abstract class SonaraWidget extends AppWidgetProvider {
     private static String lastArtist = "";
     private static Bitmap lastArt = null;
     private static boolean lastPlaying = false;
+    private static String lastLyric = "";
 
     /** The layout of this size. */
     protected abstract int layout();
@@ -50,6 +51,11 @@ public abstract class SonaraWidget extends AppWidgetProvider {
         draw(context, mgr, LargeWidgetProvider.class, R.layout.widget_large);
     }
 
+    /** The current lyric line, drawn in place of the artist ("" shows the artist again). */
+    static void setLyric(String text) {
+        lastLyric = text == null ? "" : text;
+    }
+
     /** Redraw one instance, right after its shape was picked. */
     static void refresh(Context context, int widgetId) {
         AppWidgetManager mgr = AppWidgetManager.getInstance(context);
@@ -71,7 +77,7 @@ public abstract class SonaraWidget extends AppWidgetProvider {
     private static RemoteViews render(Context context, int widgetId, int layout) {
         RemoteViews v = new RemoteViews(context.getPackageName(), layout);
         v.setTextViewText(R.id.widget_title, lastTitle.isEmpty() ? "Sonara" : lastTitle);
-        v.setTextViewText(R.id.widget_artist, lastArtist);
+        v.setTextViewText(R.id.widget_artist, lastLyric.isEmpty() ? lastArtist : lastLyric);
         Bitmap art = WidgetShapes.mask(lastArt, WidgetShapes.load(context, widgetId));
         if (art != null) v.setImageViewBitmap(R.id.widget_art, art);
         else v.setImageViewResource(R.id.widget_art, R.mipmap.ic_launcher);

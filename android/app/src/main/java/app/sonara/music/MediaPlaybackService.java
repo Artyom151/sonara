@@ -89,6 +89,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
     private boolean playing = false;
     private long positionMs = 0;
     private long durationMs = 0;
+    private String lyric = "";
 
     /**
      * The service is exported (Android Auto binds to it), so the transport intents carry a
@@ -226,6 +227,12 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
         result.sendResult(out);
     }
 
+    /** The current lyric line, shown instead of the artist in the notification and the widget. */
+    void setLyric(String text) {
+        lyric = text == null ? "" : text;
+        publish();
+    }
+
     /** Called by the plugin with the current track and playback state. */
     void update(String title, String artist, String artworkUrl, boolean playing, long positionMs, long durationMs) {
         this.title = title != null ? title : "";
@@ -280,6 +287,7 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
             .setState(playing ? PlaybackStateCompat.STATE_PLAYING : PlaybackStateCompat.STATE_PAUSED, positionMs, playing ? 1f : 0f)
             .build());
 
+        SonaraWidget.setLyric(lyric);
         PlayerWidgetProvider.push(this, title, artist, artwork, playing);
 
         NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -304,7 +312,8 @@ public class MediaPlaybackService extends MediaBrowserServiceCompat {
         NotificationCompat.Builder b = new NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_monochrome)
             .setContentTitle(title.isEmpty() ? "Sonara" : title)
-            .setContentText(artist)
+            .setContentText(lyric.isEmpty() ? artist : lyric)
+            .setSubText(lyric.isEmpty() ? null : artist)
             .setLargeIcon(artwork)
             .setContentIntent(session.getController().getSessionActivity())
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

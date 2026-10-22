@@ -123,4 +123,12 @@ public class MediaControlsPlugin extends Plugin {
         if (svc != null) svc.shutdown();
         call.resolve();
     }
+
+    /** The current lyric line from the web player ("" clears it). */
+    @PluginMethod
+    public void lyric(PluginCall call) {
+        MediaPlaybackService svc = MediaPlaybackService.get();
+        if (svc != null) svc.setLyric(call.getString("text", ""));
+        call.resolve();
+    }
 }
