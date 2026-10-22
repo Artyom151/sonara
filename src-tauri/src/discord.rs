@@ -79,8 +79,10 @@ impl Conn {
             }
             self.last_attempt = Some(Instant::now());
             let mut c = DiscordIpcClient::new(app_id);
-            if c.connect().is_ok() {
-                self.client = Some(c);
+            match c.connect() {
+                Ok(()) => self.client = Some(c),
+                // Usually Discord is not running (or its IPC socket is not there): say so once per attempt.
+                Err(e) => log::warn!("discord: not connected, will retry: {e}"),
             }
         }
         self.client.as_mut()
