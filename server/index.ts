@@ -214,6 +214,20 @@ if (existsSync(dist)) {
 }
 
 const port = Number(process.env.PORT ?? 8787);
-serve({ fetch: app.fetch, port, hostname: process.env.HOST ?? '127.0.0.1' }, (i) =>
-  console.log(`♪ Sonara server on http://${i.address}:${i.port}`),
-);
+const hostname = process.env.HOST ?? '127.0.0.1';
+const server = serve({ fetch: app.fetch, port, hostname }, (i) => console.log(`Sonara server on http://${i.address}:${i.port}`));
+
+// A second `pnpm dev` (or a leftover one) keeps using the server that already runs instead of failing.
+server.on('error', async (e: NodeJS.ErrnoException) => {
+  if (e.code !== 'EADDRINUSE') throw e;
+  const ours = await fetch(`http://${hostname}:${port}/api/health`)
+    .then((r) => r.json())
+    .then((j: { name?: string }) => j.name === 'sonara')
+    .catch(() => false);
+  if (!ours) {
+    console.error(`Port ${port} is taken by another program. Set PORT to use another one.`);
+    process.exit(1);
+  }
+  console.log(`Sonara server already runs on port ${port}: using it.`);
+  setInterval(() => {}, 1 << 30);
+});

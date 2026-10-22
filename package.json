@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "description": "Sonara — music streaming client (SoundCloud + YouTube)",
   "scripts": {
-    "dev": "concurrently -k -n server,web -c magenta,cyan \"pnpm dev:server\" \"vite\"",
+    "dev": "concurrently -k -n server,web -c magenta,cyan \"pnpm dev:server\" \"node scripts/dev-web.mjs\"",
     "dev:server": "tsx watch server/index.ts",
     "build": "node scripts/check-env.mjs && node scripts/gen-shaders.mjs --check && node scripts/build-pot.mjs && vite build",
     "shaders": "node scripts/gen-shaders.mjs",
