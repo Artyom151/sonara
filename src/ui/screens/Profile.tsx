@@ -3,9 +3,9 @@ import { useAccount } from '../../account/store';
 import { useLibrary } from '../../store/library';
 import { LOOK_GRADIENTS, useLook } from '../../store/look';
 import { ProfileBanner } from '../components/BannerMedia';
+import { RecentTiles } from '../components/Featured';
 import { useUi } from '../../store/ui';
 import { Avatar } from '../components/Avatar';
-import { TrackList } from '../components/TrackRow';
 import { useT } from '../i18n';
 import { IconChevronRight, IconGear, IconPencil, IconPerson } from '../icons';
 
@@ -108,7 +108,7 @@ export function Profile() {
               {t('seeAll')}
             </button>
           </div>
-          <TrackList tracks={recent.slice(0, 8)} context={{ title: t('recentlyPlayed') }} />
+          <RecentTiles title={t('recentlyPlayed')} />
         </section>
       )}
     </div>

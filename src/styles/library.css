@@ -198,3 +198,144 @@
   margin: 0 var(--gutter);
   --g-radius: 999px;
 }
+
+/* Downloads: a hero card with the stored covers, the size and the progress of the queue. */
+.dl-hero {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  margin: 8px var(--gutter) 18px;
+  padding: 16px;
+  border-radius: 26px;
+  background: radial-gradient(120% 140% at 0% 0%, rgb(var(--accent-rgb) / 0.22), transparent 60%), rgb(var(--fg-rgb) / 0.05);
+}
+.dl-covers {
+  flex: none;
+  width: 104px;
+  height: 104px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-radius: 20px;
+  overflow: hidden;
+  place-items: center;
+  background: var(--surface-2);
+}
+.dl-covers > * {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dl-meta {
+  min-width: 0;
+  flex: 1;
+}
+.dl-meta h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+}
+.dl-meta p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.dl-progress {
+  height: 4px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: rgb(var(--fg-rgb) / 0.14);
+  overflow: hidden;
+}
+.dl-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.3s var(--ease-out);
+}
+.dl-meta small {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.dl-clear {
+  color: var(--red);
+}
+
+/* Search genres: large cover cards in a two-column grid. */
+.genre-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 var(--gutter);
+}
+.genre-card {
+  position: relative;
+  aspect-ratio: 1.5;
+  border-radius: 22px;
+  overflow: hidden;
+  padding: 14px;
+  text-align: left;
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  isolation: isolate;
+}
+.genre-card img {
+  position: absolute;
+  right: -10px;
+  bottom: -8px;
+  width: 58%;
+  height: auto;
+  transform: rotate(18deg);
+  border-radius: 12px;
+  box-shadow: 0 10px 24px rgb(0 0 0 / 0.35);
+  z-index: -1;
+}
+
+/* Profile numbers: one wide card with three columns and large figures. */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 14px var(--gutter) 0;
+  padding: 6px 0;
+  border-radius: 24px;
+  background: rgb(var(--fg-rgb) / 0.05);
+  box-shadow: inset 0 0 0 0.5px rgb(var(--fg-rgb) / 0.08);
+}
+.stats .stat {
+  padding: 14px 6px;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+}
+.stats .stat + .stat {
+  border-left: 0.5px solid rgb(var(--fg-rgb) / 0.1);
+}
+.stats .stat b {
+  display: block;
+  font-size: 26px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.stats .stat small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}

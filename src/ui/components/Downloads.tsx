@@ -7,7 +7,7 @@ import { useUi } from '../../store/ui';
 import { useT } from '../i18n';
 import { IconCheck, IconDownload } from '../icons';
 import { NavBar } from '../screens/Detail';
-import { Alert, Field } from './controls';
+import { Alert, Art, Field } from './controls';
 import { toast } from './Toast';
 import { TrackList } from './TrackRow';
 
@@ -61,21 +61,35 @@ export function DownloadsScreen() {
   return (
     <div className="screen">
       <NavBar title={t('downloads')} />
-      <h1 className="screen-title">{t('downloads')}</h1>
-      <p className="screen-sub">
-        {tracks.length} · {(size / 1024 / 1024).toFixed(0)} MB
-        {queue.length > 0 && ` · ${t('downloading')} ${queue.length}: ${queue[0].track.title} ${Math.round(queue[0].progress * 100)}%`}
-      </p>
-      {queue.length > 0 && (
-        <button className="see-all" style={{ margin: '0 var(--gutter) 10px' }} onClick={cancelDownloads}>
-          {t('cancelDownloads')}
-        </button>
-      )}
-      {tracks.length > 0 && (
-        <button
-          className="see-all"
-          style={{ margin: '0 var(--gutter) 10px', color: 'var(--danger, #ff453a)' }}
-          onClick={() =>
+      <div className="dl-hero">
+        <div className="dl-covers">
+          {tracks.length ? tracks.slice(0, 4).map((x) => <Art key={x.key} src={x.artworkLarge ?? x.artwork} seed={x.key} />) : <IconDownload size={44} />}
+        </div>
+        <div className="dl-meta">
+          <h1>{t('downloads')}</h1>
+          <p>
+            {tracks.length} {t('tracks')} · {(size / 1024 / 1024).toFixed(0)} MB
+          </p>
+          {queue.length > 0 && (
+            <div className="dl-progress" aria-label={`${Math.round(queue[0].progress * 100)}%`}>
+              <i style={{ width: `${Math.round(queue[0].progress * 100)}%` }} />
+            </div>
+          )}
+          {queue.length > 0 && (
+            <small>
+              {t('downloading')} {queue.length}: {queue[0].track.title}
+            </small>
+          )}
+          <div className="dl-actions">
+            {queue.length > 0 && (
+              <button className="btn tonal small" onClick={cancelDownloads}>
+                {t('cancelDownloads')}
+              </button>
+            )}
+            {tracks.length > 0 && (
+              <button
+                className="btn tonal small dl-clear"
+                onClick={() =>
             open({
               type: 'confirm',
               title: t('clearDownloads'),
@@ -88,7 +102,10 @@ export function DownloadsScreen() {
         >
           {t('clearDownloads')}
         </button>
-      )}
+            )}
+          </div>
+        </div>
+      </div>
       {tracks.length ? <TrackList tracks={tracks} context={{ title: t('downloads'), id: 'downloads' }} meta="duration" /> : <div className="empty">{t('downloadsEmpty')}</div>}
     </div>
   );
