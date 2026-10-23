@@ -2,6 +2,7 @@ import { motion } from 'motion/react';
 import { useAccount } from '../../account/store';
 import { useLibrary } from '../../store/library';
 import { LOOK_GRADIENTS, useLook } from '../../store/look';
+import { ProfileBanner } from '../components/BannerMedia';
 import { useUi } from '../../store/ui';
 import { Avatar } from '../components/Avatar';
 import { TrackList } from '../components/TrackRow';
@@ -16,23 +17,19 @@ export function Profile() {
   const recent = useLibrary((s) => s.recent);
   const push = useUi((s) => s.push);
   const open = useUi((s) => s.open);
-  const { banner, bannerImage, background, frame } = useLook();
+  const { background, frame } = useLook();
   const artwork = recent[0]?.artworkLarge ?? recent[0]?.artwork;
-  const bannerGradient = LOOK_GRADIENTS[banner % LOOK_GRADIENTS.length];
   const bg = background === 'artwork' ? (artwork ? `url("${artwork}")` : null) : null;
   const bgGradient = background === 'artwork' ? null : LOOK_GRADIENTS[background % LOOK_GRADIENTS.length];
 
   return (
     <div className="screen profile-page">
       <div className="profile-bg" aria-hidden style={bg ? { backgroundImage: bg } : { background: `linear-gradient(180deg, ${(bgGradient ?? LOOK_GRADIENTS[0]).from}, ${(bgGradient ?? LOOK_GRADIENTS[0]).to})` }} />
-      <div
-        className="profile-banner"
-        style={bannerImage ? { backgroundImage: `url("${bannerImage}")` } : { background: `linear-gradient(120deg, ${bannerGradient.from}, ${bannerGradient.to})` }}
-      >
+      <ProfileBanner>
         <button className="profile-gear glass glass-icon glass-press" aria-label={t('settings')} onClick={() => push({ name: 'settings' })}>
           <IconGear size={20} />
         </button>
-      </div>
+      </ProfileBanner>
 
       {status === 'signedIn' && profile ? (
         <div className="profile-head">
