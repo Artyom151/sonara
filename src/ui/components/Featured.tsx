@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { useAccount } from '../../account/store';
 import { api } from '../../core';
 import type { Playlist, Track } from '../../core/types';
@@ -177,14 +177,38 @@ function MixFeature({ p }: { p: Playlist }) {
 }
 
 /** The big swipeable cards at the top of Home: Wave, the daylist, then mixes. */
+/** The cards swipe sideways with the neighbours peeking in; the active page shows as a stretched pill. */
 export function Featured({ mixes, wave = true }: { mixes: Playlist[]; wave?: boolean }) {
+  const track = useRef<HTMLDivElement>(null);
+  const [index, setIndex] = useState(0);
+  const count = (wave ? 1 : 0) + 1 + Math.min(4, mixes.length);
+  const onScroll = () => {
+    const el = track.current;
+    if (!el?.firstElementChild) return;
+    const stride = (el.firstElementChild as HTMLElement).offsetWidth + 12;
+    const i = Math.min(count - 1, Math.max(0, Math.round(el.scrollLeft / stride)));
+    setIndex(i);
+    Array.from(el.children).forEach((c, k) => c.classList.toggle('on-page', k === i));
+  };
+  const go = (i: number) => {
+    const el = track.current;
+    if (!el?.children[i]) return;
+    el.scrollTo({ left: (el.children[i] as HTMLElement).offsetLeft - el.offsetLeft, behavior: 'smooth' });
+  };
   return (
-    <div className="featured">
-      {wave && <WaveFeature />}
-      <DaylistFeature />
-      {mixes.slice(0, 4).map((p) => (
-        <MixFeature key={p.key} p={p} />
-      ))}
+    <div className="featured-wrap">
+      <div className="featured" ref={track} onScroll={onScroll}>
+        {wave && <WaveFeature />}
+        <DaylistFeature />
+        {mixes.slice(0, 4).map((p) => (
+          <MixFeature key={p.key} p={p} />
+        ))}
+      </div>
+      <div className="featured-dots" role="tablist">
+        {Array.from({ length: count }, (_, i) => (
+          <button key={i} role="tab" aria-selected={i === index} aria-label={`${i + 1}`} className={`featured-dot ${i === index ? 'on' : ''}`} onClick={() => go(i)} />
+        ))}
+      </div>
     </div>
   );
 }

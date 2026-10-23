@@ -189,3 +189,12 @@
 .lib-top + .section {
   margin-top: 26px;
 }
+
+/* Search: the field stays at the top while the results scroll under it. */
+.search-bar {
+  position: sticky;
+  top: calc(var(--sat) + 4px);
+  z-index: 6;
+  margin: 0 var(--gutter);
+  --g-radius: 999px;
+}

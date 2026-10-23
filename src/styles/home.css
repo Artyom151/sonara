@@ -38,21 +38,52 @@
   font-size: 14px;
 }
 
+.featured-wrap {
+  position: relative;
+}
 .featured {
   display: flex;
   gap: 12px;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
-  scroll-padding: 0 var(--gutter);
-  padding: 18px var(--gutter) 6px;
+  /* The first and last card centre under the gutter; the neighbours show at the sides. */
+  scroll-padding: 0 calc(50% - min(40vw, 150px));
+  padding: 14px calc(50% - min(40vw, 150px)) 4px;
   scrollbar-width: none;
+}
+.featured > * {
+  scroll-snap-align: center;
+  transition: opacity 0.35s var(--ease-out), transform 0.35s var(--ease-out);
+}
+.featured > *:not(.on-page) {
+  opacity: 0.55;
+  transform: scale(0.94);
+}
+.featured-dots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+.featured-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgb(var(--fg-rgb) / 0.28);
+  transition: width 0.35s var(--ease-spring), background-color 0.25s;
+}
+.featured-dot.on {
+  width: 26px;
+  background: var(--text);
 }
 .featured::-webkit-scrollbar {
   display: none;
 }
 .feature {
   position: relative;
-  flex: 0 0 min(78vw, 320px);
+  flex: 0 0 min(80vw, 300px);
   aspect-ratio: 4 / 5;
   border-radius: 28px;
   overflow: hidden;
