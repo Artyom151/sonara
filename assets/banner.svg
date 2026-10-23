@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" font-family="Inter, system-ui, sans-serif">
+<rect width="1280" height="640" fill="#0b0b0c"/>
+<g transform="translate(150 170) scale(3.2)">
+<rect width="108" height="108" rx="28" fill="#161618"/>
+<path d="M 74.67 46.48 A 22 22 0 1 1 61.52 33.33" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
+<circle cx="69.56" cy="38.44" r="4.5" fill="#fff"/>
+</g>
+<text x="530" y="300" font-size="132" font-weight="800" letter-spacing="-4" fill="#ffffff">Sonara</text>
+<text x="536" y="370" font-size="34" font-weight="500" fill="#a1a1a6">Music from SoundCloud, YouTube and Deezer</text>
+<text x="536" y="420" font-size="26" font-weight="500" fill="#6e6e73">Liquid glass interface for phones and PC</text>
+</svg>

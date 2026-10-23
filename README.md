@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/logo.svg" width="112" alt="Sonara logo" />
+<img src="assets/banner.png" width="100%" alt="Sonara banner" />
 
 # Sonara
 
