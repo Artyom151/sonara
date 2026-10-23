@@ -107,9 +107,10 @@ export function LyricsView({ lyrics, className }: { lyrics: Lyrics | null | unde
       )}
       {s.map((l, i) => {
         const state = i === idx ? 'active' : i < idx ? 'past' : '';
+        const dist = Math.min(3, Math.abs(i - idx));
         const text = l.text.trim();
         return (
-          <p key={i} className={`${state} ${text ? '' : 'lyric-gap'}`} onClick={() => seek(l.time)}>
+          <p key={i} className={`${state} dist-${dist} ${text ? '' : 'lyric-gap'}`} onClick={() => seek(l.time)}>
             {text ? i === idx && l.words ? <WordsLine words={l.words} /> : l.text : i === idx && s[i + 1] ? <GapMark next={s[i + 1].time} size={26} /> : <IconNote size={26} />}
           </p>
         );

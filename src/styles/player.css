@@ -600,3 +600,75 @@
 .app:not(.desk) .pl-stage {
   align-self: end;
 }
+
+/* Lyrics, redesigned: big bold lines, the current one white and full size, the lines around it
+   softer and blurred with the distance from it. Tap a line to seek to it. */
+.lyrics {
+  padding: 34vh 22px 42vh;
+}
+.lyrics p {
+  margin: 0 0 22px;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+  color: rgb(var(--fg-rgb) / 0.3);
+  transform-origin: left center;
+  transition:
+    color 0.45s,
+    transform 0.55s var(--ease-spring),
+    filter 0.45s,
+    opacity 0.45s;
+}
+.lyrics p.dist-1 {
+  filter: blur(0.6px);
+}
+.lyrics p.dist-2 {
+  filter: blur(1.4px);
+  opacity: 0.8;
+}
+.lyrics p.dist-3 {
+  filter: blur(2.2px);
+  opacity: 0.55;
+}
+.lyrics p.past {
+  color: rgb(var(--fg-rgb) / 0.42);
+}
+.lyrics p.active {
+  color: var(--text);
+  filter: none;
+  opacity: 1;
+  transform: scale(1.04);
+}
+.lyrics p.active .lyric-word.on {
+  color: var(--text);
+}
+.lyrics p.lyric-gap {
+  color: rgb(var(--fg-rgb) / 0.28);
+}
+.lyrics.plain p {
+  font-size: 22px;
+  font-weight: 650;
+  line-height: 1.4;
+  color: rgb(var(--fg-rgb) / 0.85);
+  filter: none;
+}
+.pl-lyrics.big p {
+  font-size: clamp(26px, 2.8vw, 40px);
+}
+.pl-panel .pl-lyrics p {
+  font-size: 20px;
+}
+.lyric-word {
+  color: rgb(var(--fg-rgb) / 0.4);
+  transition: color 0.2s;
+}
+.lyric-word.on {
+  color: var(--text);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lyrics p {
+    filter: none;
+    transition: color 0.2s;
+  }
+}
