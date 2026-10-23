@@ -410,7 +410,11 @@ export function Player() {
   const open = useUi((s) => s.open);
   const [view, setView] = useState<View>('cover');
   const [panel, setPanel] = useState<Panel | null>(null);
-  const togglePanel = (p: Panel) => setPanel((cur) => (cur === p ? null : p));
+  const togglePanel = (p: Panel) => {
+    // On phones the lyrics take over the whole cover; tapping the tab again brings the cover back.
+    if (p === 'lyrics' && !desktop) return setView((v) => (v === 'lyrics' ? 'cover' : 'lyrics'));
+    setPanel((cur) => (cur === p ? null : p));
+  };
   const { items: comments } = useComments(expanded ? track?.key : undefined);
   const lyrics = useLyrics(expanded ? track : undefined);
   const colors = usePlayerColors(track);

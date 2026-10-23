@@ -672,3 +672,43 @@
     transition: color 0.2s;
   }
 }
+
+/* Lyrics fill the whole cover: the blurred artwork is the backdrop, the lines are large and
+   left-aligned, the current one sits in the middle and is the only full-strength line. */
+.pl-overlay {
+  padding: 0;
+}
+.pl-overlay .pl-lyrics.big {
+  flex: 1;
+  min-height: 0;
+  padding: 38% 26px 38%;
+  scroll-behavior: smooth;
+}
+.pl-overlay .pl-lyrics.big p {
+  margin: 0 0 0.42em;
+  font-size: clamp(30px, 7vw, 46px);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+  color: rgb(255 255 255 / 0.28);
+  filter: none;
+  text-shadow: 0 2px 18px rgb(0 0 0 / 0.25);
+}
+.pl-overlay .pl-lyrics.big p.dist-1 {
+  opacity: 0.75;
+}
+.pl-overlay .pl-lyrics.big p.dist-2,
+.pl-overlay .pl-lyrics.big p.dist-3 {
+  opacity: 0.5;
+}
+.pl-overlay .pl-lyrics.big p.past {
+  color: rgb(255 255 255 / 0.4);
+}
+.pl-overlay .pl-lyrics.big p.active {
+  color: #fff;
+  transform: none;
+  opacity: 1;
+}
+.pl-overlay .pl-lyrics.big p.lyric-gap {
+  color: rgb(255 255 255 / 0.3);
+}
