@@ -33,59 +33,58 @@ export function ListeningStats() {
     .sort((a, b) => b.seconds - a.seconds)
     .slice(0, 5);
 
-  if (plays === 0 && total === 0) {
-    return (
-      <section className="section">
-        <div className="section-head">
-          <h2>{t('statsTitle')}</h2>
-        </div>
-        <p className="stats-empty">{t('statsEmpty')}</p>
-      </section>
-    );
-  }
+  if (plays === 0 && total === 0) return <p className="stats-empty">{t('statsEmpty')}</p>;
+
+  const today = dayKey();
+  const topSeconds = top[0]?.seconds || 1;
 
   return (
-    <section className="section">
-      <div className="section-head">
-        <h2>{t('statsTitle')}</h2>
-      </div>
-      <div className="stats-tiles">
-        <div className="stats-tile glass">
-          <b>{amount(thisWeek, t)}</b>
-          <small>{t('statsWeek')}</small>
-        </div>
-        <div className="stats-tile glass">
-          <b>{amount(total, t)}</b>
-          <small>{t('statsAllTime')}</small>
-        </div>
-        <div className="stats-tile glass">
-          <b>{plays}</b>
-          <small>{t('statsPlays')}</small>
+    <div className="stats-page">
+      <div className="stats-hero">
+        <small>{t('statsWeek')}</small>
+        <b>{amount(thisWeek, t)}</b>
+        <div className="stats-hero-row">
+          <span>
+            <strong>{amount(total, t)}</strong> {t('statsAllTime')}
+          </span>
+          <span>
+            <strong>{plays}</strong> {t('statsPlays')}
+          </span>
         </div>
       </div>
-      <div className="stats-bars glass">
+
+      <div className="stats-chart">
         {week.map((d) => (
-          <div key={d.key} className="stats-day">
+          <div key={d.key} className={`stats-day ${d.key === today ? 'today' : ''}`}>
             <div className="stats-bar-track">
-              <div className="stats-bar" style={{ height: `${Math.max(2, (d.seconds / max) * 100)}%` }} title={amount(d.seconds, t)} />
+              <div className="stats-bar" style={{ height: `${Math.max(6, (d.seconds / max) * 100)}%` }} title={amount(d.seconds, t)} />
             </div>
             <small>{d.label}</small>
           </div>
         ))}
       </div>
+
       {top.length > 0 && (
-        <>
-          <h3 className="stats-subhead">{t('statsTop')}</h3>
-          <ol className="stats-top">
-            {top.map((a) => (
+        <section className="stats-artists">
+          <h3>{t('statsTop')}</h3>
+          <ol>
+            {top.map((a, i) => (
               <li key={a.name}>
-                <span>{a.name}</span>
-                <small>{amount(a.seconds, t)}</small>
+                <span className="stats-rank">{i + 1}</span>
+                <div className="stats-artist-body">
+                  <div className="stats-artist-line">
+                    <span>{a.name}</span>
+                    <small>{amount(a.seconds, t)}</small>
+                  </div>
+                  <div className="stats-artist-bar">
+                    <i style={{ width: `${(a.seconds / topSeconds) * 100}%` }} />
+                  </div>
+                </div>
               </li>
             ))}
           </ol>
-        </>
+        </section>
       )}
-    </section>
+    </div>
   );
 }
