@@ -509,3 +509,20 @@
   flex: none;
   padding: 0 22px;
 }
+
+/* Settings on desktop: one centred column instead of a strip against the left edge. */
+.app.desk .screen.settings > * {
+  width: min(100% - 2 * var(--gutter), 720px);
+  margin-left: auto;
+  margin-right: auto;
+}
+.app.desk .screen.settings .group {
+  margin-left: auto;
+  margin-right: auto;
+}
+.app.desk .screen.settings .cell {
+  min-height: 56px;
+}
+.app.desk .screen.settings .cell-label {
+  font-size: 15px;
+}

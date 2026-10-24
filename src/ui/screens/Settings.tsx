@@ -172,7 +172,7 @@ export function Settings() {
   ];
 
   return (
-    <div className="screen">
+    <div className="screen settings">
       <div className="nav-bar">
         <button className="glass glass-icon glass-press" onClick={pop} aria-label="Back">
           <IconChevronLeft size={20} />
