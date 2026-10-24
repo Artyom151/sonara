@@ -4,7 +4,7 @@ import { useLibrary } from '../../store/library';
 import { useSettings } from '../../store/settings';
 import { usePlayer } from '../../store/player';
 import { useUi } from '../../store/ui';
-import { Art, Slider } from '../components/controls';
+import { Art, Slider, Toggle } from '../components/controls';
 import { EqBars, SourceMark } from '../components/TrackRow';
 import { useWaveColors, useWavePlaying } from '../desktop/WaveHero';
 import { WaveOrb } from '../desktop/WaveOrb';
@@ -112,7 +112,7 @@ export function WaveScreen() {
       </header>
 
       <form
-        className="search-bar glass ws-search"
+        className="search-bar ws-search"
         onSubmit={(e) => {
           e.preventDefault();
           go(q);
@@ -246,10 +246,10 @@ function WaveMood() {
       {row('familiar', 'waveKnown', 'waveNew')}
       {row('energy', 'waveCalm', 'waveEnergetic')}
       {row('popular', 'wavePopular', 'waveRare')}
-      <label className="wave-discovery">
+      <div className="wave-discovery">
         <span>{t('waveDiscovery')}</span>
-        <input type="checkbox" checked={discovery} onChange={(e) => set({ waveDiscovery: e.target.checked })} />
-      </label>
+        <Toggle checked={discovery} onChange={(v) => set({ waveDiscovery: v })} />
+      </div>
     </div>
   );
 }
