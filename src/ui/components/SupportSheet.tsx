@@ -1,3 +1,4 @@
+import cardImage from '../../assets/support-card.png';
 import { Sheet } from './controls';
 import { toast } from './Toast';
 import { useT } from '../i18n';
@@ -20,7 +21,7 @@ export function SupportSheet({ onClose }: { onClose: () => void }) {
     <Sheet open onClose={onClose} title={t('supportAuthor')}>
       <div className="support">
         <p className="support-text">{t('supportText')}</p>
-        <div className="support-card" aria-label={t('supportCard')}>
+        <div className="support-card" aria-label={t('supportCard')} style={{ backgroundImage: `url(${cardImage})` }}>
           {SUPPORT_CARD.replace(/(\d{4})(?=\d)/g, '$1 ')}
         </div>
         <button className="btn primary" onClick={copy}>
