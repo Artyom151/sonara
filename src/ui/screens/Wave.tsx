@@ -144,7 +144,8 @@ function WaveTuning({ onClose }: { onClose: () => void }) {
           )}
         </form>
 
-        <div className="wave-chips">
+        <h3 className="wave-section">{t('waveMoods')}</h3>
+        <div className="wt-chips">
           {MOODS.map((m) => (
             <button key={m.key} className="wave-mood-chip glass-press" style={{ ['--mood' as string]: m.color }} onClick={() => { startWave({ kind: 'query', query: m.query }, t(m.key)); onClose(); }}>
               <span>{m.Icon({ size: 16, filled: true })}</span>
@@ -154,13 +155,16 @@ function WaveTuning({ onClose }: { onClose: () => void }) {
         </div>
 
         {home.data?.trending.length ? (
-          <div className="wave-chips">
+          <>
+          <h3 className="wave-section">{t('browseGenres')}</h3>
+          <div className="wt-chips">
             {home.data.trending.slice(0, 12).map((g) => (
               <button key={g.urn} className="wave-genre-chip glass-press" onClick={() => { startWave({ kind: 'genre', urn: g.urn, title: g.title }); onClose(); }}>
                 {g.title}
               </button>
             ))}
           </div>
+          </>
         ) : null}
 
         {wave.active && (
