@@ -114,6 +114,7 @@ export function Search() {
         />
       </div>
 
+      <div className="search-body">
       {!q.trim() && (
         <>
           {recent.length > 0 && (
@@ -195,6 +196,7 @@ export function Search() {
           </section>
         </div>
       )}
+      </div>
     </div>
   );
 }
