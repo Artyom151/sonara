@@ -32,27 +32,29 @@ export function ArtistScreen({ r }: { r: Extract<Route, { name: 'artist' }> }) {
   return (
     <div className="screen">
       <NavBar title={name} />
-      <div className="artist-hero">
-        <div className="artist-photo">
+      <header className="artist-hero">
+        <div className="artist-backdrop" aria-hidden>
           <Art src={data?.picture} seed={name} />
         </div>
-        <h1>{name}</h1>
-        {data?.fans ? (
-          <p>
-            {compact(data.fans)} {t('fans')}
-          </p>
-        ) : null}
-        <div className="hero-actions">
-          <button className="btn primary" onClick={() => play(false)} disabled={!top.length}>
-            <IconPlay size={18} />
-            <span>{t('play')}</span>
-          </button>
-          <button className="btn glass glass-press" onClick={() => play(true)} disabled={!top.length}>
-            <IconShuffle size={18} />
-            <span>{t('shuffle')}</span>
-          </button>
+        <div className="artist-hero-body">
+          <h1>{name}</h1>
+          {data?.fans ? (
+            <p>
+              {compact(data.fans)} {t('fans')}
+            </p>
+          ) : null}
+          <div className="artist-actions">
+            <button className="btn primary" onClick={() => play(false)} disabled={!top.length}>
+              <IconPlay size={18} />
+              <span>{t('play')}</span>
+            </button>
+            <button className="btn tonal" onClick={() => play(true)} disabled={!top.length}>
+              <IconShuffle size={18} />
+              <span>{t('shuffle')}</span>
+            </button>
+          </div>
         </div>
-      </div>
+      </header>
 
       {loading && !data && (
         <div className="empty">
@@ -80,7 +82,7 @@ export function ArtistScreen({ r }: { r: Extract<Route, { name: 'artist' }> }) {
           <div className="section-head">
             <h2>{t('albums')}</h2>
           </div>
-          <div className="hscroll">
+          <div className="artist-albums">
             {data.albums.map((p) => (
               <button
                 key={p.key}
@@ -103,7 +105,7 @@ export function ArtistScreen({ r }: { r: Extract<Route, { name: 'artist' }> }) {
           <div className="section-head">
             <h2>{t('similarArtists')}</h2>
           </div>
-          <div className="hscroll">
+          <div className="artist-similar">
             {data.related.map((a) => (
               <button key={`${a.source}:${a.id ?? a.name}`} className="artist-card" onClick={() => push({ name: 'artist', source: a.source, id: a.id, artistName: a.name })}>
                 <div className="artist-avatar">
