@@ -868,6 +868,8 @@ img {
 }
 .hero-actions .btn {
   flex: 1 1 calc(50% - 4px);
+  min-width: 0;
+  padding: 0 12px;
 }
 
 .btn {
