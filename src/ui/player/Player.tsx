@@ -187,6 +187,22 @@ function Rail({ track }: { track: Track }) {
   );
 }
 
+/** Desktop comments over the cover: a header with the count, the thread, and the composer pinned at the bottom. */
+function CommentsView() {
+  const t = useT();
+  const track = usePlayer((s) => s.queue[s.index]);
+  const { items } = useComments(track?.key);
+  return (
+    <div className="pl-comments">
+      <header className="pl-comments-head">
+        <h3>{t('comments')}</h3>
+        <span>{items.length}</span>
+      </header>
+      <CommentsPanel />
+    </div>
+  );
+}
+
 /** The cover card: artwork, the action rail, and the Up next / About / Lyrics panels over it. */
 /** iOS 26 style volume: a vertical capsule that fills from the bottom; drag up or down. */
 function VolumePill() {
@@ -267,9 +283,7 @@ function Stage({ track, lyrics, view, panel, onToggle, onSwipeDown }: StageProps
         return <LyricsView lyrics={lyrics} className="pl-lyrics big" />;
       case 'comments':
         return (
-          <div className="pl-comments">
-            <CommentsPanel />
-          </div>
+          <CommentsView />
         );
       case 'cover':
         return null;

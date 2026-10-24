@@ -29,6 +29,7 @@ export type Modal =
   | { type: 'editProfile' }
   | { type: 'look' }
   | { type: 'together' }
+  | { type: 'support' }
   | { type: 'comments' }
   | { type: 'confirm'; title: string; message?: string; action: string; destructive?: boolean; onConfirm: () => void };
 

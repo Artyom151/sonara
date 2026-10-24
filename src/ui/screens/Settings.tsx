@@ -371,6 +371,12 @@ export function Settings() {
 
       <div className="group-label">{t('about')}</div>
       <div className="group">
+        <button className="cell noicon" onClick={() => open({ type: 'support' })}>
+          <span className="cell-label">
+            {t('supportAuthor')}
+            <small>{t('supportHint')}</small>
+          </span>
+        </button>
         <div className="cell" style={{ gap: 14 }}>
           <Logo size={44} />
           <span className="cell-label">
