@@ -1,17 +1,42 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../core';
-import type { SearchResult, Source } from '../../core/types';
+import type { SearchResult, Source, Track } from '../../core/types';
+import { usePlayer } from '../../store/player';
 import { useLibrary } from '../../store/library';
 import { useUi } from '../../store/ui';
 import { Art, Segmented } from '../components/controls';
 import { TrackList } from '../components/TrackRow';
 import { useT } from '../i18n';
-import { IconClose, IconSearch } from '../icons';
+import { IconClose, IconPlay, IconSearch } from '../icons';
 import { SOURCE_ORDER, SOURCES, SourceIcon } from '../sources';
 import { useHome } from './Home';
 
 const YT_PLAYLIST = /[?&]list=([\w-]+)/;
 const SC_URL = /soundcloud\.com\/[^/]+\/sets\/|soundcloud\.com\/discover\/sets\//;
+
+/** The best match as a big card: cover, title, artist and a play button. */
+function TopResult({ track }: { track: Track }) {
+  const t = useT();
+  return (
+    <section className="section">
+      <div className="section-head">
+        <h2>{t('topResult')}</h2>
+      </div>
+      <button className="top-result" onClick={() => usePlayer.getState().playQueue([track], 0, { title: track.title })}>
+        <span className="top-result-cover">
+          <Art src={track.artworkLarge ?? track.artwork} seed={track.key} />
+        </span>
+        <span className="top-result-text">
+          <b>{track.title}</b>
+          <small>{track.artist}</small>
+        </span>
+        <span className="top-result-play">
+          <IconPlay size={18} />
+        </span>
+      </button>
+    </section>
+  );
+}
 
 export function Search() {
   const t = useT();
@@ -56,24 +81,24 @@ export function Search() {
   const commit = () => q.trim() && useLibrary.getState().pushSearch(q.trim());
 
   return (
-    <div className="screen">
-      <h1 className="screen-title">{t('search')}</h1>
-      <div className="search-bar glass">
-        <IconSearch size={18} style={{ opacity: 0.6 }} />
-        <input
-          value={q}
-          placeholder={t('searchPlaceholder')}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && (commit(), (e.target as HTMLInputElement).blur())}
-          enterKeyHint="search"
-        />
-        {q && (
-          <button onClick={() => setQ('')} aria-label={t('clear')}>
-            <IconClose size={16} style={{ opacity: 0.6 }} />
-          </button>
-        )}
-      </div>
-      <div style={{ padding: '12px var(--gutter) 6px' }}>
+    <div className="screen search-screen">
+      <div className="search-head">
+        <h1 className="screen-title">{t('search')}</h1>
+        <div className="search-bar">
+          <IconSearch size={18} />
+          <input
+            value={q}
+            placeholder={t('searchPlaceholder')}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && (commit(), (e.target as HTMLInputElement).blur())}
+            enterKeyHint="search"
+          />
+          {q && (
+            <button onClick={() => setQ('')} aria-label={t('clear')}>
+              <IconClose size={16} style={{ opacity: 0.6 }} />
+            </button>
+          )}
+        </div>
         <Segmented
           value={source}
           onChange={setSource}
@@ -92,14 +117,14 @@ export function Search() {
       {!q.trim() && (
         <>
           {recent.length > 0 && (
-            <section className="section" style={{ marginTop: 14 }}>
+            <section className="section">
               <div className="section-head">
                 <h2>{t('recentSearches')}</h2>
                 <button className="see-all" onClick={() => useLibrary.getState().clearSearches()}>
                   {t('clear')}
                 </button>
               </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, padding: '0 var(--gutter)' }}>
+              <div className="search-chips">
                 {recent.map((r) => (
                   <button key={r} className="chip" onClick={() => setQ(r)}>
                     {r}
@@ -108,7 +133,7 @@ export function Search() {
               </div>
             </section>
           )}
-          <section className="section" style={{ marginTop: 18 }}>
+          <section className="section">
             <div className="section-head">
               <h2>{t('browseGenres')}</h2>
             </div>
@@ -117,7 +142,7 @@ export function Search() {
                 <button
                   key={g.urn}
                   className="genre-card"
-                  style={{ background: `hsl(${(i * 47) % 360} 55% 38%)` }}
+                  style={{ background: `linear-gradient(135deg, hsl(${(i * 47) % 360} 60% 42%), hsl(${(i * 47 + 40) % 360} 60% 28%))` }}
                   onClick={() => push({ name: 'genre', urn: g.urn, title: g.title, artwork: g.artwork })}
                 >
                   {g.title}
@@ -135,27 +160,28 @@ export function Search() {
         </div>
       )}
       {q.trim() && result && (
-        <div style={{ opacity: loading ? 0.6 : 1, transition: 'opacity .2s' }} onClick={commit}>
+        <div className={`search-results ${loading ? 'busy' : ''}`} onClick={commit}>
+          {result.tracks[0] && <TopResult track={result.tracks[0]} />}
           {result.playlists.length > 0 && (
-            <section className="section" style={{ marginTop: 14 }}>
+            <section className="section">
               <div className="section-head">
                 <h2>{t('playlists')}</h2>
               </div>
-              <div className="hscroll">
+              <div className="search-playlists">
                 {result.playlists.map((p) => (
                   <button
                     key={p.key}
-                    style={{ width: 130, textAlign: 'left' }}
-                    onClick={() => push({ name: 'playlist', source: p.source as Source, id: p.id, title: p.title, artwork: p.artwork, preview: p })}
+                    className="search-playlist"
+                    onClick={() => p.source !== 'local' && push({ name: 'playlist', source: p.source, id: p.id, title: p.title, artwork: p.artwork, preview: p })}
                   >
-                    <div style={{ width: 130, height: 130, borderRadius: 14, overflow: 'hidden', background: 'var(--surface-2)' }}>
-                      <Art src={p.artwork} seed={p.key} className="cover-img" />
-                    </div>
-                    <div className="track-title" style={{ marginTop: 6 }}>{p.title}</div>
-                    <div className="track-sub">
+                    <span className="search-playlist-cover">
+                      <Art src={p.artwork} seed={p.key} />
+                    </span>
+                    <b>{p.title}</b>
+                    <small>
                       <SourceIcon source={p.source} />
                       {p.subtitle}
-                    </div>
+                    </small>
                   </button>
                 ))}
               </div>

@@ -190,15 +190,6 @@
   margin-top: 26px;
 }
 
-/* Search: the field stays at the top while the results scroll under it. */
-.search-bar {
-  position: sticky;
-  top: calc(var(--sat) + 4px);
-  z-index: 6;
-  margin: 0 var(--gutter);
-  --g-radius: 999px;
-}
-
 /* Downloads: a hero card with the stored covers, the size and the progress of the queue. */
 .dl-hero {
   display: flex;
@@ -273,36 +264,6 @@
   color: var(--red);
 }
 
-/* Search genres: large cover cards in a two-column grid. */
-.genre-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  padding: 0 var(--gutter);
-}
-.genre-card {
-  position: relative;
-  aspect-ratio: 1.5;
-  border-radius: 22px;
-  overflow: hidden;
-  padding: 14px;
-  text-align: left;
-  font-size: 17px;
-  font-weight: 700;
-  color: #fff;
-  isolation: isolate;
-}
-.genre-card img {
-  position: absolute;
-  right: -10px;
-  bottom: -8px;
-  width: 58%;
-  height: auto;
-  transform: rotate(18deg);
-  border-radius: 12px;
-  box-shadow: 0 10px 24px rgb(0 0 0 / 0.35);
-  z-index: -1;
-}
 
 /* Profile numbers: one wide card with three columns and large figures. */
 .stats {
@@ -533,4 +494,186 @@
   height: 100%;
   border-radius: inherit;
   background: var(--accent);
+}
+
+/* Search: the header (title, field, sources) stays at the top; the genres fill the width. */
+.search-screen {
+  padding-top: 0;
+}
+.search-head {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  padding: calc(var(--sat) + 10px) var(--gutter) 10px;
+  background: linear-gradient(var(--bg) 78%, transparent);
+}
+.search-head .screen-title {
+  margin: 0 0 10px;
+}
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  margin: 0;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: rgb(var(--fg-rgb) / 0.08);
+  box-shadow: inset 0 0 0 0.5px rgb(var(--fg-rgb) / 0.08);
+}
+.search-bar > svg {
+  flex: none;
+  opacity: 0.6;
+}
+.search-head .source-seg {
+  margin-top: 10px;
+}
+.genre-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0 var(--gutter);
+}
+.app.desk .genre-grid {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+}
+.genre-card {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.5;
+  padding: 14px;
+  border-radius: 22px;
+  overflow: hidden;
+  text-align: left;
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  isolation: isolate;
+  transition: transform 0.4s var(--ease-spring);
+}
+.genre-card:active {
+  transform: scale(0.97);
+}
+.genre-card img {
+  position: absolute;
+  right: -10px;
+  bottom: -8px;
+  width: 58%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: cover;
+  transform: rotate(18deg);
+  border-radius: 12px;
+  box-shadow: 0 10px 24px rgb(0 0 0 / 0.35);
+  z-index: -1;
+}
+
+.search-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 var(--gutter);
+}
+.search-results {
+  transition: opacity 0.2s;
+}
+.search-results.busy {
+  opacity: 0.6;
+}
+.top-result {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: calc(100% - 2 * var(--gutter));
+  margin: 0 var(--gutter);
+  padding: 12px;
+  border-radius: 24px;
+  text-align: left;
+  color: inherit;
+  background: radial-gradient(120% 160% at 0% 0%, rgb(var(--accent-rgb) / 0.2), transparent 60%), rgb(var(--fg-rgb) / 0.06);
+}
+.top-result-cover {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.top-result-cover > * {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.top-result-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.top-result-text b {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.top-result-text small {
+  font-size: 13px;
+  color: var(--text-2);
+}
+.top-result-play {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--text);
+  color: var(--bg);
+}
+.search-playlists {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 0 var(--gutter);
+  scrollbar-width: none;
+}
+.search-playlists::-webkit-scrollbar {
+  display: none;
+}
+.search-playlist {
+  flex: 0 0 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  color: inherit;
+}
+.search-playlist-cover {
+  display: block;
+  aspect-ratio: 1;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+.search-playlist-cover > * {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.search-playlist b {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.search-playlist small {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-2);
 }
