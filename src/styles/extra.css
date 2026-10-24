@@ -179,7 +179,31 @@ button:disabled {
   object-fit: cover;
 }
 .island-expanded {
+  position: relative;
   padding: 18px 18px 14px;
+  isolation: isolate;
+}
+/* The cover, blurred and dimmed behind the open card, as in the full-screen player. */
+.island-backdrop {
+  position: absolute;
+  inset: -20px;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.island-backdrop img,
+.island-backdrop .art-fallback {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(24px) saturate(1.3);
+  opacity: 0.55;
+}
+.island-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgb(0 0 0 / 0.25), rgb(0 0 0 / 0.7));
 }
 .island-head {
   display: flex;

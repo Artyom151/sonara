@@ -140,6 +140,9 @@ export function IslandPlayer({ desktop = false }: { desktop?: boolean }) {
             </motion.div>
           ) : (
             <motion.div key="expanded" className="island-expanded" initial={{ opacity: 0 }} animate={{ opacity: 1, transition: { delay: 0.08 } }}>
+              <div className="island-backdrop" aria-hidden>
+                <Art src={track.artworkLarge ?? track.artwork} seed={track.key} />
+              </div>
               <div className="island-head">
                 <motion.div layoutId="island-art" className="island-art" onClick={openPlayer}>
                   <Art src={track.artwork} seed={track.key} />
