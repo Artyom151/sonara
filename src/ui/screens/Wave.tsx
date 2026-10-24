@@ -13,7 +13,7 @@ import {
   IconBan,
   IconBolt,
   IconCar,
-  IconChevronLeft,
+  IconChevronDown,
   IconClose,
   IconHeadphones,
   IconHeart,
@@ -23,6 +23,7 @@ import {
   IconRain,
   IconSearch,
   IconShuffle,
+  IconGear,
   IconSparkles,
   IconWind,
 } from '../icons';
@@ -40,146 +41,135 @@ const MOODS: { key: StrKey; query: string; Icon: (p: { size?: number; filled?: b
   { key: 'moodRomance', query: 'love r&b', Icon: IconHeart, color: '#ff6482' },
 ];
 
+/** The wave: one button starts it; the tuning lives in a layer styled like the full-screen player. */
 export function WaveScreen() {
   const t = useT();
   const pop = useUi((s) => s.pop);
-  const [q, setQ] = useState('');
+  const [tuning, setTuning] = useState(false);
   const wave = useWave();
   const colors = useWaveColors();
   const { inWave, playing } = useWavePlaying();
   const queue = usePlayer((s) => s.queue);
   const index = usePlayer((s) => s.index);
-  const home = useHome();
+  const artwork = usePlayer((s) => s.queue[s.index]?.artworkLarge ?? s.queue[s.index]?.artwork);
   const current = inWave ? queue[index] : undefined;
-  const upcoming = inWave ? queue.slice(index + 1) : [];
+  const start = () => (inWave && queue.length ? usePlayer.getState().patch({ playing: !playing }) : startWave(undefined, t('wave')));
 
+  return (
+    <div className="screen wave-screen">
+      <div className="wave-art" aria-hidden style={artwork ? { backgroundImage: `url("${artwork}")` } : undefined} />
+      <div className="wave-top">
+        <button className="glass glass-icon glass-press" onClick={pop} aria-label={t('back')}>
+          <IconChevronDown size={20} />
+        </button>
+        <button className="glass glass-icon glass-press" onClick={() => setTuning(true)} aria-label={t('waveTune')} title={t('waveTune')}>
+          <IconGear size={18} />
+        </button>
+      </div>
+
+      <div className="wave-hero">
+        <WaveOrb colors={colors} active={playing} size={0.5} className="wave-hero-orb" />
+        <div className="wave-status">
+          {wave.active && <i className={`live-dot ${wave.status === 'loading' ? 'loading' : ''}`} />}
+          <span>{wave.active ? (wave.status === 'loading' ? t('waveBuilding') : t('live')) : t('waveIdle')}</span>
+        </div>
+        <h1>{wave.active ? wave.label : t('wave')}</h1>
+        <p>{current ? `${current.title} · ${current.artist}` : t('waveHint')}</p>
+      </div>
+
+      <div className="wave-controls">
+        <button className="wave-play glass-press" onClick={start} aria-label={playing ? t('pause') : t('play')}>
+          {playing ? <IconPause size={34} /> : <IconPlay size={34} />}
+        </button>
+        {wave.active && (
+          <div className="wave-side">
+            <button className="glass glass-icon glass-press" onClick={() => rerollWave()} aria-label={t('reroll')} title={t('reroll')}>
+              <IconShuffle size={18} />
+            </button>
+            <button className="glass glass-icon glass-press" onClick={stopWave} aria-label={t('stop')} title={t('stop')}>
+              <IconClose size={16} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {tuning && <WaveTuning onClose={() => setTuning(false)} />}
+    </div>
+  );
+}
+
+/** Settings of the wave, in the full-screen player's style: a blurred backdrop, large type, glass cards. */
+function WaveTuning({ onClose }: { onClose: () => void }) {
+  const t = useT();
+  const wave = useWave();
+  const artwork = usePlayer((s) => s.queue[s.index]?.artworkLarge ?? s.queue[s.index]?.artwork);
+  const { inWave } = useWavePlaying();
+  const queue = usePlayer((s) => s.queue);
+  const index = usePlayer((s) => s.index);
+  const home = useHome();
+  const [q, setQ] = useState('');
+  const upcoming = inWave ? queue.slice(index + 1) : [];
   const go = (query: string) => {
     const v = query.trim();
     if (!v) return;
     useLibrary.getState().pushSearch(v);
     startWave({ kind: 'query', query: v });
+    onClose();
   };
-
   return (
-    <div className="screen wave-screen">
-      <div className="nav-bar">
-        <button className="glass glass-icon glass-press" onClick={pop} aria-label="Back">
-          <IconChevronLeft size={20} />
+    <div className="wave-tuning">
+      <div className="wave-tuning-bg" aria-hidden style={artwork ? { backgroundImage: `url("${artwork}")` } : undefined} />
+      <header className="wave-tuning-head">
+        <h2>{t('waveTune')}</h2>
+        <button className="glass glass-icon glass-press" onClick={onClose} aria-label={t('close')}>
+          <IconClose size={16} />
         </button>
-        <div className="title">{t('wave')}</div>
-        <div style={{ width: 44 }} />
-      </div>
-
-      <header className="ws-head">
-        <WaveOrb colors={colors} active={playing} size={0.36} className="ws-orb" />
-        <div className="ws-head-text">
-          <div className="ws-status">
-            {wave.active && <i className={`live-dot ${wave.status === 'loading' ? 'loading' : ''}`} />}
-            <span>{wave.active ? (wave.status === 'loading' ? t('waveBuilding') : t('live')) : t('waveIdle')}</span>
-          </div>
-          <h1>{wave.active ? wave.label : t('wave')}</h1>
-          {wave.active && wave.topTags.length > 0 && (
-            <div className="ws-tags">
-              {wave.topTags.map((tag) => (
-                <button key={tag} className="chip" onClick={() => go(tag)}>
-                  #{tag}
-                </button>
-              ))}
-            </div>
-          )}
-          <WaveMood />
-          <div className="ws-actions">
-            <button
-              className="btn primary"
-              onClick={() => (inWave && queue.length ? usePlayer.getState().patch({ playing: !playing }) : startWave(undefined, t('wave')))}
-            >
-              {playing ? <IconPause size={18} /> : <IconPlay size={18} />}
-              <span>{playing ? t('pause') : t('play')}</span>
-            </button>
-            {wave.active && (
-              <>
-                <button className="btn tonal" onClick={() => rerollWave()}>
-                  <IconShuffle size={18} />
-                  <span>{t('reroll')}</span>
-                </button>
-                <button className="btn tonal icon" onClick={stopWave} aria-label={t('stop')} title={t('stop')}>
-                  <IconClose size={16} />
-                </button>
-              </>
-            )}
-          </div>
-        </div>
       </header>
+      <div className="wave-tuning-body">
+        <WaveMood />
 
-      <form
-        className="search-bar ws-search"
-        onSubmit={(e) => {
-          e.preventDefault();
-          go(q);
-        }}
-      >
-        <IconSearch size={18} style={{ opacity: 0.6 }} />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('waveSearch')} enterKeyHint="go" />
-        {q && (
-          <button type="submit" className="btn primary small ws-go">
-            <span>{t('waveGo')}</span>
-          </button>
-        )}
-      </form>
+        <form
+          className="wave-tuning-search"
+          onSubmit={(e) => {
+            e.preventDefault();
+            go(q);
+          }}
+        >
+          <IconSearch size={18} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('waveSearch')} enterKeyHint="go" />
+          {q && (
+            <button type="submit" className="wave-tuning-go">
+              {t('waveGo')}
+            </button>
+          )}
+        </form>
 
-      <section className="section">
-        <div className="section-head">
-          <h2>{t('waveMoods')}</h2>
-        </div>
-        <div className="ws-moods">
+        <div className="wave-chips">
           {MOODS.map((m) => (
-            <button key={m.key} className="ws-mood glass glass-press" onClick={() => startWave({ kind: 'query', query: m.query }, t(m.key))}>
-              <span className="ws-mood-icon" style={{ color: m.color }}>
-                <m.Icon size={20} filled />
-              </span>
-              <span>{t(m.key)}</span>
+            <button key={m.key} className="wave-mood-chip glass-press" style={{ ['--mood' as string]: m.color }} onClick={() => { startWave({ kind: 'query', query: m.query }, t(m.key)); onClose(); }}>
+              <span>{m.Icon({ size: 16, filled: true })}</span>
+              {t(m.key)}
             </button>
           ))}
         </div>
-      </section>
 
-      {home.data?.trending.length ? (
-        <section className="section">
-          <div className="section-head">
-            <h2>{t('browseGenres')}</h2>
-          </div>
-          <div className="ws-genres">
-            {home.data.trending.slice(0, 14).map((g) => (
-              <button key={g.urn} className="chip" onClick={() => startWave({ kind: 'genre', urn: g.urn, title: g.title })}>
+        {home.data?.trending.length ? (
+          <div className="wave-chips">
+            {home.data.trending.slice(0, 12).map((g) => (
+              <button key={g.urn} className="wave-genre-chip glass-press" onClick={() => { startWave({ kind: 'genre', urn: g.urn, title: g.title }); onClose(); }}>
                 {g.title}
               </button>
             ))}
           </div>
-        </section>
-      ) : null}
+        ) : null}
 
-      {current && (
-        <section className="section">
-          <div className="section-head">
-            <h2>{t('nowPlaying')}</h2>
-          </div>
-          <WaveRow track={current} reason={wave.reasons[current.key]} index={index} now playing={playing} />
-        </section>
-      )}
-
-      {inWave && (
-        <section className="section">
-          <div className="section-head">
-            <h2>{t('queue')}</h2>
-            {wave.status === 'loading' && <span className="spinner" style={{ width: 16, height: 16 }} />}
-          </div>
-          {upcoming.length ? (
-            upcoming.map((tr, i) => <WaveRow key={`${tr.key}-${i}`} track={tr} reason={wave.reasons[tr.key]} index={index + 1 + i} />)
-          ) : (
-            <div className="empty">{t('waveEmpty')}</div>
-          )}
-        </section>
-      )}
+        {wave.active && (
+          <section className="wave-next">
+            <h3>{t('queue')}</h3>
+            {upcoming.length ? upcoming.slice(0, 20).map((tr, i) => <WaveRow key={`${tr.key}-${i}`} track={tr} reason={wave.reasons[tr.key]} index={index + 1 + i} />) : <p>{t('waveEmpty')}</p>}
+          </section>
+        )}
+      </div>
     </div>
   );
 }
