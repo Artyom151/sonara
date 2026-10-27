@@ -684,6 +684,14 @@
   padding: 38% 26px 38%;
   scroll-behavior: smooth;
 }
+/* On a wide stage a width-based padding outgrows the stage height and pushes the current line out of view. */
+.app.desk .pl-overlay .pl-lyrics.big {
+  max-width: 1100px;
+  padding: 34vh 64px;
+}
+.app.desk .pl-overlay .pl-lyrics.big p {
+  font-size: clamp(40px, 3.4vw, 64px);
+}
 .pl-overlay .pl-lyrics.big p {
   margin: 0 0 0.42em;
   font-size: clamp(30px, 7vw, 46px);
