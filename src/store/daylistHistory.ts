@@ -19,7 +19,9 @@ export const useDaylistHistory = create<HistoryState>()(
         set((s) => {
           const at = Date.now();
           const merged = { ...s.served };
-          for (const k of keys) merged[k] = at;
+          // A per-key offset breaks the ties inside one batch: with equal timestamps the cap
+          // would evict the tail of the batch — the tracks recorded last.
+          keys.forEach((k, i) => (merged[k] = at + i));
           const entries = Object.entries(merged).sort((a, b) => b[1] - a[1]).slice(0, CAP);
           return { served: Object.fromEntries(entries) };
         }),
