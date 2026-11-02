@@ -81,7 +81,7 @@ public abstract class SonaraWidget extends AppWidgetProvider {
         Bitmap art = WidgetShapes.mask(lastArt, WidgetShapes.load(context, widgetId));
         if (art != null) v.setImageViewBitmap(R.id.widget_art, art);
         else v.setImageViewResource(R.id.widget_art, R.mipmap.ic_launcher);
-        v.setImageViewBitmap(R.id.widget_play, WidgetShapes.playButton(lastPlaying));
+        v.setImageViewBitmap(R.id.widget_play, WidgetShapes.playButton(lastPlaying, WidgetShapes.accent(context)));
         v.setContentDescription(R.id.widget_play, lastPlaying ? "Pause" : "Play");
 
         PendingIntent open = openApp(context);

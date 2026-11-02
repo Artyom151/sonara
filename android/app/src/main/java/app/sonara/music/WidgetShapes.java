@@ -2,6 +2,7 @@ package app.sonara.music;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
@@ -39,9 +40,24 @@ final class WidgetShapes {
     private static final float MARGIN = 0.07f;
     private static final int BUTTON = 168;
     private static final int GLYPH = 0xFF101014;
+    /** The fallback accent for Android < 12, where the wallpaper palette does not exist. */
     static final int ACCENT_COLOR = 0xFFC4B5FD;
 
     private WidgetShapes() {}
+
+    /**
+     * The Material You accent of the current wallpaper (system_accent1_200, a light tone so the
+     * dark glyph keeps its contrast), resolved against the app context. Widget updates redraw on
+     * wallpaper changes, so the button follows the system theme without any re-registration.
+     */
+    static int accent(Context context) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return ACCENT_COLOR;
+        try {
+            return context.getColor(android.R.color.system_accent1_200);
+        } catch (RuntimeException e) {
+            return ACCENT_COLOR;
+        }
+    }
 
     /** The cover cropped to the shape. A null cover stays null: the widget shows its placeholder. */
     static Bitmap mask(Bitmap art, int shape) {
@@ -61,20 +77,20 @@ final class WidgetShapes {
     }
 
     /** A shape filled with the app's accent colour, for the picker. */
-    static Bitmap preview(int shape, int size) {
+    static Bitmap preview(int shape, int size, int accent) {
         Bitmap out = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        paint.setColor(ACCENT_COLOR);
+        paint.setColor(accent);
         new Canvas(out).drawPath(path(shape, size), paint);
         return out;
     }
 
     /** The play / pause button: an accent-coloured cookie with a dark glyph. */
-    static Bitmap playButton(boolean playing) {
+    static Bitmap playButton(boolean playing, int accent) {
         Bitmap out = Bitmap.createBitmap(BUTTON, BUTTON, Bitmap.Config.ARGB_8888);
         Canvas c = new Canvas(out);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        paint.setColor(ACCENT_COLOR);
+        paint.setColor(accent);
         c.drawPath(path(COOKIE, BUTTON), paint);
         paint.setColor(GLYPH);
         float cx = BUTTON / 2f;

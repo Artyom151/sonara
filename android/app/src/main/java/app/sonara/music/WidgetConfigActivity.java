@@ -76,14 +76,14 @@ public class WidgetConfigActivity extends Activity {
         GradientDrawable bg = new GradientDrawable();
         bg.setCornerRadius(dp(22));
         bg.setColor(CARD);
-        if (chosen) bg.setStroke(dp(2), WidgetShapes.ACCENT_COLOR);
+        if (chosen) bg.setStroke(dp(2), WidgetShapes.accent(this));
         c.setBackground(bg);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
         lp.setMargins(dp(4), dp(4), dp(4), dp(4));
         c.setLayoutParams(lp);
 
         ImageView preview = new ImageView(this);
-        preview.setImageBitmap(WidgetShapes.preview(shape, dp(56)));
+        preview.setImageBitmap(WidgetShapes.preview(shape, dp(56), WidgetShapes.accent(this)));
         c.addView(preview, new LinearLayout.LayoutParams(dp(56), dp(56)));
 
         TextView name = text(12, chosen ? Color.WHITE : TEXT_2, chosen);
