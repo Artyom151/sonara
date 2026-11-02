@@ -92,7 +92,8 @@ export const useSettings = create<Settings>()(
       displayName: 'Listener',
       discordEnabled: true,
       closeToTray: false,
-      discordAppId: (import.meta.env.VITE_DISCORD_APP_ID as string | undefined) ?? '',
+      // `?.` so the store also loads outside Vite (node tests); Vite still inlines the env object.
+      discordAppId: ((import.meta as any).env?.VITE_DISCORD_APP_ID as string | undefined) ?? '',
       islandPlayer: false,
       railSide: 'left',
       set: (patch) => set(patch),
