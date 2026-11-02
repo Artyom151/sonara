@@ -1,6 +1,7 @@
 import { useSettings } from '../store/settings';
 
-const en = {
+/** The dictionaries are exported so the key parity of the two languages is testable (tests/i18n.test.ts). */
+export const en = {
   home: 'Home', search: 'Search', likes: 'Likes', profile: 'Profile',
   trendingNow: 'Trending now', mixesForYou: 'Mixes for you', picksForYou: 'Picks for you', seeAll: 'See all',
   trendingYoutube: 'Trending on YouTube', deezerChart: 'Deezer chart', fans: 'fans', popularTracks: 'Popular tracks', showLess: 'Less', albums: 'Albums and singles', similarArtists: 'Similar artists', goToArtist: 'Go to artist', chooseArtist: 'Choose artist', tracks: 'tracks', playlistOfTheDay: 'Playlist of the Day',
@@ -95,7 +96,7 @@ const en = {
   yandexLibrary: 'Yandex Music', yandexToken: 'Yandex Music token',
 };
 
-const ru: typeof en = {
+export const ru: typeof en = {
   home: 'Главная', search: 'Поиск', likes: 'Лайки', profile: 'Профиль',
   trendingNow: 'В тренде', mixesForYou: 'Миксы для вас', picksForYou: 'Подборка для вас', seeAll: 'Все',
   trendingYoutube: 'В тренде на YouTube', deezerChart: 'Чарт Deezer', fans: 'слушателей', popularTracks: 'Популярные треки', showLess: 'Свернуть', albums: 'Альбомы и синглы', similarArtists: 'Похожие артисты', goToArtist: 'К артисту', chooseArtist: 'Выберите артиста', tracks: 'треков', playlistOfTheDay: 'Плейлист дня',
