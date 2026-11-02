@@ -1,4 +1,5 @@
-import { motion } from 'motion/react';
+import { motion, useTransform } from 'motion/react';
+import { useRef } from 'react';
 import { togglePlay } from '../../player/engine';
 import { useLibrary } from '../../store/library';
 import { useSettings } from '../../store/settings';
@@ -7,6 +8,7 @@ import { useUi, type Tab } from '../../store/ui';
 import { useT } from '../i18n';
 import { IconHeart, IconHome, IconPause, IconPerson, IconPlay, IconSearch } from '../icons';
 import { Art } from './controls';
+import { useLensDrag } from './lensDrag';
 
 const TABS: { id: Tab; icon: (a: boolean) => React.ReactNode }[] = [
   { id: 'home', icon: (a) => <IconHome size={23} filled={a} /> },
@@ -73,16 +75,36 @@ export function TabBar() {
   const hasNewLikes = useLibrary((s) => s.likes.length > 0);
   const t = useT();
   const idx = TABS.findIndex((x) => x.id === tab);
+  const navRef = useRef<HTMLElement>(null);
+  // Hold the lens of the active tab and drag it across the strip; release snaps to the nearest tab.
+  const { pos, stretch, dragging, len, bind } = useLensDrag({
+    navRef,
+    idx,
+    count: TABS.length,
+    axis: 'x',
+    inset: 4,
+    commit: (i) => {
+      const id = TABS[i]?.id;
+      if (id && id !== tab) setTab(id);
+    },
+  });
+  // The glass stretches along the drag whichever way it goes: the deform follows the speed
+  // magnitude, not its sign, so pulling left and pulling right both elongate the lens.
+  const scaleX = useTransform(stretch, (s) => 1 + Math.abs(s));
+  const scaleY = useTransform(stretch, (s) => 1 - Math.abs(s) * 0.5);
   return (
-    <nav className="tabbar glass refract">
+    <nav ref={navRef} className={`tabbar glass refract${dragging ? ' lens-drag' : ''}`}>
       <motion.div
         className="tab-lens"
-        animate={{ left: `calc(${idx * 25}% + 4px)` }}
-        style={{ width: 'calc(25% - 8px)' }}
-        transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+        style={{ left: pos, width: len || undefined, scaleX, scaleY }}
       />
-      {TABS.map((x) => (
-        <button key={x.id} className={`tab ${tab === x.id ? 'active' : ''}`} onClick={() => setTab(x.id)}>
+      {TABS.map((x, i) => (
+        <button
+          key={x.id}
+          className={`tab ${tab === x.id ? 'active' : ''}`}
+          onClick={() => setTab(x.id)}
+          {...(i === idx ? bind : {})}
+        >
           {x.icon(tab === x.id)}
           <span>{t(x.id)}</span>
           {x.id === 'likes' && hasNewLikes && tab !== 'likes' && <i className="dot" />}

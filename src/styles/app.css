@@ -458,6 +458,7 @@ img {
 }
 
 .tabbar {
+  position: relative;
   display: flex;
   height: var(--tabbar-h);
   padding: 4px;
@@ -479,9 +480,16 @@ img {
   border-radius: 28px;
   transition: color 0.3s;
   z-index: 3;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .tab.active {
   color: var(--text);
+  cursor: grab;
+}
+.tab.active:active {
+  cursor: grabbing;
 }
 .tab .dot {
   position: absolute;
@@ -505,6 +513,18 @@ img {
   box-shadow:
     inset 0 0.5px 0 rgb(var(--fg-rgb) / 0.3),
     inset 0 0 0 0.5px rgb(var(--fg-rgb) / 0.08);
+  will-change: left, transform;
+}
+/* The lens is held and dragged: it lifts off the bar like a drop of liquid glass. */
+.tabbar.lens-drag .tab-lens {
+  background: rgb(var(--fg-rgb) / 0.16);
+  box-shadow:
+    inset 0 0.5px 0 rgb(var(--fg-rgb) / 0.35),
+    inset 0 0 0 0.5px rgb(var(--fg-rgb) / 0.12),
+    0 6px 18px rgb(0 0 0 / 0.22);
+}
+.tabbar.lens-drag .tab {
+  pointer-events: none;
 }
 
 /* Mini player */

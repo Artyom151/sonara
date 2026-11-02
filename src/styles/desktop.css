@@ -88,16 +88,20 @@
 .rail-items {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0;
   padding: 6px;
+  height: max-content;
+  align-self: center;
   --g-radius: 999px;
   --lg-tint: rgb(var(--elevated-rgb) / 0.55);
   --lg-blur: 10px;
 }
 .rail-btn {
   position: relative;
+  flex: none;
   width: 44px;
   height: 44px;
+  min-height: 44px;
   display: grid;
   place-items: center;
   color: var(--text-2);
@@ -108,16 +112,33 @@
 .rail-btn.active {
   color: var(--text);
 }
+.rail-btn.active {
+  cursor: grab;
+}
+.rail-btn.active:active {
+  cursor: grabbing;
+}
 .rail-btn > svg {
   position: relative;
   z-index: 2;
 }
 .rail-lens {
-  position: absolute;
-  inset: 0;
+  position: absolute !important;
+  left: 6px;
+  right: 6px;
+  display: block;
   border-radius: 50%;
   background: rgb(var(--fg-rgb) / 0.1);
   z-index: 1;
+  pointer-events: none;
+  will-change: top, transform;
+}
+.rail-items.lens-drag .rail-lens {
+  background: rgb(var(--fg-rgb) / 0.16);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.22);
+}
+.rail-items.lens-drag .rail-btn {
+  pointer-events: none;
 }
 
 /* Content panel */
