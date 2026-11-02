@@ -6,6 +6,14 @@ Russian version: [CHANGELOG_ru.md](CHANGELOG_ru.md).
 ## [Unreleased]
 
 ## [2.0.0] - 2026-10-22
+### Fixed
+- The Android widgets' play/pause button (and the shape picker's accents) follow the Material You wallpaper palette instead of a static violet; the built-in violet stays as the fallback below Android 12.
+- The daylist history no longer evicts the tail of a freshly recorded batch when the 800-key cap trims it.
+- Desktop and mobile navigation lenses now snap to measured slots and support pointer dragging.
+
+### Changed
+- `test:unit` now runs the whole offline suite (126 tests): navigation, library, settings, look, sleep timer, island notices, LRU, i18n parity, the extended player queue, EQ curves and the widget colour wiring.
+
 
 Pre-release. The new interface and the features below are not yet tested on every device.
 
