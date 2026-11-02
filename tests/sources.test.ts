@@ -11,7 +11,9 @@ test('yandex token: unset or placeholder counts as none', () => {
 
 test('a refused yandex token falls back to anonymous requests', async () => {
   const auths: (string | null)[] = [];
-  const fetcher = (async (_u: string, i?: RequestInit) => {
+  const fetcher = (async (u: string, i?: RequestInit) => {
+    // createCoreApi warms up the SoundCloud client_id in the background; only the Yandex calls count.
+    if (!/yandex/.test(String(u))) return new Response('{}');
     const a = (i?.headers as Record<string, string>)?.Authorization ?? null;
     auths.push(a);
     if (a) return new Response(JSON.stringify({ error: { name: 'missing-required-scopes' } }), { status: 403 });
