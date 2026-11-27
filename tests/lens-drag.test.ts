@@ -30,11 +30,15 @@ test('the tab bar lens is wired to the drag: only the active tab carries the han
   assert.match(dock, /id !== tab/, 'committing the same tab is a no-op (no stack reset)');
 });
 
-test('the desktop rail lens drags vertically and is measured, not hard-coded', () => {
+test('the desktop rail has a stable grid and a measured draggable indicator', () => {
   const rail = readFileSync(new URL('../src/ui/desktop/Rail.tsx', import.meta.url), 'utf8');
+  const styles = readFileSync(new URL('../src/styles/desktop.css', import.meta.url), 'utf8');
+  assert.match(rail, /useLensDrag\(\{/);
   assert.match(rail, /axis: 'y'/);
-  assert.match(rail, /height: len/, 'the lens height comes from the measured button box');
-  assert.doesNotMatch(rail, /layoutId="rail-lens"/, 'the layout-animation lens is gone');
+  assert.match(rail, /top: pos, height: len/);
+  assert.match(styles, /grid-template-rows: repeat\(4, 44px\)/);
+  assert.match(styles, /height: max-content/);
+  assert.match(styles, /min-height: 188px/);
 });
 
 test('a finished drag swallows the trailing click, so the tab does not flip back', () => {
@@ -44,9 +48,13 @@ test('a finished drag swallows the trailing click, so the tab does not flip back
   assert.match(hook, /setPointerCapture/, 'the pointer stays routed to the button during the hold');
 });
 
-test('the lift styles exist for both bars', () => {
+test('a drag commits only after the lens reaches its target', () => {
+  const hook = readFileSync(new URL('../src/ui/components/lensDrag.ts', import.meta.url), 'utf8');
+  assert.match(hook, /springTo\(lensStart\(target\), \(\) => commit\(target\)\)/);
+  assert.match(hook, /animation\.current\?\.stop\(\)/, 'a new gesture cancels the previous spring');
+});
+
+test('the phone tab bar keeps its drag lift style', () => {
   const app = readFileSync(new URL('../src/styles/app.css', import.meta.url), 'utf8');
-  const desk = readFileSync(new URL('../src/styles/desktop.css', import.meta.url), 'utf8');
   assert.match(app, /\.tabbar\.lens-drag \.tab-lens/);
-  assert.match(desk, /\.rail-items\.lens-drag \.rail-lens/);
 });

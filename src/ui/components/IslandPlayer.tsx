@@ -14,7 +14,6 @@ import {
   IconPlay,
   IconQueue,
   IconQuote,
-  IconRepeat,
   IconShuffle,
   IconSpeaker,
   IconSpeakerLow,
@@ -28,6 +27,7 @@ import { BatteryRing, HeadphoneArt } from './HeadphoneArt';
 import { IslandChips, IslandNoticeView } from './IslandNotice';
 import { useIslandNotice } from '../../store/islandNotice';
 import { EqBars } from './TrackRow';
+import { RepeatControl } from './RepeatControl';
 
 const spring = { type: 'spring', stiffness: 420, damping: 32, mass: 0.9 } as const;
 
@@ -104,7 +104,6 @@ export function IslandPlayer({ desktop = false }: { desktop?: boolean }) {
       </AnimatePresence>
       <motion.div
         className={`island is-${mode} ${open && mode !== 'device' && mode !== 'notice' ? 'open' : ''} ${desktop ? 'desk' : ''}`}
-        layout
         transition={spring}
         style={{ borderRadius: radius }}
         onClick={() => {
@@ -130,8 +129,8 @@ export function IslandPlayer({ desktop = false }: { desktop?: boolean }) {
         ) : track ? (
           <>
           {!open ? (
-            <motion.div key="compact" className="island-compact" layout="position" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <motion.div layoutId="island-art" className="island-art small">
+            <motion.div key="compact" className="island-compact" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <motion.div className="island-art small">
                 <Art src={track.artwork} seed={track.key} />
               </motion.div>
               <Marquee className="island-line" text={`${track.title} · ${track.artist}`} />
@@ -144,7 +143,7 @@ export function IslandPlayer({ desktop = false }: { desktop?: boolean }) {
                 <Art src={track.artworkLarge ?? track.artwork} seed={track.key} />
               </div>
               <div className="island-head">
-                <motion.div layoutId="island-art" className="island-art" onClick={openPlayer}>
+                <motion.div className="island-art" onClick={openPlayer}>
                   <Art src={track.artwork} seed={track.key} />
                 </motion.div>
                 <div className="island-meta" onClick={openPlayer}>
@@ -223,13 +222,7 @@ function ShuffleButton() {
 }
 
 function RepeatButton() {
-  const t = useT();
-  const repeat = usePlayer((s) => s.repeat);
-  return (
-    <button className={`island-small ${repeat !== 'off' ? 'on' : ''}`} aria-label={t('repeat')} onClick={() => usePlayer.getState().cycleRepeat()}>
-      <IconRepeat size={18} one={repeat === 'one'} />
-    </button>
-  );
+  return <RepeatControl className="island-small" size={18} />;
 }
 
 /** Desktop: like, lyrics and queue next to the title (the player bar is hidden in island mode). */

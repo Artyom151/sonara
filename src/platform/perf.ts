@@ -1,7 +1,6 @@
 import { isAndroid, isCapacitor } from '.';
 
 export type PerfTier = 'high' | 'balanced' | 'low';
-export type GraphicsSetting = 'auto' | PerfTier;
 
 /** Pick a graphics tier for this device. Phones default to balanced; weak phones to low. */
 export function detectTier(): PerfTier {
@@ -13,7 +12,4 @@ export function detectTier(): PerfTier {
   return mobile ? 'balanced' : 'high';
 }
 
-export const resolveTier = (s: GraphicsSetting): PerfTier => (s === 'auto' ? detectTier() : s);
-
-/** Current tier as set on <html data-perf> by the ThemeController. */
 export const currentTier = (): PerfTier => (document.documentElement.dataset.perf as PerfTier) || detectTier();

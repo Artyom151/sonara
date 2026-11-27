@@ -22,6 +22,7 @@ interface PlayerState {
   playing: boolean;
   loading: boolean;
   position: number;
+  restart: number;
   duration: number;
   buffered: number;
   shuffle: boolean;
@@ -67,6 +68,7 @@ export const usePlayer = create<PlayerState>()(
       playing: false,
       loading: false,
       position: 0,
+      restart: 0,
       duration: 0,
       buffered: 0,
       shuffle: false,
@@ -136,8 +138,8 @@ export const usePlayer = create<PlayerState>()(
         set({ playing: false });
       },
       prev: () => {
-        const { index, position } = get();
-        if (position > 3 || index === 0) return set({ position: 0, error: null });
+        const { index, position, restart } = get();
+        if (position > 3 || index === 0) return set({ position: 0, restart: restart + 1, error: null });
         set({ index: index - 1, position: 0, playing: true, error: null });
       },
       toggleShuffle: () =>

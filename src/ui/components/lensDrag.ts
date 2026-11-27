@@ -48,8 +48,27 @@ export function useLensDrag(opts: {
   // A drag ends with a pointerup on the captured button, which also fires a click: it must not
   // land as a tab tap (it would switch back / reset the stack).
   const suppressed = useRef(0);
+  const animation = useRef<ReturnType<typeof animate> | null>(null);
+  const sequence = useRef(0);
 
   const lensStart = useCallback((i: number) => originRef.current + i * slotRef.current + inset, [inset]);
+
+  const springTo = useCallback((target: number, done?: () => void) => {
+    const id = ++sequence.current;
+    animation.current?.stop();
+    const next = animate(pos, target, spring);
+    animation.current = next;
+    void next.then(() => {
+      if (id === sequence.current) done?.();
+    });
+  }, [pos]);
+
+  const stop = useCallback(() => {
+    sequence.current++;
+    animation.current?.stop();
+  }, []);
+
+  useEffect(() => () => animation.current?.stop(), []);
 
   const measure = useCallback(() => {
     const nav = navRef.current;
@@ -62,8 +81,11 @@ export function useLensDrag(opts: {
     originRef.current = at(b0);
     const btnLen = axis === 'x' ? b0.offsetWidth : b0.offsetHeight;
     setLen(Math.max(0, btnLen - 2 * inset));
-    if (!draggingRef.current && slotRef.current) pos.set(lensStart(idx));
-  }, [axis, inset, lensStart, navRef, pos, idx]);
+    if (!draggingRef.current && slotRef.current) {
+      stop();
+      pos.set(lensStart(idx));
+    }
+  }, [axis, inset, lensStart, navRef, pos, idx, stop]);
 
   useLayoutEffect(measure, [measure]);
   useEffect(() => {
@@ -76,11 +98,12 @@ export function useLensDrag(opts: {
 
   // The resting lens follows the active tab with the same spring as before.
   useEffect(() => {
-    if (!draggingRef.current && slotRef.current) animate(pos, lensStart(idx), spring);
-  }, [idx, lensStart, pos]);
+    if (!draggingRef.current && slotRef.current) springTo(lensStart(idx));
+  }, [idx, lensStart, springTo]);
 
   const begin = (target: Element, id: number) => {
     if (draggingRef.current) return;
+    stop();
     draggingRef.current = true;
     setDragging(true);
     target.setPointerCapture?.(id);
@@ -128,8 +151,7 @@ export function useLensDrag(opts: {
     const slot = slotRef.current;
     const target = snapIndex(pos.get() - originRef.current - inset, slot, count);
     stretch.set(0);
-    animate(pos, lensStart(target), spring);
-    commit(target);
+    springTo(lensStart(target), () => commit(target));
   };
 
   return {

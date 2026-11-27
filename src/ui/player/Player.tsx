@@ -11,6 +11,7 @@ import { useUi } from '../../store/ui';
 import { imageColors, playerBackdrop } from '../../theme/color';
 import { shareTrack } from '../components/actions';
 import { CastButton } from '../components/CastButton';
+import { RepeatControl } from '../components/RepeatControl';
 import { Art, Marquee, Segmented, Slider } from '../components/controls';
 import { SpeedControl } from '../components/SpeedControl';
 import { SourceMark } from '../components/TrackRow';
@@ -29,7 +30,6 @@ import {
   IconPlus,
   IconQueue,
   IconQuote,
-  IconRepeat,
   IconShare,
   IconShuffle,
   IconSpeaker,
@@ -374,7 +374,6 @@ function Transport() {
   const playing = usePlayer((s) => s.playing);
   const loading = usePlayer((s) => s.loading);
   const shuffle = usePlayer((s) => s.shuffle);
-  const repeat = usePlayer((s) => s.repeat);
   return (
     <div className="pl-transport">
       <button className={`pl-btn ${shuffle ? 'on' : ''}`} aria-label={t('shuffle')} onClick={() => usePlayer.getState().toggleShuffle()}>
@@ -389,9 +388,7 @@ function Transport() {
       <button className="pl-btn big" aria-label="Next" onClick={() => usePlayer.getState().next()}>
         <IconForward size={24} />
       </button>
-      <button className={`pl-btn ${repeat !== 'off' ? 'on' : ''}`} aria-label={t('repeat')} onClick={() => usePlayer.getState().cycleRepeat()}>
-        <IconRepeat size={19} one={repeat === 'one'} />
-      </button>
+      <RepeatControl className="pl-btn" />
     </div>
   );
 }

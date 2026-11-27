@@ -1,6 +1,6 @@
 [package]
 name = "sonara"
-version = "2.0.0"
+version = "2.0.1"
 description = "Sonara music player"
 authors = ["Sonara"]
 license = "Apache-2.0"

@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { isAndroid } from '../platform';
-import { resolveTier } from '../platform/perf';
-import { usePlayer } from '../store/player';
+ import { usePlayer } from '../store/player';
 import { useSettings, type AccentMode, type ThemeMode } from '../store/settings';
-import { refreshGlass, retintGlass } from '../ui/glass/liquid';
+import { retintGlass } from '../ui/glass/liquid';
 import { useMedia } from '../ui/useMedia';
 import { accentVars, argbFromHex, imageColors, SONARA_SEED, type Scheme } from './color';
 import { getSystemPalette } from './dynamic';
@@ -46,8 +45,7 @@ export function ThemeController() {
   const tint = useSettings((s) => s.tintInterface);
   const glass = useSettings((s) => s.glass);
   const reduce = useSettings((s) => s.reduceMotion);
-  const graphics = useSettings((s) => s.graphics);
-  const artwork = usePlayer((s) => s.queue[s.index]?.artwork);
+   const artwork = usePlayer((s) => s.queue[s.index]?.artwork);
   const scheme = useScheme(theme);
   const [seed, setSeed] = useState(SONARA_SEED);
 
@@ -79,14 +77,9 @@ export function ThemeController() {
     root.dataset.glass = glass;
     root.dataset.reduceMotion = reduce ? '1' : '0';
     root.dataset.accentToggles = mode === 'system' && isAndroid ? '1' : '0';
-    const tier = resolveTier(graphics);
-    if (root.dataset.perf !== tier) {
-      root.dataset.perf = tier;
-      refreshGlass();
-    }
     retintGlass();
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', getComputedStyle(root).getPropertyValue('--bg').trim());
-  }, [seed, tint, scheme, glass, reduce, mode, graphics]);
+  }, [seed, tint, scheme, glass, reduce, mode]);
 
   return null;
 }

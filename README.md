@@ -68,7 +68,7 @@ SoundCloud (the public client id is obtained automatically) and YouTube in one s
 <td valign="top">
 
 ### Light on the device
-Lazy-loaded backend (the YouTube client loads only when needed), throttled storage writes, isolated re-renders, three graphics tiers (Maximum / Balanced / Battery saver) chosen automatically, and a background trim that releases caches and GPU contexts.
+Lazy-loaded backend (the YouTube client loads only when needed), throttled storage writes, isolated re-renders, single-map Liquid Glass optics with automatic frame-friendly fallbacks, and a background trim that releases caches and GPU contexts.
 
 </td>
 </tr>
@@ -181,7 +181,7 @@ src/
   player/        audio engine, Wave engine, personal picks, audio analyser
   account/       Supabase + offline providers, comments, likes sync
   ui/            screens, desktop shell, iOS 26 controls, Liquid Glass runtime (ui/glass)
-  platform/      native fetch, graphics tiers, memory trim, Android media controls, Discord
+  platform/      native fetch, automatic graphics scaling, memory trim, Android media controls, Discord
 server/          Hono API server for the web build
 src-tauri/       desktop app (Rust): Discord RPC, WebView2 memory level
 android/ ios/    Capacitor projects (Dynamic Color plugin, media service)

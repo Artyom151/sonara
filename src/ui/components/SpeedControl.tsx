@@ -2,7 +2,9 @@ import { motion, useSpring, useTransform } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { setRate } from '../../player/engine';
 import { usePlayer } from '../../store/player';
+import { useSettings } from '../../store/settings';
 import { useT } from '../i18n';
+import { Toggle } from './controls';
 
 /**
  * Playback speed, after iOS 26 Podcasts: a glass chip with the current speed opens a row of presets
@@ -107,6 +109,8 @@ function Dial({ rate }: { rate: number }) {
 
 export function SpeedControl({ rate }: { rate: number }) {
   const t = useT();
+  const censor = useSettings((s) => s.censor);
+  const set = useSettings((s) => s.set);
   const [open, setOpen] = useState(false);
   return (
     <div className="speed">
@@ -118,6 +122,13 @@ export function SpeedControl({ rate }: { rate: number }) {
         <motion.div className="glass speed-panel" initial={{ scale: 0.92, y: -8 }} animate={{ scale: 1, y: 0 }} transition={spring}>
           <Presets rate={rate} />
           <Dial rate={rate} />
+          <div className="player-censor">
+          <span>
+            <b>{t('censor')}</b>
+            <small>{t('censorHint')}</small>
+          </span>
+          <Toggle checked={censor} onChange={(v) => set({ censor: v })} />
+          </div>
         </motion.div>
       )}
     </div>

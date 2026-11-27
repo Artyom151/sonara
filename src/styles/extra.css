@@ -93,26 +93,10 @@ button:disabled {
   background: rgb(var(--accent-rgb) / 0.4);
 }
 
-/* Graphics tiers (platform/perf.ts) */
 /* Balanced / low: the full-screen player backdrop uses soft radial masks instead of
    very expensive 70–80px filter blurs. */
 :root:not([data-perf='high']) .splash-glow {
   filter: none;
-}
-/* Low: glass becomes a light translucent fill with a small blur. */
-:root[data-perf='low'] .glass:not(.tabbar):not(.mini):not(.pbar) {
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  background: rgb(var(--glass-tint-rgb) / 0.55);
-}
-/* …and Clear stays lighter than Tinted in battery saver too. */
-:root[data-perf='low'][data-glass='clear'] .glass:not(.tabbar):not(.mini):not(.pbar) {
-  background: rgb(var(--glass-tint-rgb) / 0.3);
-}
-:root[data-perf='low'] .sheet.glass,
-:root[data-perf='low'] .alert.glass,
-:root[data-perf='low'] .menu.glass {
-  background: rgb(var(--elevated-rgb) / 0.94);
 }
 /* Long lists: skip layout/paint for off-screen rows. */
 .track-row {
@@ -132,6 +116,10 @@ button:disabled {
   box-shadow: 0 0 0 0.5px rgb(var(--fg-rgb) / 0.08), 0 12px 30px -8px rgb(0 0 0 / 0.7);
   overflow: hidden;
   cursor: pointer;
+  transition:
+    width 0.42s cubic-bezier(0.2, 1.15, 0.35, 1),
+    height 0.42s cubic-bezier(0.2, 1.15, 0.35, 1),
+    border-radius 0.35s ease;
 }
 .island:not(.open) {
   height: 40px;
@@ -142,9 +130,9 @@ button:disabled {
   max-width: min(80vw, 330px);
 }
 .island.open {
-  width: max-content;
+  width: min(92vw, 380px);
+  height: 238px;
   min-width: min(80vw, 320px);
-  max-width: min(92vw, 380px);
   cursor: default;
 }
 .island-scrim {
@@ -196,8 +184,9 @@ button:disabled {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: blur(24px) saturate(1.3);
-  opacity: 0.55;
+  filter: saturate(1.2);
+  transform: scale(1.08);
+  opacity: 0.3;
 }
 .island-backdrop::after {
   content: '';
@@ -278,8 +267,8 @@ button:disabled {
   max-width: 300px;
 }
 .island.desk.open {
-  width: max-content;
-  max-width: 420px;
+  width: min(420px, calc(100vw - 120px));
+  height: 224px;
 }
 .island.desk .island-compact {
   height: 30px;
@@ -317,9 +306,12 @@ button:disabled {
   color: rgb(var(--fg-rgb) / 0.6);
   transition: color 0.2s, background-color 0.2s, transform 0.3s var(--ease-spring);
 }
-.island-small:hover {
-  color: #fff;
-  background: rgb(var(--fg-rgb) / 0.08);
+@media (hover: hover) and (pointer: fine) {
+  .island-small:hover,
+  .island.desk .island-controls button:not(.island-small):hover {
+    color: #fff;
+    background: rgb(var(--fg-rgb) / 0.08);
+  }
 }
 .island-small:active {
   transform: scale(0.88);
@@ -333,10 +325,7 @@ button:disabled {
 .island.desk .island-controls {
   gap: 18px;
 }
-.island.desk .island-controls button:not(.island-small):hover {
-  background: rgb(var(--fg-rgb) / 0.08);
-}
-.island-volume {
+ .island-volume {
   margin-top: 6px;
   padding: 0 4px;
 }
@@ -858,6 +847,10 @@ button.link:hover {
 .speed-ticks i { position: absolute; top: 50%; width: 2px; height: 10px; margin: -5px 0 0 -1px; border-radius: 1px; background: currentColor; opacity: 0.3; }
 .speed-ticks i.major { height: 18px; margin-top: -9px; opacity: 0.55; }
 .speed-needle { position: absolute; left: 50%; top: 4px; bottom: 4px; width: 3px; margin-left: -1.5px; border-radius: 2px; background: var(--accent); }
+.player-censor { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 4px 4px 0; padding: 12px 4px 2px; border-top: 0.5px solid rgb(var(--fg-rgb) / 0.16); }
+.player-censor > span { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.player-censor b { font-size: 14px; font-weight: 600; }
+.player-censor small { max-width: 190px; font-size: 10.5px; line-height: 1.3; color: rgb(var(--fg-rgb) / 0.58); }
 
 /* Listening statistics on the profile (ui/components/ListeningStats.tsx). */
 .stats-empty { opacity: 0.6; margin: 4px 0 0; }

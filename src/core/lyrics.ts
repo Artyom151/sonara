@@ -99,9 +99,10 @@ async function betterLyrics(fetcher: Fetcher, track: Track): Promise<Lyrics | nu
 
 export async function fetchLyrics(fetcher: Fetcher, track: Track): Promise<Lyrics | null> {
   const lrc = await fetchLrclib(fetcher, track).catch(() => null);
-  // Prefer synced lyrics: LRCLIB first, BetterLyrics when LRCLIB has none (or only plain text).
-  if (lrc?.synced?.length || lrc?.instrumental) return lrc;
-  return (await betterLyrics(fetcher, track)) ?? lrc;
+  if (lrc?.synced?.some((line) => line.words?.length) || lrc?.instrumental) return lrc;
+  const better = await betterLyrics(fetcher, track);
+  if (better?.synced?.some((line) => line.words?.length)) return better;
+  return better ?? lrc;
 }
 
 async function fetchLrclib(fetcher: Fetcher, track: Track): Promise<Lyrics | null> {

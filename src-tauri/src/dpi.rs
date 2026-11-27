@@ -376,11 +376,29 @@ pub fn upstream() -> Option<(String, u16)> {
     UPSTREAM.read().ok()?.clone()
 }
 
-/// `socks5://host:port` (the scheme is optional); empty turns it off.
+pub fn upstream_http() -> Option<String> {
+    let (host, _) = upstream()?;
+    let addr = (host.as_str(), 10809).to_socket_addrs().ok()?.next()?;
+    TcpStream::connect_timeout(&addr, Duration::from_millis(150)).ok()?;
+    Some(format!("http://{host}:10809"))
+}
+
+fn local_socks5(port: u16) -> Option<(String, u16)> {
+    let addr = ("127.0.0.1", port).to_socket_addrs().ok()?.next()?;
+    let mut stream = TcpStream::connect_timeout(&addr, Duration::from_millis(150)).ok()?;
+    stream.set_read_timeout(Some(Duration::from_millis(150))).ok()?;
+    stream.set_write_timeout(Some(Duration::from_millis(150))).ok()?;
+    stream.write_all(&[5, 1, 0]).ok()?;
+    let mut greeting = [0u8; 2];
+    stream.read_exact(&mut greeting).ok()?;
+    (greeting == [5, 0]).then_some(("127.0.0.1".into(), port))
+}
+
+/// `socks5://host:port` (the scheme is optional); empty detects a running local proxy.
 #[tauri::command]
-pub fn net_set_upstream(url: Option<String>) -> Result<(), String> {
+pub fn net_set_upstream(url: Option<String>) -> Result<Option<String>, String> {
+    let automatic = url.as_deref().map(str::trim).filter(|s| !s.is_empty()).is_none();
     let parsed = match url.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
-        None => None,
         Some(u) => {
             let rest = u.strip_prefix("socks5://").unwrap_or(u).trim_end_matches('/');
             let (h, p) = rest.rsplit_once(':').ok_or("Адрес вида socks5://127.0.0.1:1080")?;
@@ -390,11 +408,19 @@ pub fn net_set_upstream(url: Option<String>) -> Result<(), String> {
             }
             Some((h.to_string(), port))
         }
+        None => local_socks5(10808),
     };
+    let public = parsed.as_ref().map(|(host, port)| {
+        if automatic {
+            format!("http://{host}:10809")
+        } else {
+            format!("socks5://{host}:{port}")
+        }
+    });
     if let Ok(mut s) = UPSTREAM.write() {
         *s = parsed;
     }
-    Ok(())
+    Ok(public)
 }
 
 /// Opens a tunnel to host:port through the SOCKS5 server; the server resolves the name itself.

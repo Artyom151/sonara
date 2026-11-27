@@ -23,12 +23,12 @@ test('sensible defaults: every source on, playback helpers on, interface neutral
 });
 
 test('set() applies a partial patch without touching the rest', () => {
-  useSettings.getState().set({ theme: 'dark', graphics: 'low' });
+  useSettings.getState().set({ theme: 'dark', autoplay: false });
   const s = useSettings.getState();
   assert.equal(s.theme, 'dark');
-  assert.equal(s.graphics, 'low');
+  assert.equal(s.autoplay, false);
   assert.equal(s.lang, 'auto', 'unrelated keys keep their values');
-  useSettings.getState().set({ theme: 'system', graphics: 'auto' });
+  useSettings.getState().set({ theme: 'system', autoplay: true });
 });
 
 test('the wave mood sliders are 0..1 with a neutral 0.5 and stay in range', () => {

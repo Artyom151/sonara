@@ -26,6 +26,22 @@ test('reordering upcoming tracks preserves the current track and survives shuffl
   assert.deepEqual(keys(), ['a', 'd', 'b', 'c']);
 });
 
+test('previous restarts once, then switches to the previous track', () => {
+  const p = usePlayer.getState();
+  p.playQueue([track('a'), track('b')], 1);
+  const restart = usePlayer.getState().restart;
+  p.patch({ position: 42 });
+  p.prev();
+  assert.equal(usePlayer.getState().current()?.id, 'b');
+  assert.equal(usePlayer.getState().position, 0);
+  assert.equal(usePlayer.getState().restart, restart + 1);
+  p.prev();
+  assert.equal(usePlayer.getState().current()?.id, 'a');
+  p.prev();
+  assert.equal(usePlayer.getState().current()?.id, 'a');
+  assert.equal(usePlayer.getState().restart, restart + 2);
+});
+
 test('removing and undoing an upcoming track restores it once in its position', () => {
   const p = usePlayer.getState();
   p.playQueue([track('a'), track('b'), track('c')]);

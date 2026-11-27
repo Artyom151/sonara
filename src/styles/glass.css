@@ -1,19 +1,8 @@
-/* Liquid Glass
-   Optics come from the ported GLSL shader (src/ui/glass/shaders.ts), rendered
-   per element by src/ui/glass/liquid.ts:
-     .lg-layer        backdrop-filter: blur(B) url(#lg-N) — refraction, tint mix,
-                      rim light/shade (the shader's main()), shaped by its alpha mask
-     .glass::before   rim light overlay — only where SVG backdrop filters are unsupported
-   Defaults are deliberately transparent with a light blur. */
-
+/* Liquid Glass optics: one cached displacement/light/alpha map per surface. */
 .glass {
   --g-radius: 999px;
-  --lg-blur: 3px;
-  --lg-tint: rgb(var(--fg-rgb) / 0.04);
-  --lg-strength: 10;
-  --lg-wave: 8;
-  --lg-edge: 1.5;
-  --lg-depth: 1;
+  --lg-blur: 8px;
+  --lg-tint: rgb(var(--fg-rgb) / 0.055);
   --lg-alpha: 1;
   --lg-pad: 0px;
   position: relative;
@@ -21,8 +10,6 @@
   background: none;
 }
 
-/* Backdrop layer (inserted as first child). Extends by the rim padding so the
-   shader's outer edge (outerEdge × 0.42) can sit just outside the box. */
 .glass > .lg-layer {
   position: absolute;
   inset: var(--lg-pad);
@@ -34,110 +21,97 @@
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
 }
-/* WebKit / no WebGL2 / before the maps arrive: the host itself blurs its backdrop.
-   (Its own content is never part of its backdrop, so text stays crisp.) */
+
 :root:not([data-lg='svg']) .glass,
 .glass:not([data-lg]) {
-  -webkit-backdrop-filter: blur(var(--lg-blur));
-  backdrop-filter: blur(var(--lg-blur));
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(145%);
+  backdrop-filter: blur(var(--lg-blur)) saturate(145%);
   background: var(--lg-tint);
 }
+
 :root[data-lg='svg'] .glass[data-lg] {
-  /* The backdrop layer reaches past the box (rim + lens offset) so the filter can sample there;
-     clip its painting so it never widens the page / creates sideways scrolling. */
   overflow: clip;
   overflow-clip-margin: 3px;
 }
+
 :root[data-lg='svg'] .glass[data-lg]:not(.btn.primary) {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
   background: none;
 }
+
 :root:not([data-lg='svg']) .glass > .lg-layer {
   display: none;
-}
-/* Desktop WebKit: the content under this glass is already blurred and refracted by the shader
-   maps (liquid.ts, content refraction), so the host only adds tint and rim light. */
-:root .glass[data-lgc] {
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
 }
 
 .glass::before {
   content: '';
   position: absolute;
-  inset: var(--lg-pad);
+  inset: 0;
+  border-radius: inherit;
   pointer-events: none;
-  background-image: var(--lg-light-map, none);
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
+  box-shadow:
+    inset 0 0.5px 0 rgb(255 255 255 / 0.28),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.1),
+    inset 0 -5px 12px rgb(0 0 0 / 0.04);
 }
-/* Chromium: tint, rim light and shade are composited inside the SVG backdrop filter. */
-:root[data-lg='svg'] .glass[data-lg] > .lg-layer {
-  background: none;
-}
-:root[data-lg='svg'] .glass::before {
+
+:root[data-lg='svg'] .glass[data-lg]::before {
   display: none;
 }
 
-/* Phones while scrolling: plain blur + tint instead of the SVG filter (liquid.ts). The mask
-   keeps the shader's shape, so the bars do not change outline. */
+/* Moving the page under SVG backdrop filters is expensive. The same tint and blur stay visible
+   while scrolling; refraction returns automatically after the last frame. */
 :root[data-scrolling='1'] .glass > .lg-layer {
-  -webkit-backdrop-filter: blur(var(--lg-blur)) !important;
-  backdrop-filter: blur(var(--lg-blur)) !important;
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(145%) !important;
+  backdrop-filter: blur(var(--lg-blur)) saturate(145%) !important;
   background: var(--lg-tint) !important;
 }
-/* …plus the shader's light map (rim light, inner glow, shade) as an overlay, like on WebKit. */
-:root[data-lg='svg'][data-scrolling='1'] .glass[data-lg]::before {
+
+:root[data-scrolling='1'] .glass::before {
   display: block;
 }
-/* Battery saver: lighter blur on the shader bars (blur radius is the main GPU cost). */
-:root[data-perf='low'] .glass[data-lg] {
-  --lg-blur: 4px;
-}
 
-/* No WebGL2 (the shader could not run): a plain frosted fill instead of a nearly invisible 4% tint,
-   so text under bars, menus and cards stays readable. */
 :root[data-lg='0'] .glass,
 :root[data-lg='0'] .glass:not([data-lg]) {
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
   background: rgb(var(--glass-tint-rgb) / 0.5);
 }
 
-/* Content paints above the backdrop layer. */
 .glass > :not(.lg-layer) {
   position: relative;
 }
 
-/* Variants */
 .glass.dark {
   --lg-tint: rgb(12 12 14 / 0.38);
 }
+
 .glass.clear {
-  --lg-tint: rgb(var(--fg-rgb) / 0.015);
-  --lg-blur: 2px;
-}
-:root[data-glass='tinted'] .glass {
-  --lg-tint: rgb(var(--glass-tint-rgb) / 0.4);
-  --lg-blur: 6px;
-}
-.glass.refract {
-  --lg-strength: 14;
+  --lg-tint: rgb(var(--fg-rgb) / 0.02);
+  --lg-blur: 5px;
 }
 
-/* Press feedback: glass swells slightly and brightens, like iOS 26 controls. */
+:root[data-glass='tinted'] .glass {
+  --lg-tint: rgb(var(--glass-tint-rgb) / 0.4);
+  --lg-blur: 12px;
+}
+
+.glass.refract {
+  --lg-strength: 1;
+}
+
 .glass-press {
   transition:
     transform 0.35s cubic-bezier(0.2, 1.4, 0.4, 1),
     filter 0.25s ease;
   will-change: transform;
 }
+
 .glass-press:active {
   transform: scale(1.08);
 }
 
-/* Circle icon button used in headers (chevron, more). */
 .glass-icon {
   display: grid;
   place-items: center;

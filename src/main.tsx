@@ -12,6 +12,7 @@ import './player/equalizer';
 import './platform/dpi';
 import './player/likePulse';
 import './player/normalize';
+import './player/censorEngine';
 import './platform/mediaControls';
 import './platform/audioDevices';
 import './platform/network';
@@ -23,7 +24,7 @@ import './platform/memory';
 import './account/sync';
 import './account/cloud';
 import { isAndroid, isCapacitor } from './platform';
-import { resolveTier } from './platform/perf';
+import { detectTier } from './platform/perf';
 import { useSettings } from './store/settings';
 import { schemeFor } from './theme/ThemeController';
 import { App } from './ui/App';
@@ -31,7 +32,7 @@ import { startLiquidGlass, warmGlass } from './ui/glass/liquid';
 
 document.documentElement.dataset.platform = isAndroid ? 'android' : 'other';
 // Graphics tier before the first paint (ThemeController keeps it in sync with Settings).
-document.documentElement.dataset.perf = resolveTier(useSettings.getState().graphics);
+document.documentElement.dataset.perf = detectTier();
 
 // Compile and link the glass shader now, not on the first glass element, and start watching the
 // DOM before React paints so the very first frame already has its glass layers.

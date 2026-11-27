@@ -1,59 +1,24 @@
-import { isCapacitor } from '../../platform';
-import { currentTier } from '../../platform/perf';
-import { FRAGMENT, VERTEX } from './shaders';
+ import { FRAGMENT, VERTEX } from './shaders';
+import { glassPresetFor, type LiquidGlassPreset } from './sdk';
+import { isAndroid, isCapacitor } from '../../platform';
 
-/**
- * Liquid glass runtime.
- *
- * Every element with the `.glass` class gets a backdrop layer (`.lg-layer`) and two
- * pseudo-element overlays. The ported shader (shaders.ts) is rendered once per unique
- * size/parameter set into four maps, which are cached and shared between elements:
- *
- *   mask   → .lg-layer mask-image (shape alpha incl. outer rim)
- *   disp   → feDisplacementMap   ┐
- *   tint   → feComposite arithmetic: mix(blurred, tint, a)          ├ backdrop-filter: blur(B) url(#lg-N)
- *   light  → feComposite arithmetic: + lightAdd − shadeSub          ┘ (Chromium: the whole main() runs here)
- *   light2 → .glass::before overlay — fallback for engines without SVG backdrop filters
- * No mix-blend-mode is used: blend modes isolate the group and would hide the backdrop.
- *
- * Per-element parameters come from CSS custom properties:
- *   --lg-strength  glass.x  refraction strength (framebuffer px)
- *   --lg-wave      glass.y  wave scale
- *   --lg-edge      glass.z  rim width (CSS px)
- *   --lg-depth     glass.w  rim light/shade strength
- *   --lg-alpha     screen.w global alpha
- *   --lg-blur      backdrop blur radius (CSS px)
- *   --lg-tint      tint colour incl. alpha (painted as the layer background)
- *   --lg-cuts      "tl tr br bl" corner cuts (CSS px)
- * Corner radii are read from the element's computed border-radius.
- */
-
-interface Params {
+interface Params extends LiquidGlassPreset {
   tint: [number, number, number, number];
   w: number;
   h: number;
+  /** Computed border radius per corner (px): tl tr br bl. */
   radii: [number, number, number, number];
-  cuts: [number, number, number, number];
-  strength: number;
-  wave: number;
-  edge: number;
-  depth: number;
-  alpha: number;
 }
 
-interface Maps {
-  mask: string;
-  disp: string;
-  light: string;
-  combined: string;
-  dispScale: number;
+interface GlassMap {
+  url: string;
   pad: number;
-  qw: number;
-  qh: number;
+  width: number;
+  height: number;
+  dispScale: number;
   refs: number;
 }
 
-/** The SVG filter of one element: shared maps, its own tint (so a tint change needs no new maps). */
 interface ElFilter {
   id: string;
   flood: SVGElement;
@@ -61,52 +26,23 @@ interface ElFilter {
 }
 
 const supportsRefraction = /Chrome\/|Edg\//.test(navigator.userAgent);
-/**
- * Desktop WebKit (Linux WebKitGTK, macOS): backdrop-filter cannot run SVG filters, but a plain CSS
- * filter can. The shader's refraction is therefore applied to the content *under* the floating
- * glass (the visible tab stack): blur + displacement map + shape mask inside each glass rect.
- */
-// Off: in a real WebKitGTK window (GPU compositing) the CSS filter is dropped on the tab stack,
-// which holds composited layers (WebGL canvases); it only renders in software snapshots.
-const CONTENT_REFRACTION_ENABLED = false;
-const contentRefraction = CONTENT_REFRACTION_ENABLED && !supportsRefraction && !isCapacitor && matchMedia('(pointer: fine)').matches;
-/** Glass that floats over the tab stack (not inside it) and gets content refraction. */
-const OVERLAY_GLASS = '.pbar, .tabbar, .mini, .handoff';
-/** Map resolution cap: the maps are smooth gradients, 1x is visually identical on phones. */
-const maxDpr = () => (currentTier() === 'high' ? 2 : 1);
-
-/** Which elements get the full shader treatment for the current graphics tier. */
-const KEY_GLASS = '.refract, .ctl-main, .tabbar, .mini, .pbar, .menu, .alert';
-const LOW_GLASS = '.tabbar, .mini, .pbar';
-function wantsShader(el: HTMLElement) {
-  const tier = currentTier();
-  if (tier === 'high') return true;
-  if (tier === 'balanced') return el.matches(KEY_GLASS);
-  // Battery saver: only the always-visible bars keep the real shader; maps are rendered at 1x and
-  // the SVG filter is paused while scrolling (see pauseRefractionWhileScrolling).
-  return el.matches(LOW_GLASS);
-}
+const SHADER_SURFACES = '.refract, .ctl-main, .tabbar, .mini, .pbar, .menu, .alert, .sheet, .island';
+const PAD = 10;
+const DISP_SCALE = 28;
 
 let gl: WebGL2RenderingContext | null = null;
 let program: WebGLProgram | null = null;
-let ubo: WebGLBuffer | null = null;
-let uMode: WebGLUniformLocation | null = null;
-let uDispScale: WebGLUniformLocation | null = null;
 let canvas: HTMLCanvasElement | null = null;
 let defs: SVGDefsElement | null = null;
-
-const cache = new Map<string, Promise<Maps>>();
-const resolved = new Map<string, Maps>();
-const state = new WeakMap<HTMLElement, { key?: string; layer: HTMLElement | null; ro: ResizeObserver; filter?: ElFilter }>();
+let initTried = false;
 let filterSeq = 0;
-/** Unique per module instance: after a hot reload the old <filter> elements may still be in the
- *  document, and a repeated id would resolve to a stale map of another element's size. */
-const ID_PREFIX = Math.random().toString(36).slice(2, 8);
+const idPrefix = Math.random().toString(36).slice(2, 8);
+const cache = new Map<string, Promise<GlassMap>>();
+const resolved = new Map<string, GlassMap>();
+const state = new WeakMap<HTMLElement, { key?: string; layer: HTMLElement | null; ro: ResizeObserver; filter?: ElFilter }>();
 
-/** What the glass runs on this device (shown in Settings → About, handy for bug reports). */
 export const glassStatus: { mode: 'svg' | 'overlay' | 'off' | 'pending'; reason: string } = { mode: 'pending', reason: '' };
 
-let initTried = false;
 function initGl(): boolean {
   if (gl) return true;
   if (initTried) return false;
@@ -118,11 +54,11 @@ function initGl(): boolean {
     return false;
   }
   const compile = (type: number, src: string) => {
-    const s = ctx.createShader(type)!;
-    ctx.shaderSource(s, src);
-    ctx.compileShader(s);
-    if (!ctx.getShaderParameter(s, ctx.COMPILE_STATUS)) throw new Error(ctx.getShaderInfoLog(s) ?? 'shader error');
-    return s;
+    const shader = ctx.createShader(type)!;
+    ctx.shaderSource(shader, src);
+    ctx.compileShader(shader);
+    if (!ctx.getShaderParameter(shader, ctx.COMPILE_STATUS)) throw new Error(ctx.getShaderInfoLog(shader) ?? 'shader error');
+    return shader;
   };
   try {
     const p = ctx.createProgram()!;
@@ -132,50 +68,14 @@ function initGl(): boolean {
     if (!ctx.getProgramParameter(p, ctx.LINK_STATUS)) throw new Error(ctx.getProgramInfoLog(p) ?? 'link error');
     program = p;
   } catch (e) {
-    console.warn('[liquid-glass]', e);
     glassStatus.reason = String((e as Error)?.message ?? e).slice(0, 160);
     return false;
   }
   ctx.useProgram(program);
-  const block = ctx.getUniformBlockIndex(program!, 'BlurData');
-  ctx.uniformBlockBinding(program!, block, 0);
-  ubo = ctx.createBuffer();
-  ctx.bindBuffer(ctx.UNIFORM_BUFFER, ubo);
-  ctx.bufferData(ctx.UNIFORM_BUFFER, 160, ctx.DYNAMIC_DRAW);
-  ctx.bindBufferBase(ctx.UNIFORM_BUFFER, 0, ubo);
-  uMode = ctx.getUniformLocation(program!, 'uMode');
-  uDispScale = ctx.getUniformLocation(program!, 'uDispScale');
-  // Sampler0 is the backdrop on desktop; on the web CSS samples it, so bind a neutral texel.
-  const tex = ctx.createTexture();
-  ctx.bindTexture(ctx.TEXTURE_2D, tex);
-  ctx.texImage2D(ctx.TEXTURE_2D, 0, ctx.RGBA, 1, 1, 0, ctx.RGBA, ctx.UNSIGNED_BYTE, new Uint8Array([128, 128, 128, 255]));
-  ctx.uniform1i(ctx.getUniformLocation(program!, 'Sampler0'), 0);
-  ctx.enable(ctx.BLEND);
-  ctx.blendFunc(ctx.ONE, ctx.ZERO);
   gl = ctx;
-  warmUp(ctx);
   return true;
 }
 
-/**
- * Drivers compile and link lazily, on the first draw. Draw one pixel now so the shader is ready
- * at startup (not on the first glass element) and a driver that fails shows up immediately.
- */
-function warmUp(ctx: WebGL2RenderingContext) {
-  try {
-    canvas!.width = canvas!.height = 1;
-    ctx.viewport(0, 0, 1, 1);
-    ctx.uniform1i(ctx.getUniformLocation(program!, 'uMode'), 0);
-    ctx.drawArrays(ctx.TRIANGLES, 0, 6);
-    ctx.readPixels(0, 0, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, new Uint8Array(4));
-    const err = ctx.getError();
-    if (err !== ctx.NO_ERROR) console.warn('[liquid-glass] warm-up GL error', err);
-  } catch (e) {
-    console.warn('[liquid-glass] warm-up', e);
-  }
-}
-
-/** Compile the glass shader right away (called at startup, before the first paint of the app). */
 export function warmGlass() {
   const ok = initGl();
   glassStatus.mode = ok ? 'pending' : 'off';
@@ -195,154 +95,81 @@ function ensureDefs() {
   return defs;
 }
 
-const toBlobUrl = (c: HTMLCanvasElement) =>
-  new Promise<string>((resolve, reject) =>
-    c.toBlob((b) => (b ? resolve(URL.createObjectURL(b)) : reject(new Error('toBlob failed'))), 'image/png'),
-  );
+const uniform = (name: string) => gl!.getUniformLocation(program!, name);
 
-// All elements share one WebGL canvas. toBlob copies the canvas bitmap synchronously when it is
-// called and only encodes afterwards, so a whole element (resize, four draws, four toBlob calls)
-// runs in one task: renders can never interleave (a resize mid-way would hand one element another
-// element's maps), and the four PNG encodes of an element run in parallel instead of one by one.
-const renderMaps = (p: Params): Promise<Maps> => renderMapsNow(p);
-
-async function renderMapsNow(p: Params): Promise<Maps> {
+async function renderMap(p: Params): Promise<GlassMap> {
   const ctx = gl!;
-  // Large panels: the maps are smooth gradients, 1x is visually identical and keeps the four PNG
-  // encodes of a full-window element from taking seconds on high-DPI desktops.
-  const dpr = Math.min(window.devicePixelRatio || 1, maxDpr(), p.w * p.h > 360_000 ? 1 : Infinity);
-  // Largest possible offset of glassDistortion in CSS px (|wave| ≤ √2·1.35, |lens| ≤ 2.25).
-  const dispScale = Math.max(1, ((p.strength * (1.35 * Math.SQRT2 + 2.25)) / dpr) * 2);
-  // The desktop shader samples the whole framebuffer; a CSS backdrop filter only sees its own
-  // box. Grow the layer by the rim and the maximum displacement so edge samples stay inside it.
-  const pad = Math.ceil(Math.max(p.edge, 0) * 2) + 1 + Math.ceil(dispScale / 2);
-  const qw = p.w + pad * 2;
-  const qh = p.h + pad * 2;
-  const fbw = Math.max(1, Math.round(qw * dpr));
-  const fbh = Math.max(1, Math.round(qh * dpr));
-  canvas!.width = fbw;
-  canvas!.height = fbh;
-  ctx.viewport(0, 0, fbw, fbh);
-
-
-  // std140 BlurData: 10 × vec4
-  const data = new Float32Array([
-    0, 0, qw, qh, // rect
-    qw, qh, dpr, p.alpha, // screen: size, guiScale, global alpha (blurRadius slot)
-    fbw, fbh, 0, 0, // framebufferSize
-    ...p.radii, // radii tl tr br bl
-    ...p.cuts, // cuts tl tr br bl
-    ...p.tint, // color
-    p.strength, p.wave, p.edge, p.depth, // glassData
-    pad, pad, p.w, p.h, // blobRect0
-    pad, pad, p.w, p.h, // blobRect1
-    1, 0, 0, 0, // blobData: single shape
-  ]);
-  ctx.bindBuffer(ctx.UNIFORM_BUFFER, ubo);
-  ctx.bufferSubData(ctx.UNIFORM_BUFFER, 0, data);
-  ctx.uniform1f(uDispScale, dispScale);
-
-  const jobs: Promise<string>[] = [];
-  for (const mode of [0, 1, 2, 3]) {
-    const neutral = mode === 1 || mode === 3;
-    ctx.clearColor(neutral ? 0.5 : 0, neutral ? 0.5 : 0, neutral ? 0.5 : 0, neutral ? 1 : 0);
-    ctx.clear(ctx.COLOR_BUFFER_BIT);
-    ctx.uniform1i(uMode, mode);
-    ctx.drawArrays(ctx.TRIANGLES, 0, 6);
-    jobs.push(toBlobUrl(canvas!));
-  }
-  const out = await Promise.all(jobs);
-
-  return { mask: out[0], disp: out[1], light: out[2], combined: out[3], dispScale, pad, qw, qh, refs: 0 };
+  const width = p.w + PAD * 2;
+  const height = p.h + PAD * 2;
+  canvas!.width = width;
+  canvas!.height = height;
+  ctx.viewport(0, 0, width, height);
+  ctx.uniform2f(uniform('uSize'), width, height);
+  ctx.uniform4f(uniform('uShape'), PAD, PAD, p.w, p.h);
+  ctx.uniform4f(uniform('uRadius'), ...p.radii);
+  ctx.uniform1f(uniform('uStrength'), p.strength);
+  ctx.uniform1f(uniform('uAlpha'), p.alpha);
+  ctx.uniform4f(uniform('uRefraction'), ...p.refraction);
+  ctx.uniform1f(uniform('uRefractionPower'), p.refractionPower);
+  ctx.uniform1f(uniform('uGlow'), p.glow);
+  ctx.uniform1f(uniform('uDispScale'), DISP_SCALE);
+  ctx.clearColor(0.5, 0.5, 0.5, 0);
+  ctx.clear(ctx.COLOR_BUFFER_BIT);
+  ctx.drawArrays(ctx.TRIANGLES, 0, 3);
+  const blob = await new Promise<Blob>((resolve, reject) => canvas!.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png'));
+  return { url: URL.createObjectURL(blob), pad: PAD, width, height, dispScale: DISP_SCALE, refs: 0 };
 }
 
-/** Build the element's SVG backdrop filter from shared maps; the tint stays editable (retint). */
-function buildFilter(maps: Maps, p: Params): ElFilter {
-  const NS = 'http://www.w3.org/2000/svg';
-  const id = `lg-${ID_PREFIX}-${++filterSeq}`;
-  const { qw, qh, disp, combined, dispScale } = maps;
-  const f = document.createElementNS(NS, 'filter');
-  f.setAttribute('id', id);
-  f.setAttribute('filterUnits', 'userSpaceOnUse');
-  f.setAttribute('primitiveUnits', 'userSpaceOnUse');
-  f.setAttribute('x', '0');
-  f.setAttribute('y', '0');
-  f.setAttribute('width', String(qw));
-  f.setAttribute('height', String(qh));
-  f.setAttribute('color-interpolation-filters', 'sRGB');
-  const img = document.createElementNS(NS, 'feImage');
-  img.setAttribute('href', disp);
-  img.setAttribute('x', '0');
-  img.setAttribute('y', '0');
-  img.setAttribute('width', String(qw));
-  img.setAttribute('height', String(qh));
-  img.setAttribute('preserveAspectRatio', 'none');
-  img.setAttribute('result', 'map');
-  const dm = document.createElementNS(NS, 'feDisplacementMap');
-  dm.setAttribute('in', 'SourceGraphic');
-  dm.setAttribute('in2', 'map');
-  dm.setAttribute('scale', String(dispScale));
-  dm.setAttribute('xChannelSelector', 'R');
-  dm.setAttribute('yChannelSelector', 'G');
-  dm.setAttribute('result', 'refracted');
-  // mix(blurred, tintColor.rgb, tintColor.a)
-  const flood = document.createElementNS(NS, 'feFlood');
-  flood.setAttribute('result', 'tint');
-  const mix = document.createElementNS(NS, 'feComposite');
-  mix.setAttribute('in', 'refracted');
-  mix.setAttribute('in2', 'tint');
-  mix.setAttribute('operator', 'arithmetic');
-  mix.setAttribute('result', 'tinted');
-  // finalColor += lightAdd; finalColor -= shadeSub  (map stores 0.5 + add − sub)
-  const lightImg = document.createElementNS(NS, 'feImage');
-  lightImg.setAttribute('href', combined);
-  lightImg.setAttribute('x', '0');
-  lightImg.setAttribute('y', '0');
-  lightImg.setAttribute('width', String(qw));
-  lightImg.setAttribute('height', String(qh));
-  lightImg.setAttribute('preserveAspectRatio', 'none');
-  lightImg.setAttribute('result', 'light');
-  const add = document.createElementNS(NS, 'feComposite');
-  add.setAttribute('in', 'tinted');
-  add.setAttribute('in2', 'light');
-  add.setAttribute('operator', 'arithmetic');
-  add.setAttribute('k2', '1');
-  add.setAttribute('k3', '1');
-  add.setAttribute('k4', '-0.5');
-  f.append(img, dm, flood, mix, lightImg, add);
-  ensureDefs().appendChild(f);
+function buildFilter(map: GlassMap, p: Params): ElFilter {
+  const ns = 'http://www.w3.org/2000/svg';
+  const make = (tag: string, attrs: Record<string, string | number>) => {
+    const node = document.createElementNS(ns, tag);
+    for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
+    return node;
+  };
+  const id = `lg-${idPrefix}-${++filterSeq}`;
+  const filter = make('filter', {
+    id,
+    filterUnits: 'userSpaceOnUse',
+    primitiveUnits: 'userSpaceOnUse',
+    x: 0,
+    y: 0,
+    width: map.width,
+    height: map.height,
+    'color-interpolation-filters': 'sRGB',
+  });
+  const image = make('feImage', { href: map.url, x: 0, y: 0, width: map.width, height: map.height, preserveAspectRatio: 'none', result: 'optics' });
+  const displacement = make('feDisplacementMap', {
+    in: 'SourceGraphic',
+    in2: 'optics',
+    scale: map.dispScale,
+    xChannelSelector: 'R',
+    yChannelSelector: 'G',
+    result: 'refracted',
+  });
+  const light = make('feColorMatrix', {
+    in: 'optics',
+    type: 'matrix',
+    values: '0 0 1 0 0  0 0 1 0 0  0 0 1 0 0  0 0 0 0 1',
+    result: 'light',
+  });
+  const lit = make('feComposite', { in: 'refracted', in2: 'light', operator: 'arithmetic', k2: 1, k3: 1, k4: -0.5, result: 'lit' });
+  const flood = make('feFlood', { result: 'tint' });
+  const mix = make('feComposite', { in: 'lit', in2: 'tint', operator: 'arithmetic', result: 'glass' });
+  filter.append(image, displacement, light, lit, flood, mix);
+  ensureDefs().appendChild(filter);
   const out = { id, flood, mix };
   setTint(out, p.tint);
   return out;
 }
 
-function setTint(f: ElFilter, tint: [number, number, number, number]) {
-  f.flood.setAttribute('flood-color', `rgb(${tint.slice(0, 3).map((c) => Math.round(c * 255)).join(' ')})`);
-  f.mix.setAttribute('k2', String(1 - tint[3]));
-  f.mix.setAttribute('k3', String(tint[3]));
+function setTint(filter: ElFilter, tint: [number, number, number, number]) {
+  filter.flood.setAttribute('flood-color', `rgb(${tint.slice(0, 3).map((c) => Math.round(c * 255)).join(' ')})`);
+  filter.mix.setAttribute('k2', String(1 - tint[3]));
+  filter.mix.setAttribute('k3', String(tint[3]));
 }
-
-/**
- * The tint follows CSS variables (accent palette, Clear / Tinted glass, theme). The maps do not
- * depend on it, so a change only rewrites each filter's flood colour: no map is rendered again.
- */
-export function retintGlass() {
-  if (!supportsRefraction) return;
-  for (const el of document.querySelectorAll<HTMLElement>('.glass[data-lg]')) {
-    const f = state.get(el)?.filter;
-    if (!f) continue;
-    const tint = parseColor(getComputedStyle(el).getPropertyValue('--lg-tint').trim() || 'rgb(255 255 255 / 0.04)');
-    setTint(f, tint);
-  }
-}
-
-const num = (v: string, d: number) => {
-  const n = parseFloat(v);
-  return Number.isFinite(n) ? n : d;
-};
 
 let probe: HTMLElement | null = null;
-/** Resolve any CSS colour (rgb(), color-mix(), var()) to linear 0..1 RGBA. */
 function parseColor(value: string): [number, number, number, number] {
   if (!probe) {
     probe = document.createElement('i');
@@ -351,47 +178,46 @@ function parseColor(value: string): [number, number, number, number] {
   }
   probe.style.color = '';
   probe.style.color = value;
-  const c = getComputedStyle(probe).color;
-  const n = (c.match(/-?[\d.]+(e-?\d+)?/g) ?? []).map(Number);
-  if (c.startsWith('color(')) return [n[0] ?? 1, n[1] ?? 1, n[2] ?? 1, n[3] ?? 1];
+  const color = getComputedStyle(probe).color;
+  const n = (color.match(/-?[\d.]+(e-?\d+)?/g) ?? []).map(Number);
+  if (color.startsWith('color(')) return [n[0] ?? 1, n[1] ?? 1, n[2] ?? 1, n[3] ?? 1];
   return [(n[0] ?? 255) / 255, (n[1] ?? 255) / 255, (n[2] ?? 255) / 255, n[3] ?? 1];
 }
 
+const num = (value: string, fallback: number) => {
+  const n = parseFloat(value);
+  return Number.isFinite(n) ? n : fallback;
+};
+
 function readParams(el: HTMLElement): Params {
-  const cs = getComputedStyle(el);
+  const preset = glassPresetFor(el);
+  const style = getComputedStyle(el);
   const w = Math.round(el.offsetWidth);
   const h = Math.round(el.offsetHeight);
   const r = (v: string) => Math.min(num(v, 0), Math.min(w, h) / 2);
-  const cuts = (cs.getPropertyValue('--lg-cuts').trim() || '0 0 0 0').split(/\s+/).map((x) => num(x, 0));
   return {
-    tint: parseColor(cs.getPropertyValue('--lg-tint').trim() || 'rgb(255 255 255 / 0.04)'),
+    ...preset,
+    strength: num(style.getPropertyValue('--lg-strength'), preset.strength),
+    alpha: num(style.getPropertyValue('--lg-alpha'), preset.alpha),
+    tint: parseColor(style.getPropertyValue('--lg-tint').trim() || 'rgb(255 255 255 / 0.04)'),
     w,
     h,
-    radii: [r(cs.borderTopLeftRadius), r(cs.borderTopRightRadius), r(cs.borderBottomRightRadius), r(cs.borderBottomLeftRadius)],
-    cuts: [cuts[0] ?? 0, cuts[1] ?? 0, cuts[2] ?? 0, cuts[3] ?? 0],
-    strength: num(cs.getPropertyValue('--lg-strength'), 10),
-    wave: num(cs.getPropertyValue('--lg-wave'), 8),
-    edge: num(cs.getPropertyValue('--lg-edge'), 1.5),
-    depth: num(cs.getPropertyValue('--lg-depth'), 1),
-    alpha: num(cs.getPropertyValue('--lg-alpha'), 1),
+    radii: [r(style.borderTopLeftRadius), r(style.borderTopRightRadius), r(style.borderBottomRightRadius), r(style.borderBottomLeftRadius)],
   };
 }
 
-// The tint is not part of the key: the maps are the same for any tint (see retintGlass).
-const keyOf = (p: Params) =>
-  [maxDpr(), p.w, p.h, ...p.radii.map((x) => x.toFixed(1)), ...p.cuts, p.strength, p.wave, p.edge, p.depth, p.alpha].join('|');
+const keyOf = (p: Params) => [p.w, p.h, ...p.radii, p.strength, p.alpha, ...p.refraction, p.refractionPower, p.glow].join('|');
 
 function release(key?: string) {
   if (!key) return;
-  const m = resolved.get(key);
-  if (!m || --m.refs > 0) return;
-  // Keep a small pool: identical elements come and go (rows, sheets).
+  const map = resolved.get(key);
+  if (!map || --map.refs > 0) return;
   setTimeout(() => {
-    if (m.refs > 0) return;
+    if (map.refs > 0 || resolved.get(key) !== map) return;
     cache.delete(key);
     resolved.delete(key);
-    for (const u of [m.mask, m.disp, m.light, m.combined]) URL.revokeObjectURL(u);
-  }, 10_000);
+    URL.revokeObjectURL(map.url);
+  }, 15_000);
 }
 
 let queue = new Set<HTMLElement>();
@@ -407,7 +233,6 @@ async function flush() {
   scheduled = false;
   const items = [...queue];
   queue = new Set();
-  // One failing element must not stall the rest of the queue.
   for (const el of items) await apply(el).catch((e) => console.warn('[liquid-glass]', e));
 }
 
@@ -419,60 +244,28 @@ async function apply(el: HTMLElement) {
   const key = keyOf(p);
   if (key === st.key) return;
   if (!cache.has(key)) {
-    cache.set(
-      key,
-      renderMaps(p)
-        .then((m) => (resolved.set(key, m), m))
-        .catch((e) => {
-          cache.delete(key); // retry later instead of caching the failure
-          throw e;
-        }),
-    );
+    cache.set(key, renderMap(p).then((map) => (resolved.set(key, map), map)).catch((e) => {
+      cache.delete(key);
+      throw e;
+    }));
   }
-  const maps = await cache.get(key)!;
+  const map = await cache.get(key)!;
   if (!el.isConnected || state.get(el) !== st) return;
-  maps.refs++;
+  map.refs++;
   release(st.key);
   st.key = key;
-
   el.dataset.lg = '1';
-  el.style.setProperty('--lg-pad', `${-maps.pad}px`);
-  if (!supportsRefraction || !st.layer) {
-    // WebKit: blur lives on the host itself (glass.css), only the rim light overlay is added.
-    // A backdrop layer inside the host would capture the host's own text and blur it into a halo.
-    el.style.setProperty('--lg-light-map', `url("${maps.light}")`);
-    setHostBlur(el);
-    scheduleContent();
-    return;
-  }
-  // Also kept on Chromium: while scrolling on phones the SVG filter is paused and this overlay
-  // (the shader's rim light / shade) is shown instead, so the glass keeps its look.
-  el.style.setProperty('--lg-light-map', `url("${maps.light}")`);
-  const { layer } = st;
-  layer.style.maskImage = layer.style.webkitMaskImage = `url("${maps.mask}")`;
-  const blur = getComputedStyle(el).getPropertyValue('--lg-blur').trim() || '3px';
-  // New maps (a resize): a fresh filter around them; the old one goes away.
+  el.style.setProperty('--lg-pad', `${-map.pad}px`);
+  if (!supportsRefraction || !st.layer) return;
+  st.layer.style.maskImage = st.layer.style.webkitMaskImage = `url("${map.url}")`;
   st.filter?.flood.parentElement?.remove();
-  st.filter = buildFilter(maps, p);
-  // Blur first: the shader samples an already-blurred backdrop at distorted coordinates.
-  const bf = `blur(${blur}) url(#${st.filter.id})`;
-  layer.style.backdropFilter = bf;
-  layer.style.setProperty('-webkit-backdrop-filter', bf);
+  st.filter = buildFilter(map, p);
+  const blur = getComputedStyle(el).getPropertyValue('--lg-blur').trim() || '3px';
+  const backdrop = `blur(${blur}) url(#${st.filter.id})`;
+  st.layer.style.backdropFilter = backdrop;
+  st.layer.style.setProperty('-webkit-backdrop-filter', backdrop);
 }
 
-/** Remove the shader layer and fall back to the CSS blur. */
-function strip(el: HTMLElement) {
-  detach(el);
-  el.querySelector(':scope > .lg-layer')?.remove();
-  delete el.dataset.lg;
-  for (const v of ['--lg-pad', '--lg-light-map']) el.style.removeProperty(v);
-}
-
-/**
- * WebKitGTK computes `-webkit-backdrop-filter: blur(var(--lg-blur))` to `none` (a var() inside the
- * prefixed property is dropped), which left every glass element without blur on Linux. Resolve
- * the value here and set it inline with a plain length.
- */
 function setHostBlur(el: HTMLElement) {
   if (supportsRefraction) return;
   const blur = getComputedStyle(el).getPropertyValue('--lg-blur').trim() || '3px';
@@ -481,8 +274,7 @@ function setHostBlur(el: HTMLElement) {
 
 function attach(el: HTMLElement) {
   setHostBlur(el);
-  if (state.has(el)) return;
-  if (!wantsShader(el)) return;
+  if (state.has(el) || !el.matches(SHADER_SURFACES)) return;
   let layer = el.querySelector<HTMLElement>(':scope > .lg-layer');
   if (!layer && supportsRefraction) {
     layer = document.createElement('i');
@@ -499,252 +291,106 @@ function attach(el: HTMLElement) {
 function detach(el: HTMLElement) {
   const st = state.get(el);
   if (!st) return;
-  if (el.dataset.lgc) scheduleContent();
   st.ro.disconnect();
   release(st.key);
   st.filter?.flood.parentElement?.remove();
   state.delete(el);
 }
 
-// Content refraction (desktop WebKit)
-
-const content = { src: null as HTMLElement | null, filterId: '', sig: '', paused: false, offUntil: 0 };
-let contentRaf = 0;
-let contentSeq = 0;
-
-function scheduleContent() {
-  if (!contentRefraction || contentRaf) return;
-  contentRaf = requestAnimationFrame(() => {
-    contentRaf = 0;
-    updateContent();
-  });
+function strip(el: HTMLElement) {
+  detach(el);
+  el.querySelector(':scope > .lg-layer')?.remove();
+  delete el.dataset.lg;
+  el.style.removeProperty('--lg-pad');
 }
 
-function clearContent() {
-  content.src?.style.removeProperty('filter');
-  document.getElementById(content.filterId)?.remove();
-  document.querySelectorAll<HTMLElement>('[data-lgc]').forEach((e) => delete e.dataset.lgc);
-  content.src = null;
-  content.filterId = '';
-  content.sig = '';
-}
-
-function updateContent() {
-  if (content.paused || Date.now() < content.offUntil || currentTier() === 'low' || document.hidden) return clearContent();
-  const src = [...document.querySelectorAll<HTMLElement>('.tab-stack')].find((e) => e.style.display !== 'none');
-  if (!src) return clearContent();
-  const sr = src.getBoundingClientRect();
-  const items: { el: HTMLElement; m: Maps; x: number; y: number; blur: number }[] = [];
-  for (const el of document.querySelectorAll<HTMLElement>(OVERLAY_GLASS)) {
-    const st = state.get(el);
-    const m = st?.key ? resolved.get(st.key) : undefined;
-    if (!m || src.contains(el)) continue;
-    const r = el.getBoundingClientRect();
-    if (r.width < 2 || r.bottom <= sr.top || r.top >= sr.bottom || r.right <= sr.left || r.left >= sr.right) continue;
-    if (Math.abs(r.width - el.offsetWidth) > 1) continue; // mid-animation (scaled): wait for it to settle
-    const blur = num(getComputedStyle(el).getPropertyValue('--lg-blur'), 3);
-    // WebKit resolves userSpaceOnUse for CSS filters on HTML in page coordinates (not the
-    // element's own box), so every rect below is in viewport px (the app itself never scrolls).
-    items.push({ el, m, x: Math.round(r.left) - m.pad, y: Math.round(r.top) - m.pad, blur });
+export function retintGlass() {
+  if (!supportsRefraction) return;
+  for (const el of document.querySelectorAll<HTMLElement>('.glass[data-lg]')) {
+    const filter = state.get(el)?.filter;
+    if (filter) setTint(filter, parseColor(getComputedStyle(el).getPropertyValue('--lg-tint').trim() || 'rgb(255 255 255 / 0.04)'));
   }
-  if (!items.length) return clearContent();
-  const sig = [Math.round(sr.left), Math.round(sr.top), Math.round(sr.width), Math.round(sr.height), ...items.map((i) => `${i.m.disp}@${i.x},${i.y},${i.blur}`)].join('|');
-  if (sig === content.sig && src === content.src) return;
-
-  const NS = 'http://www.w3.org/2000/svg';
-  const make = (tag: string, attrs: Record<string, string | number>) => {
-    const n = document.createElementNS(NS, tag);
-    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, String(v));
-    return n;
-  };
-  const id = `lgc-${ID_PREFIX}-${++contentSeq}`;
-  const f = make('filter', {
-    id,
-    filterUnits: 'userSpaceOnUse',
-    primitiveUnits: 'userSpaceOnUse',
-    x: Math.floor(sr.left),
-    y: Math.floor(sr.top),
-    width: Math.ceil(sr.width),
-    height: Math.ceil(sr.height),
-    'color-interpolation-filters': 'sRGB',
-  });
-  const merge = make('feMerge', {});
-  merge.appendChild(make('feMergeNode', { in: 'SourceGraphic' }));
-  items.forEach(({ m, x, y, blur }, i) => {
-    const box = { x, y, width: m.qw, height: m.qh };
-    // Blur a little beyond the glass so displaced samples near the rim still find content.
-    const ext = Math.ceil(m.dispScale / 2 + blur * 2);
-    f.append(
-      make('feGaussianBlur', { in: 'SourceGraphic', stdDeviation: blur, x: x - ext, y: y - ext, width: m.qw + ext * 2, height: m.qh + ext * 2, result: `b${i}` }),
-      make('feImage', { href: m.disp, ...box, preserveAspectRatio: 'none', result: `d${i}` }),
-      make('feDisplacementMap', { in: `b${i}`, in2: `d${i}`, scale: m.dispScale, xChannelSelector: 'R', yChannelSelector: 'G', ...box, result: `r${i}` }),
-      make('feImage', { href: m.mask, ...box, preserveAspectRatio: 'none', result: `m${i}` }),
-      make('feComposite', { in: `r${i}`, in2: `m${i}`, operator: 'in', ...box, result: `g${i}` }),
-    );
-    merge.appendChild(make('feMergeNode', { in: `g${i}` }));
-  });
-  f.appendChild(merge);
-  ensureDefs().appendChild(f);
-
-  const oldId = content.filterId;
-  if (content.src && content.src !== src) content.src.style.removeProperty('filter');
-  src.style.filter = `url(#${id})`;
-  document.getElementById(oldId)?.remove();
-  const hosts = new Set(items.map((i) => i.el));
-  document.querySelectorAll<HTMLElement>('[data-lgc]').forEach((e) => !hosts.has(e) && delete e.dataset.lgc);
-  hosts.forEach((e) => (e.dataset.lgc = '1'));
-  Object.assign(content, { src, filterId: id, sig });
-  watchFrames();
 }
 
-/** While content refraction is on, fall back to plain blur if it makes frames slow. */
-let watching = false;
-function watchFrames() {
-  if (watching) return;
-  watching = true;
-  let last = performance.now();
-  let slow = 0;
-  let frames = 0;
-  const tick = (now: number) => {
-    if (!content.src) return void (watching = false);
-    const dt = now - last;
-    last = now;
-    if (dt < 250) {
-      frames++;
-      if (dt > 28) slow++;
+export function refreshGlass(el?: HTMLElement) {
+  const targets = el ? [el] : [...document.querySelectorAll<HTMLElement>('.glass')];
+  for (const target of targets) {
+    setHostBlur(target);
+    if (!target.matches(SHADER_SURFACES)) {
+      if (state.has(target) || target.dataset.lg) strip(target);
+      continue;
     }
-    if (frames >= 90) {
-      if (slow / frames > 0.3) {
-        content.offUntil = Date.now() + 30_000;
-        clearContent();
-        setTimeout(scheduleContent, 30_500);
-      }
-      frames = slow = 0;
-    }
-    requestAnimationFrame(tick);
-  };
-  requestAnimationFrame(tick);
+    if (!state.has(target)) attach(target);
+    const st = state.get(target);
+    if (st) st.key = undefined;
+    schedule(target);
+  }
 }
 
-/** Scrolling under a filtered element repaints it every frame: drop the filter while it moves. */
-function pauseContentWhileScrolling() {
-  let t: ReturnType<typeof setTimeout> | undefined;
-  const onScroll = (e: Event) => {
-    const target = e.target as Node;
-    if (!(target instanceof HTMLElement) || !target.closest('.tab-stack')) return;
-    if (!content.paused) {
-      content.paused = true;
-      clearContent();
-    }
-    clearTimeout(t);
-    t = setTimeout(() => {
-      content.paused = false;
-      scheduleContent();
-    }, 180);
-  };
-  document.addEventListener('scroll', onScroll, { capture: true, passive: true });
-  document.addEventListener('visibilitychange', scheduleContent);
-  // Tab switches, menus, the mini player appearing… are cheap to re-check.
-  const iv = setInterval(scheduleContent, 400);
-  return () => {
-    document.removeEventListener('scroll', onScroll, { capture: true });
-    document.removeEventListener('visibilitychange', scheduleContent);
-    clearInterval(iv);
-    clearContent();
-  };
+export function purgeGlass() {
+  for (const [key, map] of resolved) {
+    if (map.refs > 0) continue;
+    cache.delete(key);
+    resolved.delete(key);
+    URL.revokeObjectURL(map.url);
+  }
 }
 
-/**
- * Phones in battery saver: an SVG backdrop filter is re-rasterised every frame while content
- * scrolls under it, which is what makes weak GPUs stutter. While a scroll is in progress the
- * layers switch to a plain blur + tint + the shader's light map and get the full filter back
- * 150 ms after it stops. Maximum and Balanced never pause the shader.
- */
-function pauseRefractionWhileScrolling() {
-  if (!supportsRefraction || !matchMedia('(pointer: coarse)').matches) return () => {};
+function pauseWhileScrolling() {
+  // Phones keep the full refraction while scrolling: the swap to plain blur was visible as a
+  // style change on every swipe, and mobile GPUs hold the SVG backdrop filter fine.
+  if (!supportsRefraction || isAndroid || isCapacitor) return () => {};
+  let timer: ReturnType<typeof setTimeout> | undefined;
   const root = document.documentElement;
-  let t: ReturnType<typeof setTimeout> | undefined;
   const onScroll = () => {
-    // Only in battery saver: Maximum and Balanced keep the full shader while scrolling.
-    if (currentTier() !== 'low') return;
     if (root.dataset.scrolling !== '1') root.dataset.scrolling = '1';
-    clearTimeout(t);
-    t = setTimeout(() => delete root.dataset.scrolling, 150);
+    clearTimeout(timer);
+    timer = setTimeout(() => delete root.dataset.scrolling, 140);
   };
   document.addEventListener('scroll', onScroll, { capture: true, passive: true });
   return () => document.removeEventListener('scroll', onScroll, { capture: true });
 }
 
-/** Free every cached map set no element uses right now (background memory trim). */
-export function purgeGlass() {
-  for (const [key, m] of resolved) {
-    if (m.refs > 0) continue;
-    cache.delete(key);
-    resolved.delete(key);
-    for (const u of [m.mask, m.disp, m.light, m.combined]) URL.revokeObjectURL(u);
-  }
-}
-
-/** Re-render maps for an element whose CSS parameters changed without a resize. */
-export function refreshGlass(el?: HTMLElement) {
-  const targets = el ? [el] : [...document.querySelectorAll<HTMLElement>('.glass')];
-  for (const t of targets) {
-    setHostBlur(t);
-    if (!wantsShader(t)) {
-      if (state.has(t) || t.dataset.lg) strip(t);
-      continue;
-    }
-    if (!state.has(t)) attach(t);
-    const st = state.get(t);
-    if (st) st.key = undefined;
-    schedule(t);
-  }
-}
-
 export function startLiquidGlass() {
   const ok = initGl();
-  document.documentElement.dataset.lg = ok ? (supportsRefraction ? 'svg' : 'overlay') : '0';
-  glassStatus.mode = ok ? (supportsRefraction ? 'svg' : 'overlay') : 'off';
+  const mode = ok ? (supportsRefraction ? 'svg' : 'overlay') : 'off';
+  document.documentElement.dataset.lg = mode;
+  glassStatus.mode = mode;
   if (!ok) return;
-  const stopContent = contentRefraction ? pauseContentWhileScrolling() : undefined;
-  const stopScrollPause = pauseRefractionWhileScrolling();
+  const stopScrollPause = pauseWhileScrolling();
   document.querySelectorAll<HTMLElement>('.glass').forEach(attach);
   const mo = new MutationObserver((records) => {
-    for (const r of records) {
-      if (r.type === 'attributes') {
-        const t = r.target as HTMLElement;
-        if (t.classList.contains('glass')) attach(t);
-        else detach(t);
+    for (const record of records) {
+      if (record.type === 'attributes') {
+        const target = record.target as HTMLElement;
+        if (target.classList.contains('glass')) attach(target);
+        else detach(target);
         continue;
       }
-      r.addedNodes.forEach((n) => {
-        if (!(n instanceof HTMLElement)) return;
-        if (n.classList.contains('glass')) attach(n);
-        n.querySelectorAll?.<HTMLElement>('.glass').forEach(attach);
+      record.addedNodes.forEach((node) => {
+        if (!(node instanceof HTMLElement)) return;
+        if (node.classList.contains('glass')) attach(node);
+        node.querySelectorAll?.<HTMLElement>('.glass').forEach(attach);
       });
-      r.removedNodes.forEach((n) => {
-        if (!(n instanceof HTMLElement)) return;
-        if (n.classList.contains('lg-layer')) {
-          // React replaced the children (e.g. text content): restore the layer.
-          const host = r.target as HTMLElement;
+      record.removedNodes.forEach((node) => {
+        if (!(node instanceof HTMLElement)) return;
+        if (node.classList.contains('lg-layer')) {
+          const host = record.target as HTMLElement;
           const st = state.get(host);
           if (st?.layer && host.isConnected && !st.layer.isConnected) host.prepend(st.layer);
           return;
         }
-        if (state.has(n)) detach(n);
-        n.querySelectorAll?.<HTMLElement>('.glass').forEach(detach);
+        if (state.has(node)) detach(node);
+        node.querySelectorAll?.<HTMLElement>('.glass').forEach(detach);
       });
     }
   });
   mo.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
   const onResize = () => refreshGlass();
   window.addEventListener('resize', onResize);
-
-  // Dev: on hot reload drop this instance's observers and filters; the new instance re-attaches.
   import.meta.hot?.dispose(() => {
     mo.disconnect();
     window.removeEventListener('resize', onResize);
-    stopContent?.();
     stopScrollPause();
     defs?.closest('svg')?.remove();
     document.querySelectorAll<HTMLElement>('.glass[data-lg]').forEach((el) => delete el.dataset.lg);

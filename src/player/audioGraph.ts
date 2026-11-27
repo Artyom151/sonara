@@ -19,6 +19,7 @@ export interface Graph {
   analyser: AnalyserNode;
   /** Loudness levelling (player/normalize.ts): a gain after the equalizer. */
   norm: GainNode;
+  censor: GainNode;
 }
 
 let graph: Graph | null = null;
@@ -57,9 +58,11 @@ export function ensureGraph(): Graph | null {
     for (const b of bands) node = node.connect(b);
     node.connect(analyser);
     const norm = ctx.createGain();
+    const censor = ctx.createGain();
     analyser.connect(norm);
-    norm.connect(ctx.destination);
-    graph = { ctx, preamp, bands, analyser, norm };
+    norm.connect(censor);
+    censor.connect(ctx.destination);
+    graph = { ctx, preamp, bands, analyser, norm, censor };
     for (const fn of readyListeners) fn(graph);
     // Keep it running: the context starts suspended until a gesture and may be suspended by the OS.
     const resume = () => void ctx.resume().catch(() => {});

@@ -14,7 +14,7 @@ import { Select, Toggle } from '../components/controls';
 import { toast } from '../components/Toast';
 import { openExternal } from '../components/actions';
 import { useT } from '../i18n';
-import { IconChevronLeft, IconChevronRight,  IconDiscord, IconMusic, IconQuote, IconShield } from '../icons';
+import { IconChevronLeft, IconChevronRight, IconDiscord, IconMusic, IconQuote, IconShield } from '../icons';
 import { useAccount } from '../../account/store';
 import { pull, useCloud } from '../../account/cloud';
 import { Avatar } from '../components/Avatar';
@@ -222,19 +222,7 @@ export function Settings() {
         <Cell noicon label={t('glassStyle')}>
           <Select value={s.glass} options={[{ value: 'clear', label: t('glassClear') }, { value: 'tinted', label: t('glassTinted') }]} onChange={(v) => s.set({ glass: v })} />
         </Cell>
-        <Cell noicon label={t('graphics')} hint={t('graphicsHint')}>
-          <Select
-            value={s.graphics}
-            options={[
-              { value: 'auto', label: t('gfxAuto') },
-              { value: 'high', label: t('gfxHigh') },
-              { value: 'balanced', label: t('gfxBalanced') },
-              { value: 'low', label: t('gfxLow') },
-            ]}
-            onChange={(v) => s.set({ graphics: v })}
-          />
-        </Cell>
-        <Cell noicon label={t('islandPlayer')} hint={t(desktop ? 'islandPlayerHintDesk' : 'islandPlayerHint')}>
+         <Cell noicon label={t('islandPlayer')} hint={t(desktop ? 'islandPlayerHintDesk' : 'islandPlayerHint')}>
           <Toggle checked={s.islandPlayer} onChange={(v) => s.set({ islandPlayer: v })} />
         </Cell>
         <Cell noicon label={t('reduceMotion')}>
@@ -276,7 +264,7 @@ export function Settings() {
         <Cell icon={<IconMusic size={17} />} color="#ff9f0a" label={t('normalize')}>
           <Toggle checked={s.normalize} onChange={(v) => s.set({ normalize: v })} />
         </Cell>
-        <Cell icon={<IconMusic size={17} />} color="#5e5ce6" label={t('skipUnavailable')}>
+         <Cell icon={<IconMusic size={17} />} color="#5e5ce6" label={t('skipUnavailable')}>
           <Toggle checked={s.skipUnavailable} onChange={(v) => s.set({ skipUnavailable: v })} />
         </Cell>
         <Cell icon={<IconQuote size={17} />} color="#ff9f0a" label={t('lyricsLine')}>

@@ -1,4 +1,5 @@
 import { CastButton } from '../components/CastButton';
+import { RepeatControl } from '../components/RepeatControl';
 import { togglePlay, setVolume } from '../../player/engine';
 import { useLibrary } from '../../store/library';
 import { usePlayer } from '../../store/player';
@@ -17,7 +18,6 @@ import {
   IconPlay,
   IconQueue,
   IconQuote,
-  IconRepeat,
   IconShuffle,
   IconSpeaker,
   IconSpeakerLow,
@@ -41,8 +41,7 @@ export function PlayerBar() {
   const playing = usePlayer((s) => s.playing);
   const loading = usePlayer((s) => s.loading);
   const shuffle = usePlayer((s) => s.shuffle);
-  const repeat = usePlayer((s) => s.repeat);
-  const volume = usePlayer((s) => s.volume);
+   const volume = usePlayer((s) => s.volume);
   const liked = useLibrary((s) => (track ? s.likes.some((x) => x.key === track.key) : false));
   const open = useUi((s) => s.open);
   const expanded = usePlayer((s) => s.expanded);
@@ -98,9 +97,7 @@ export function PlayerBar() {
             <button className="pbar-icon big" aria-label="Next" onClick={() => usePlayer.getState().next()} disabled={!track}>
               <IconForward size={22} />
             </button>
-            <button className={`pbar-icon ${repeat !== 'off' ? 'on' : ''}`} aria-label={t('repeat')} onClick={() => usePlayer.getState().cycleRepeat()}>
-              <IconRepeat size={18} one={repeat === 'one'} />
-            </button>
+            <RepeatControl className="pbar-icon" size={18} />
           </div>
           <div className="pbar-progress">
             <Scrubber compact />

@@ -35,7 +35,8 @@ export const strategyOf = (c: BypassServiceConfig) => (c.preset === 'custom' ? c
 
 /** Proxy URL the native fetch uses while the bypass is on (null: direct). */
 let proxyUrl: string | null = null;
-export const bypassProxy = () => proxyUrl;
+let upstreamProxyUrl: string | null = null;
+export const bypassProxy = () => proxyUrl ?? upstreamProxyUrl;
 
 /** Desktop and Android run the bypass proxy; the plain web cannot. */
 export const bypassSupported = isTauri || isAndroid;
@@ -221,7 +222,7 @@ export async function applyBypass(): Promise<string | null> {
 export async function applyUpstream(): Promise<void> {
   if (!bypassSupported || Bypass) return;
   const { invoke } = await import('@tauri-apps/api/core');
-  await invoke('net_set_upstream', { url: useSettings.getState().upstreamProxy || null });
+  upstreamProxyUrl = await invoke<string | null>('net_set_upstream', { url: useSettings.getState().upstreamProxy || null });
 }
 
 if (bypassSupported) {

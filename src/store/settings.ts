@@ -15,9 +15,7 @@ export interface Settings {
   tintInterface: boolean;
   glass: 'clear' | 'tinted';
   reduceMotion: boolean;
-  /** Graphics quality; 'auto' picks by device (see platform/perf). */
-  graphics: 'auto' | 'high' | 'balanced' | 'low';
-  showSplash: boolean;
+   showSplash: boolean;
   sources: { soundcloud: boolean; youtube: boolean; deezer?: boolean; yandex?: boolean };
   youtubeApiKey: string;
   /** Yandex Music OAuth token, entered in Settings (kept on this device only). */
@@ -31,6 +29,7 @@ export interface Settings {
   skipUnavailable: boolean;
   /** Levelling: tracks from different sources play at about the same loudness. */
   normalize: boolean;
+  censor: boolean;
   /** Wave sliders, 0..1 (0.5 = neutral): familiar ↔ new, calm ↔ energetic, popular ↔ rare. */
   waveMood: { familiar: number; energy: number; popular: number };
   /** Wave: only artists the listener has not heard yet. */
@@ -64,8 +63,7 @@ export const useSettings = create<Settings>()(
       tintInterface: false,
       glass: 'clear',
       reduceMotion: false,
-      graphics: 'auto',
-      showSplash: true,
+       showSplash: true,
       sources: { soundcloud: true, youtube: true, deezer: true, yandex: true },
       youtubeApiKey: '',
       yandexToken: '',
@@ -83,6 +81,7 @@ export const useSettings = create<Settings>()(
       autoplay: true,
       skipUnavailable: true,
       normalize: false,
+      censor: false,
       waveMood: { familiar: 0.5, energy: 0.5, popular: 0.5 },
       waveDiscovery: false,
       waveBlocked: { genres: [], artists: [] },

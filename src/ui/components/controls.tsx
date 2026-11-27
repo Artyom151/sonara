@@ -1,8 +1,11 @@
 import { isDownloaded, offlineArtUrl } from '../../player/offline';
-import { AnimatePresence, motion, useDragControls, useMotionValue, useSpring, useTransform, type PanInfo } from 'motion/react';
+import { animate, AnimatePresence, motion, useDragControls, useMotionValue, useReducedMotion, useSpring, useTransform, type PanInfo } from 'motion/react';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { IconCheck, IconChevronDown, IconChevronLeft, IconChevronRight } from '../icons';
+import { MENU_CONTENT_SPRING, MENU_SPRING } from '../glass/sdk';
+import { refreshGlass } from '../glass/liquid';
+import { needsNativeArtwork, proxiedArtwork } from '../artwork';
 
 const spring = { type: 'spring', stiffness: 520, damping: 34, mass: 0.8 } as const;
 const softSpring = { type: 'spring', stiffness: 380, damping: 32 } as const;
@@ -105,108 +108,210 @@ export interface MenuItem {
   destructive?: boolean;
   onSelect?: () => void;
   separatorBefore?: boolean;
-  /** Nested menu: selecting the item swaps the menu content for these items (iOS style). */
   children?: MenuItem[];
-  /** Shown on the right of an item with children (e.g. the current choice). */
   detail?: string;
 }
 
-export function Menu({ anchor, items, onClose }: { anchor: DOMRect | null; items: MenuItem[]; onClose: () => void }) {
+interface MenuPos {
+  left: number;
+  top: number;
+  origin: string;
+  maxH: number;
+  scaleX: number;
+  scaleY: number;
+}
+
+function MenuSurface({
+  anchor,
+  items,
+  title,
+  nested = false,
+  direction,
+  selected,
+  onClose,
+  onBack,
+  onOpen,
+}: {
+  anchor: DOMRect;
+  items: MenuItem[];
+  title?: string;
+  nested?: boolean;
+  direction: 1 | -1;
+  selected?: string;
+  onClose: () => void;
+  onBack?: () => void;
+  onOpen: (item: MenuItem) => void;
+}) {
   const ref = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ left: number; top: number; origin: string; maxH: number } | null>(null);
-  const [sub, setSub] = useState<MenuItem | null>(null);
-  useEffect(() => {
-    if (!anchor) setSub(null);
-  }, [anchor]);
-  const shown = sub?.children ?? items;
+  const [pos, setPos] = useState<MenuPos | null>(null);
+  const [hovered, setHovered] = useState<number | null>(null);
+  const systemReducedMotion = useReducedMotion();
+  const reducedMotion = systemReducedMotion || document.documentElement.dataset.reduceMotion === '1';
+  const scaleX = useMotionValue(0.1);
+  const scaleY = useMotionValue(0.1);
 
   useLayoutEffect(() => {
-    if (!anchor || !ref.current) return;
-    // offsetWidth/Height ignore the entrance scale animation (getBoundingClientRect would report
-    // a 0.4x box on the first frame and the menu would be placed as if it were tiny).
-    const m = { width: ref.current.offsetWidth, height: ref.current.offsetHeight };
+    if (!ref.current) return;
+    const width = ref.current.offsetWidth;
+    const height = ref.current.offsetHeight;
     const vv = window.visualViewport;
     const vw = vv?.width ?? window.innerWidth;
     const vh = vv?.height ?? window.innerHeight;
-    const gap = 8;
     const margin = 12;
+    const gap = 8;
     const spaceBelow = vh - anchor.bottom - gap - margin;
     const spaceAbove = anchor.top - gap - margin;
-    // Open where it fits; otherwise towards the larger side, clamped and scrollable.
-    const below = m.height <= spaceBelow || spaceBelow >= spaceAbove;
+    const below = height <= spaceBelow || spaceBelow >= spaceAbove;
     const maxH = Math.max(120, below ? spaceBelow : spaceAbove);
-    const h = Math.min(m.height, maxH);
-    const top = below ? anchor.bottom + gap : anchor.top - gap - h;
+    const top = below ? anchor.bottom + gap : anchor.top - gap - Math.min(height, maxH);
     const alignRight = anchor.left + anchor.width / 2 > vw / 2;
-    const width = Math.min(m.width, vw - margin * 2);
-    const left = Math.min(vw - width - margin, Math.max(margin, alignRight ? anchor.right - width : anchor.left));
-    setPos({ left, top, maxH, origin: `${alignRight ? 'right' : 'left'} ${below ? 'top' : 'bottom'}` });
-  }, [anchor, sub]);
+    const clampedWidth = Math.min(width, vw - margin * 2);
+    const left = Math.min(vw - clampedWidth - margin, Math.max(margin, alignRight ? anchor.right - clampedWidth : anchor.left));
+    const origin = `${alignRight ? 'right' : 'left'} ${below ? 'top' : 'bottom'}`;
+    const next = { left, top, origin, maxH, scaleX: Math.min(1, anchor.width / Math.max(1, width)), scaleY: Math.min(1, anchor.height / Math.max(1, height)) };
+    scaleX.set(next.scaleX);
+    scaleY.set(next.scaleY);
+    setPos(next);
+    if (reducedMotion) {
+      scaleX.set(1);
+      scaleY.set(1);
+      return;
+    }
+    const x = animate(scaleX, 1, MENU_SPRING);
+    const y = animate(scaleY, 1, MENU_SPRING);
+    return () => {
+      x.stop();
+      y.stop();
+    };
+  }, [anchor, reducedMotion, scaleX, scaleY]);
+
+  useLayoutEffect(() => {
+    if (!ref.current || !pos) return;
+    const viewport = window.visualViewport;
+    const margin = 12;
+    const height = ref.current.offsetHeight;
+    const vh = viewport?.height ?? window.innerHeight;
+    const top = Math.max(margin, Math.min(pos.top, vh - height - margin));
+    if (top !== pos.top) setPos((current) => current ? { ...current, top } : current);
+  }, [title]);
+
+  useEffect(() => setHovered(null), [title]);
+  const hoverProps = (index: number) => ({
+    onPointerMove: (e: React.PointerEvent) => e.pointerType === 'mouse' && setHovered(index),
+    onPointerLeave: () => setHovered((current) => current === index ? null : current),
+    onFocus: () => setHovered(index),
+    onBlur: () => setHovered((current) => current === index ? null : current),
+  });
+
+  return (
+    <motion.div
+      ref={ref}
+      className="menu glass refract"
+      role="menu"
+      tabIndex={-1}
+      layout={!reducedMotion}
+      style={{ left: pos?.left ?? -9999, top: pos?.top ?? 0, transformOrigin: pos?.origin, scaleX, scaleY }}
+      initial={false}
+      exit={{ scaleX: reducedMotion ? 1 : pos?.scaleX ?? 0.2, scaleY: reducedMotion ? 1 : pos?.scaleY ?? 0.2, transition: { duration: reducedMotion ? 0 : 0.16 } }}
+      transition={MENU_SPRING}
+      onLayoutAnimationComplete={() => {
+        // The spring settles the box: re-measure so the mask matches the final size exactly.
+        if (ref.current) refreshGlass(ref.current);
+      }}
+      onClick={(e) => e.stopPropagation()}
+      onPointerLeave={() => setHovered(null)}
+    >
+      <AnimatePresence initial={false} mode="popLayout" custom={direction}>
+        <motion.div
+          key={title ?? 'root'}
+          className="menu-scroll"
+          style={{ maxHeight: pos?.maxH }}
+          initial={{ opacity: 0, x: reducedMotion ? 0 : direction * 28, scale: reducedMotion ? 1 : 0.985 }}
+          animate={{ opacity: 1, x: 0, scale: 1 }}
+          exit={{ opacity: 0, x: reducedMotion ? 0 : direction * -20, scale: reducedMotion ? 1 : 0.985, transition: { duration: reducedMotion ? 0 : 0.14 } }}
+          transition={MENU_CONTENT_SPRING}
+        >
+          {nested && onBack && (
+            <>
+              <button className={`menu-item menu-back ${hovered === -1 ? 'active' : ''}`} role="menuitem" onClick={onBack} {...hoverProps(-1)}>
+                <motion.span className="menu-row-highlight" layoutId={reducedMotion ? undefined : 'menu-active-row'} transition={MENU_SPRING} />
+                <span className="menu-check"><IconChevronLeft size={15} /></span>
+                <span className="menu-label">{title}</span>
+              </button>
+              <div className="menu-sep" />
+            </>
+          )}
+          {items.map((item, i) => (
+            <div key={`${title ?? ''}${i}`}>
+              {item.separatorBefore && <div className="menu-sep" />}
+              <button
+                className={`menu-item ${item.destructive ? 'destructive' : ''} ${hovered === i ? 'active' : ''}`}
+                role="menuitem"
+                aria-haspopup={item.children ? 'menu' : undefined}
+                {...hoverProps(i)}
+                onClick={() => {
+                  if (item.children) return onOpen(item);
+                  onClose();
+                  item.onSelect?.();
+                }}
+              >
+                {selected === item.label && <motion.span className="menu-row-highlight" layoutId={reducedMotion ? undefined : 'menu-active-row'} transition={MENU_SPRING} />}
+                <span className="menu-check">{item.checked && <IconCheck size={15} />}</span>
+                <span className="menu-label">
+                  {item.label}
+                  {item.detail && <small className="menu-detail">{item.detail}</small>}
+                </span>
+                {item.children ? <span className="menu-icon"><IconChevronRight size={15} /></span> : item.icon && <span className="menu-icon">{item.icon}</span>}
+              </button>
+            </div>
+          ))}
+        </motion.div>
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+export function Menu({ anchor, items, onClose }: { anchor: DOMRect | null; items: MenuItem[]; onClose: () => void }) {
+  const [sub, setSub] = useState<MenuItem | null>(null);
+  const [direction, setDirection] = useState<1 | -1>(1);
+  const back = () => {
+    setDirection(-1);
+    setSub(null);
+  };
+  useEffect(() => {
+    if (!anchor) setSub(null);
+  }, [anchor]);
+  useEffect(() => {
+    if (!anchor) return;
+    const escape = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      e.stopPropagation();
+      if (sub) back();
+      else onClose();
+    };
+    window.addEventListener('keydown', escape, true);
+    return () => window.removeEventListener('keydown', escape, true);
+  }, [anchor, sub, onClose]);
 
   return createPortal(
     <AnimatePresence>
       {anchor && (
-        // The scrim is transparent: no opacity animation here either (it would be a backdrop root).
         <motion.div className="menu-scrim" exit={{ x: 0, transition: { duration: 0.16 } }} onClick={onClose}>
-          <motion.div
-            ref={ref}
-            className="menu glass refract"
-            style={{ left: pos?.left ?? -9999, top: pos?.top ?? 0, transformOrigin: pos?.origin }}
-            // Only transform on the glass itself: opacity or filter on it would make it a backdrop
-            // root, and the liquid glass layer inside would show no backdrop until the end.
-            initial={{ scale: 0.4 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0.6, transition: { duration: 0.16 } }}
-            transition={{ type: 'spring', stiffness: 460, damping: 32 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <motion.div
-              className="menu-scroll"
-              style={{ maxHeight: pos?.maxH }}
-              initial={{ opacity: 0, filter: 'blur(6px)' }}
-              animate={{ opacity: 1, filter: 'blur(0px)', transitionEnd: { filter: 'none' } }}
-              exit={{ opacity: 0, filter: 'blur(4px)', transition: { duration: 0.14 } }}
-              transition={{ duration: 0.22 }}
-            >
-              {sub && (
-                <>
-                  <button className="menu-item menu-back" onClick={() => setSub(null)}>
-                    <span className="menu-check">
-                      <IconChevronLeft size={15} />
-                    </span>
-                    <span className="menu-label">{sub.label}</span>
-                  </button>
-                  <div className="menu-sep" />
-                </>
-              )}
-              {shown.map((it, i) => (
-                <div key={`${sub?.label ?? ''}${i}`}>
-                  {it.separatorBefore && <div className="menu-sep" />}
-                  <button
-                    className={`menu-item ${it.destructive ? 'destructive' : ''}`}
-                    onClick={() => {
-                      if (it.children) return setSub(it);
-                      onClose();
-                      it.onSelect?.();
-                    }}
-                  >
-                    <span className="menu-check">{it.checked && <IconCheck size={15} />}</span>
-                    <span className="menu-label">
-                      {it.label}
-                      {it.detail && <small className="menu-detail">{it.detail}</small>}
-                    </span>
-                    {it.children ? (
-                      <span className="menu-icon">
-                        <IconChevronRight size={15} />
-                      </span>
-                    ) : (
-                      it.icon && <span className="menu-icon">{it.icon}</span>
-                    )}
-                  </button>
-                </div>
-              ))}
-            </motion.div>
-          </motion.div>
+          <MenuSurface
+            key="root"
+            anchor={anchor}
+            items={sub?.children ?? items}
+            title={sub?.label}
+            nested={!!sub}
+            direction={direction}
+            selected={sub?.label}
+            onClose={onClose}
+            onBack={sub ? back : undefined}
+            onOpen={(item) => {
+              setDirection(1);
+              setSub(item);
+            }}
+          />
         </motion.div>
       )}
     </AnimatePresence>,
@@ -220,7 +325,7 @@ export function Select<T extends string>({ value, options, onChange }: { value: 
   const current = options.find((o) => o.value === value);
   return (
     <>
-      <button className="select-btn" onClick={(e) => setAnchor(e.currentTarget.getBoundingClientRect())}>
+      <button className={`select-btn ${anchor ? 'open' : ''}`} aria-expanded={!!anchor} onClick={(e) => setAnchor(e.currentTarget.getBoundingClientRect())}>
         <span>{current?.label}</span>
         <IconChevronDown size={13} style={{ opacity: 0.7 }} />
       </button>
@@ -428,7 +533,16 @@ export function Marquee({ text, className }: { text: string; className?: string 
 export function Art({ src, alt = '', className, seed }: { src?: string; alt?: string; className?: string; seed?: string }) {
   const [failed, setFailed] = useState(false);
   const [local, setLocal] = useState<string | null>(null);
-  useEffect(() => (setFailed(false), setLocal(null)), [src]);
+  useEffect(() => {
+    setFailed(false);
+    setLocal(null);
+    if (!src || !needsNativeArtwork(src)) return;
+    let active = true;
+    proxiedArtwork(src).then((url) => active && setLocal(url)).catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [src]);
   // Offline: the cover saved with a downloaded track (seed is the track key).
   useEffect(() => {
     if ((failed || !src) && seed && isDownloaded(seed)) offlineArtUrl(seed).then(setLocal);

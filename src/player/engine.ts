@@ -470,6 +470,10 @@ usePlayer.subscribe((s, prev) => {
     }
     return;
   }
+  if (s.restart !== prev.restart) {
+    seek(0);
+    return;
+  }
   if (!cur || s.playing === prev.playing) return;
   if (isCasting()) {
     // A track changed while paused: the device does not have it yet.

@@ -33,7 +33,7 @@ export class YandexMusic {
     if (withToken) headers.Authorization = `OAuth ${this.token()}`;
     const r = await this.fetcher(`${API}${path}`, { headers });
     if (withToken && (r.status === 401 || r.status === 403)) {
-      console.warn('[yandex] token refused, continuing without it:', (await r.json().catch(() => null))?.error?.name ?? r.status);
+      console.warn(`[yandex] token refused (HTTP ${r.status}): use a token issued to Yandex Music with its music permissions; falling back to 30-second previews`);
       this.tokenRefused = true;
       return this.get(path, false);
     }

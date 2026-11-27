@@ -5,6 +5,18 @@ Russian version: [CHANGELOG_ru.md](CHANGELOG_ru.md).
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-11-27
+### Fixed
+- Liquid Glass on Android follows each surface's real corner radius again: the navigation bar, mini player and menus were drawn far rounder than designed.
+- Removed a corrupted alpha seam that cut across the middle of every glass surface.
+- The bars no longer swap to plain blur while scrolling on phones, and menus keep their refraction while opening and while moving between submenus — glass stays on at all times.
+- Menus render their glass on the first open instead of falling back to flat blur until the first navigation inside the menu.
+
+### Changed
+- The network bypass can auto-detect a local SOCKS5 proxy (ports 10808/10809) when the upstream field is left empty.
+- The graphics quality setting is gone: the glass runtime is now a single-map pipeline with automatic fallbacks.
+- New "Censorship" setting mutes profanity in synced lyrics (English, Russian, Ukrainian).
+
 ## [2.0.0] - 2026-10-22
 ### Fixed
 - The Android widgets' play/pause button (and the shape picker's accents) follow the Material You wallpaper palette instead of a static violet; the built-in violet stays as the fallback below Android 12.
