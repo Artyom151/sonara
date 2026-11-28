@@ -5,6 +5,11 @@ Russian version: [CHANGELOG_ru.md](CHANGELOG_ru.md).
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-11-28
+### Changed
+- Dropdowns now open and close with perspective, edge-aware rotation and translateZ depth, including morphing between Repeat, Sleep timer and other nested choices.
+- Menus respect reduced-motion preferences while keeping their matched-geometry transitions.
+
 ## [2.0.1] - 2026-11-27
 ### Fixed
 - Liquid Glass on Android follows each surface's real corner radius again: the navigation bar, mini player and menus were drawn far rounder than designed.

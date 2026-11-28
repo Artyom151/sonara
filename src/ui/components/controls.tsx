@@ -149,6 +149,14 @@ function MenuSurface({
   const reducedMotion = systemReducedMotion || document.documentElement.dataset.reduceMotion === '1';
   const scaleX = useMotionValue(0.1);
   const scaleY = useMotionValue(0.1);
+  const directionX = useMotionValue(1);
+  const directionY = useMotionValue(1);
+  const morphDepth = useMotionValue(0);
+  const openingRotateX = useTransform(scaleY, (scale) => directionY.get() * (1 - scale) * 0.16);
+  const openingRotateY = useTransform(scaleX, (scale) => directionX.get() * (1 - scale) * -0.16);
+  const rotateX = useTransform([openingRotateX, morphDepth], ([opening, morph]: number[]) => opening + morph);
+  const rotateY = useTransform([openingRotateY, morphDepth], ([opening, morph]: number[]) => opening - morph * 0.7);
+  const z = useTransform([scaleX, scaleY], ([x, y]: number[]) => (1 - Math.min(x, y)) * 16);
 
   useLayoutEffect(() => {
     if (!ref.current) return;
@@ -169,6 +177,8 @@ function MenuSurface({
     const left = Math.min(vw - clampedWidth - margin, Math.max(margin, alignRight ? anchor.right - clampedWidth : anchor.left));
     const origin = `${alignRight ? 'right' : 'left'} ${below ? 'top' : 'bottom'}`;
     const next = { left, top, origin, maxH, scaleX: Math.min(1, anchor.width / Math.max(1, width)), scaleY: Math.min(1, anchor.height / Math.max(1, height)) };
+    directionX.set(alignRight ? -1 : 1);
+    directionY.set(below ? 1 : -1);
     scaleX.set(next.scaleX);
     scaleY.set(next.scaleY);
     setPos(next);
@@ -195,6 +205,13 @@ function MenuSurface({
     if (top !== pos.top) setPos((current) => current ? { ...current, top } : current);
   }, [title]);
 
+  useLayoutEffect(() => {
+    if (reducedMotion || !title) return;
+    morphDepth.set(direction * 0.055);
+    const depth = animate(morphDepth, 0, MENU_CONTENT_SPRING);
+    return () => depth.stop();
+  }, [title, direction, reducedMotion, morphDepth]);
+
   useEffect(() => setHovered(null), [title]);
   const hoverProps = (index: number) => ({
     onPointerMove: (e: React.PointerEvent) => e.pointerType === 'mouse' && setHovered(index),
@@ -210,7 +227,7 @@ function MenuSurface({
       role="menu"
       tabIndex={-1}
       layout={!reducedMotion}
-      style={{ left: pos?.left ?? -9999, top: pos?.top ?? 0, transformOrigin: pos?.origin, scaleX, scaleY }}
+      style={{ left: pos?.left ?? -9999, top: pos?.top ?? 0, transformOrigin: pos?.origin, transformPerspective: 900, scaleX, scaleY, rotateX, rotateY, z }}
       initial={false}
       exit={{ scaleX: reducedMotion ? 1 : pos?.scaleX ?? 0.2, scaleY: reducedMotion ? 1 : pos?.scaleY ?? 0.2, transition: { duration: reducedMotion ? 0 : 0.16 } }}
       transition={MENU_SPRING}
